@@ -3,6 +3,9 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/supabase', '@nuxt/eslint'],
   devtools: { enabled: true },
   compatibilityDate: '2025-07-15',
+  nitro: {
+    preset: 'cloudflare-pages',
+  },
   eslint: {
     config: {
       stylistic: true,
