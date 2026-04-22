@@ -20,7 +20,16 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.4.1",
+    "commander": "^13.1.0",
     "prettier": "^3.5.3"
+  },
+  "overrides": {
+    "vite-node": {
+      "cac": "^6.7.14"
+    },
+    "@bomb.sh/tab": {
+      "commander": "^13.1.0"
+    }
   },
   "prettier": {
     "semi": false,
