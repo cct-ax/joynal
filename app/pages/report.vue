@@ -17,58 +17,55 @@ const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
 // TODO: メンター・OJT は担当新人を mentor_assignments から、管理者は全新人を profiles から取得して trainees に格納する
 
 // --- 週ナビゲーション ---
-function getThisMonday(): Date {
+const getThisMonday = (): Date => {
   const today = new Date()
-  const day = today.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  const d = new Date(today)
-  d.setDate(today.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
+  const dayOfWeek = today.getDay()
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
 }
 
 const currentWeekStart = ref(getThisMonday())
 
 const weekDays = computed(() =>
-  Array.from({ length: 5 }, (_, i) => {
-    const d = new Date(currentWeekStart.value)
-    d.setDate(d.getDate() + i)
-    return d
+  Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(currentWeekStart.value)
+    date.setDate(date.getDate() + index)
+    return date
   })
 )
 
 const weekLabel = computed(() => {
-  const s = currentWeekStart.value
-  const e = weekDays.value.at(-1)!
-  const fmt = (d: Date) => `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`
-  return `${s.getFullYear()}/${fmt(s)}（月）〜 ${fmt(e)}（金）`
+  const weekStart = currentWeekStart.value
+  const weekEnd = weekDays.value.at(-1)!
+  const formatMonthDay = (date: Date) => `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
+  return `${weekStart.getFullYear()}/${formatMonthDay(weekStart)}（月）〜 ${formatMonthDay(weekEnd)}（金）`
 })
 
-function prevWeek() {
-  const d = new Date(currentWeekStart.value)
-  d.setDate(d.getDate() - 7)
-  currentWeekStart.value = d
+const prevWeek = () => {
+  const date = new Date(currentWeekStart.value)
+  date.setDate(date.getDate() - 7)
+  currentWeekStart.value = date
 }
 
-function nextWeek() {
-  const d = new Date(currentWeekStart.value)
-  d.setDate(d.getDate() + 7)
-  currentWeekStart.value = d
+const nextWeek = () => {
+  const date = new Date(currentWeekStart.value)
+  date.setDate(date.getDate() + 7)
+  currentWeekStart.value = date
 }
 
-function goToThisWeek() {
+const goToThisWeek = () => {
   currentWeekStart.value = getThisMonday()
 }
 
 const DAY_LABELS = ['月', '火', '水', '木', '金'] as const
 
-function formatDate(d: Date) {
-  return `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, '0')}`
-}
+const formatDate = (date: Date) =>
+  `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
 
-function toDateString(d: Date) {
-  return d.toISOString().slice(0, 10)
-}
+const toDateString = (date: Date) => date.toISOString().slice(0, 10)
 
 // --- 日報データ ---
 // key: 'YYYY-MM-DD', value: daily_report レコード
@@ -138,11 +135,11 @@ void user
       <table>
         <tbody>
           <tr
-            v-for="(day, i) in weekDays"
-            :key="i"
+            v-for="(day, index) in weekDays"
+            :key="index"
           >
             <!-- 日付・曜日 -->
-            <td>{{ formatDate(day) }}（{{ DAY_LABELS[i] }}）</td>
+            <td>{{ formatDate(day) }}（{{ DAY_LABELS[index] }}）</td>
 
             <!-- 出勤〜退勤・やったこと -->
             <td>

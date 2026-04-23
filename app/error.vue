@@ -6,7 +6,7 @@ const title = computed(() => {
   return 'エラーが発生しました'
 })
 
-function goHome() {
+const goHome = () => {
   clearError({ redirect: '/' })
 }
 </script>

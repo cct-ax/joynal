@@ -8,7 +8,7 @@ const successMessage = ref('')
 const errorMessage = ref('')
 const loading = ref(false)
 
-async function sendResetEmail() {
+const sendResetEmail = async () => {
   loading.value = true
   successMessage.value = ''
   errorMessage.value = ''

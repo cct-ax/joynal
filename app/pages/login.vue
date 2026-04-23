@@ -9,7 +9,7 @@ const password = ref('')
 const errorMessage = ref('')
 const loading = ref(false)
 
-async function signIn() {
+const signIn = async () => {
   loading.value = true
   errorMessage.value = ''
 

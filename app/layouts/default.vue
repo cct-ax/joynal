@@ -5,20 +5,18 @@ const router = useRouter()
 
 const isAdmin = ref(false)
 
-watch(
-  user,
-  async (u) => {
-    if (!u?.id) {
-      isAdmin.value = false
-      return
-    }
-    const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single()
-    isAdmin.value = data?.role === 'admin'
-  },
-  { immediate: true }
-)
+const onUserChange = async (currentUser: ReturnType<typeof useSupabaseUser>['value']) => {
+  if (!currentUser?.id) {
+    isAdmin.value = false
+    return
+  }
+  const { data } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
+  isAdmin.value = data?.role === 'admin'
+}
 
-async function signOut() {
+watch(user, onUserChange, { immediate: true })
+
+const signOut = async () => {
   await supabase.auth.signOut()
   await router.push('/login')
 }
