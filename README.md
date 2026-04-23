@@ -13,8 +13,19 @@
 | 項目 | 技術 |
 |------|------|
 | フロントエンド | Nuxt 4 |
-| バックエンド/DB | Supabase |
+| UI ライブラリ | Nuxt UI v3（Tailwind CSS v4 含む） |
+| バックエンド/DB | Supabase（認証・DB・RLS） |
 | ホスティング | Cloudflare Pages |
+
+### 主なパッケージ
+
+| パッケージ | 用途 |
+|-----------|------|
+| `@nuxt/ui` | UIコンポーネント（Modal, Toast, Table, Form 等） |
+| `@nuxtjs/supabase` | Supabase 連携（認証・データ取得） |
+| `zod` + `vee-validate` | フォームバリデーション |
+| `@vueuse/core` | ユーティリティ composables |
+| `@iconify/vue` | アイコン |
 
 ## ユーザー種別
 
@@ -33,7 +44,7 @@ pnpm install
 
 ### 環境変数
 
-`.env.example`をコピーして`.env`を作成し、Supabaseの認証情報を設定してください。
+`.env.example` をコピーして `.env` を作成し、Supabaseの認証情報を設定してください。
 
 ```bash
 cp .env.example .env
@@ -46,3 +57,37 @@ pnpm dev
 ```
 
 `http://localhost:3000` で起動します。
+
+## 開発コマンド
+
+```bash
+pnpm dev          # 開発サーバー起動
+pnpm build        # 本番ビルド
+pnpm lint         # ESLint 実行
+pnpm lint:fix     # ESLint 自動修正
+pnpm format       # Prettier フォーマット
+pnpm exec vue-tsc --noEmit  # 型チェック
+```
+
+## プロジェクト構成
+
+```
+app/
+├── assets/css/       # グローバルCSS
+├── layouts/          # レイアウト（default.vue）
+├── middleware/        # 認証ミドルウェア
+├── pages/            # ページ（login / report / admin / confirm / reset-password）
+└── types/            # 型定義（database.types.ts）
+docs/                 # 設計ドキュメント
+supabase/migrations/  # DBマイグレーション
+```
+
+## ドキュメント
+
+| ドキュメント | 内容 |
+|-------------|------|
+| [docs/requirements.md](docs/requirements.md) | 要件定義 |
+| [docs/screen-flow.md](docs/screen-flow.md) | 画面一覧・画面遷移図 |
+| [docs/design-spec.md](docs/design-spec.md) | デザイン仕様書 |
+| [docs/db-design.md](docs/db-design.md) | DBテーブル設計書 |
+| [docs/rls-design.md](docs/rls-design.md) | RLS設計書 |
