@@ -8,7 +8,7 @@ const isAdmin = ref(false)
 watch(
   user,
   async (u) => {
-    if (!u) {
+    if (!u?.id) {
       isAdmin.value = false
       return
     }
