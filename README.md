@@ -10,31 +10,31 @@
 
 ## 技術スタック
 
-| 項目 | 技術 |
-|------|------|
-| フロントエンド | Nuxt 4 |
-| UI ライブラリ | Nuxt UI v3（Tailwind CSS v4 含む） |
-| バックエンド/DB | Supabase（認証・DB・RLS） |
-| ホスティング | Cloudflare Pages |
+| 項目            | 技術                               |
+| --------------- | ---------------------------------- |
+| フロントエンド  | Nuxt 4                             |
+| UI ライブラリ   | Nuxt UI v3（Tailwind CSS v4 含む） |
+| バックエンド/DB | Supabase（認証・DB・RLS）          |
+| ホスティング    | Cloudflare Pages                   |
 
 ### 主なパッケージ
 
-| パッケージ | 用途 |
-|-----------|------|
-| `@nuxt/ui` | UIコンポーネント（Modal, Toast, Table, Form 等） |
-| `@nuxtjs/supabase` | Supabase 連携（認証・データ取得） |
-| `zod` + `vee-validate` | フォームバリデーション |
-| `@vueuse/core` | ユーティリティ composables |
-| `@iconify/vue` | アイコン |
+| パッケージ             | 用途                                             |
+| ---------------------- | ------------------------------------------------ |
+| `@nuxt/ui`             | UIコンポーネント（Modal, Toast, Table, Form 等） |
+| `@nuxtjs/supabase`     | Supabase 連携（認証・データ取得）                |
+| `zod` + `vee-validate` | フォームバリデーション                           |
+| `@vueuse/core`         | ユーティリティ composables                       |
+| `@iconify/vue`         | アイコン                                         |
 
 ## ユーザー種別
 
-| 種別 | できること |
-|------|-----------|
-| 新人 | 自分の日報を入力・編集・閲覧、コメント閲覧 |
-| メンター | 担当新人の日報閲覧、週次コメント入力 |
-| OJT | 担当新人の日報閲覧、週次コメント入力 |
-| 管理者 | 全日報閲覧、ユーザー管理、権限設定 |
+| 種別     | できること                                 |
+| -------- | ------------------------------------------ |
+| 新人     | 自分の日報を入力・編集・閲覧、コメント閲覧 |
+| メンター | 担当新人の日報閲覧、週次コメント入力       |
+| OJT      | 担当新人の日報閲覧、週次コメント入力       |
+| 管理者   | 全日報閲覧、ユーザー管理、権限設定         |
 
 ## セットアップ
 
@@ -74,18 +74,23 @@ pnpm exec vue-tsc --noEmit  # 型チェック
 ```
 app/
 ├── assets/css/       # グローバルCSS
+├── components/       # 共通コンポーネント
+├── composables/      # 共通 composables（useCurrentUser 等）
 ├── layouts/          # レイアウト（default.vue）
 ├── middleware/        # 認証ミドルウェア
 ├── pages/            # ページ（login / report / admin / confirm / reset-password）
 └── types/            # 型定義（database.types.ts）
-docs/                 # 設計ドキュメント
+docs/                 # 設計ドキュメント・開発計画
 supabase/migrations/  # DBマイグレーション
 ```
+
+開発の進め方は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ## ドキュメント
 
 | ドキュメント | 内容 |
-|-------------|------|
+| --- | --- |
+| [docs/component-diagram.md](docs/component-diagram.md) | コンポーネント構成図 |
 | [docs/requirements.md](docs/requirements.md) | 要件定義 |
 | [docs/screen-flow.md](docs/screen-flow.md) | 画面一覧・画面遷移図 |
 | [docs/design-spec.md](docs/design-spec.md) | デザイン仕様書 |

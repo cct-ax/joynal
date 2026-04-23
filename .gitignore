@@ -25,5 +25,5 @@ logs
 !.env.example
 
 # Project-specific
-PLAN.md
-.vercel
+docs/PLAN.md
+docs/test-users.md
