@@ -30,8 +30,15 @@ async function signOut() {
       <span>Joynal</span>
       <nav v-if="user">
         <NuxtLink to="/report">日報</NuxtLink>
-        <NuxtLink v-if="isAdmin" to="/admin">管理</NuxtLink>
-        <button @click="signOut">ログアウト</button>
+        <NuxtLink
+          v-if="isAdmin"
+          to="/admin"
+        >
+          管理
+        </NuxtLink>
+        <button @click="signOut">
+          ログアウト
+        </button>
       </nav>
     </header>
 

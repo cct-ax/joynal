@@ -14,7 +14,7 @@ async function sendResetEmail() {
   errorMessage.value = ''
 
   const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-    redirectTo: `${window.location.origin}/confirm`,
+    redirectTo: `${window.location.origin}/confirm`
   })
 
   if (error) {
@@ -34,13 +34,26 @@ async function sendResetEmail() {
     <form @submit.prevent="sendResetEmail">
       <div>
         <label for="email">メールアドレス</label>
-        <input id="email" v-model="email" type="email" required autocomplete="email" />
+        <input
+          id="email"
+          v-model="email"
+          type="email"
+          required
+          autocomplete="email"
+        >
       </div>
 
-      <p v-if="successMessage">{{ successMessage }}</p>
-      <p v-if="errorMessage">{{ errorMessage }}</p>
+      <p v-if="successMessage">
+        {{ successMessage }}
+      </p>
+      <p v-if="errorMessage">
+        {{ errorMessage }}
+      </p>
 
-      <button type="submit" :disabled="loading">
+      <button
+        type="submit"
+        :disabled="loading"
+      >
         {{ loading ? '送信中...' : 'リセットメールを送信' }}
       </button>
     </form>

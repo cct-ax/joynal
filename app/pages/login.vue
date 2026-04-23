@@ -15,7 +15,7 @@ async function signIn() {
 
   const { error } = await supabase.auth.signInWithPassword({
     email: email.value,
-    password: password.value,
+    password: password.value
   })
 
   if (error) {
@@ -36,7 +36,13 @@ async function signIn() {
     <form @submit.prevent="signIn">
       <div>
         <label for="email">メールアドレス</label>
-        <input id="email" v-model="email" type="email" required autocomplete="email" />
+        <input
+          id="email"
+          v-model="email"
+          type="email"
+          required
+          autocomplete="email"
+        >
       </div>
 
       <div>
@@ -47,12 +53,17 @@ async function signIn() {
           type="password"
           required
           autocomplete="current-password"
-        />
+        >
       </div>
 
-      <p v-if="errorMessage">{{ errorMessage }}</p>
+      <p v-if="errorMessage">
+        {{ errorMessage }}
+      </p>
 
-      <button type="submit" :disabled="loading">
+      <button
+        type="submit"
+        :disabled="loading"
+      >
         {{ loading ? 'ログイン中...' : 'ログイン' }}
       </button>
     </form>

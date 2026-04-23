@@ -2,39 +2,45 @@
 export default defineNuxtConfig({
   modules: ['@nuxtjs/supabase', '@nuxt/eslint'],
   devtools: { enabled: true },
-  compatibilityDate: '2025-07-15',
 
   app: {
     head: {
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
       title: 'Joynal',
-      htmlAttrs: { lang: 'ja' },
-    },
+      htmlAttrs: { lang: 'ja' }
+    }
   },
 
-  typescript: {
-    typeCheck: true,
-  },
+  compatibilityDate: '2025-07-15',
 
   nitro: {
     preset: 'cloudflare-pages',
     cloudflare: {
-      nodeCompat: true,
-    },
+      nodeCompat: true
+    }
   },
+
+  typescript: {
+    typeCheck: true
+  },
+
   eslint: {
     config: {
-      stylistic: true,
-    },
+      stylistic: {
+        commaDangle: 'never',
+        braceStyle: '1tbs'
+      }
+    }
   },
+
   supabase: {
     redirect: true,
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/login', '/reset-password'],
+      exclude: ['/login', '/reset-password']
     },
-    types: '~/types/database.types.ts',
-  },
+    types: '~/types/database.types.ts'
+  }
 })
