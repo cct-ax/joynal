@@ -30,6 +30,7 @@ erDiagram
         time check_in
         time check_out
         text content
+        smallint mood
         timestamptz created_at
         timestamptz updated_at
     }
@@ -109,7 +110,8 @@ CREATE TABLE public.profiles (
 | `date` | `date` | NOT NULL | 日報の日付（土日・祝日は入力しない運用） |
 | `check_in` | `time` | NOT NULL | 出勤時間 |
 | `check_out` | `time` | NOT NULL | 退勤時間 |
-| `content` | `text` | NOT NULL | やったこと（長文可） |
+| `content` | `text` | NOT NULL | やったこと（長文可）。Joy / Good / Next の3観点を含む |
+| `mood` | `smallint` | CHECK (mood BETWEEN 1 AND 5) | 気分（1〜5、任意） |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
 | `updated_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
 
@@ -125,6 +127,7 @@ CREATE TABLE public.daily_reports (
   check_in   time        NOT NULL,
   check_out  time        NOT NULL CHECK (check_out > check_in),
   content    text        NOT NULL,
+  mood       smallint    CHECK (mood BETWEEN 1 AND 5),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, date)
