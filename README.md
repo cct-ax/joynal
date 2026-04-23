@@ -12,7 +12,7 @@
 |------|------|
 | フロントエンド | Nuxt 4 |
 | バックエンド/DB | Supabase |
-| ホスティング | Vercel |
+| ホスティング | Cloudflare Pages |
 
 ## ユーザー種別
 
@@ -26,7 +26,7 @@
 ## セットアップ
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 環境変数
@@ -40,7 +40,7 @@ cp .env.example .env
 ### 開発サーバー起動
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 `http://localhost:3000` で起動します。
