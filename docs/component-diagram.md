@@ -28,7 +28,8 @@ graph TD
 
   subgraph Components["コンポーネント（今後追加）"]
     ReportInputModal["ReportInputModal.vue\n日報入力・編集モーダル\n新人のみ操作可"]
-    ReportDetailModal["ReportDetailModal.vue\n日報詳細モーダル\nメンター・OJT・管理者用"]
+    ReportCard["ReportCard.vue\n日報カード（インライン展開）\nクリックで詳細表示"]
+    CommentInputModal["CommentInputModal.vue\n週次コメント入力モーダル\nメンター・OJT用"]
     UserAddModal["UserAddModal.vue\nユーザー追加モーダル\n管理者用"]
     FormExample["FormExample.vue\nフォームサンプル\n（実装参考用）"]
   end
@@ -64,7 +65,8 @@ graph TD
   AdminPage --> SupabaseDB
 
   ReportPage -. "MS2" .-> ReportInputModal
-  ReportPage -. "MS3" .-> ReportDetailModal
+  ReportPage -. "MS3" .-> ReportCard
+  ReportPage -. "MS3" .-> CommentInputModal
   AdminPage -. "MS4" .-> UserAddModal
 
   UseCurrentUser --> DBTypes
@@ -117,5 +119,6 @@ graph TD
 | ファイル | MS | 役割 |
 |---------|-----|------|
 | `components/ReportInputModal.vue` | MS2 | 日報の入力・編集モーダル（新人のみ） |
-| `components/ReportDetailModal.vue` | MS3 | 日報の詳細表示モーダル（メンター・OJT・管理者） |
+| `components/ReportCard.vue` | MS3 | 日報カード。クリックでインライン展開し、詳細内容を表示 |
+| `components/CommentInputModal.vue` | MS3 | 週次コメント入力モーダル（メンター・OJTのみ） |
 | `components/UserAddModal.vue` | MS4 | ユーザー招待フォームモーダル（管理者のみ） |
