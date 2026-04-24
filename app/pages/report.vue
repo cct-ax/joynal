@@ -146,7 +146,7 @@ void user
               <template v-if="reports[toDateString(day)]">
                 {{ reports[toDateString(day)]?.check_in }} 〜 {{ reports[toDateString(day)]?.check_out }}
                 <br>
-                {{ reports[toDateString(day)]?.content.slice(0, 100) }}
+                {{ reports[toDateString(day)]?.content.slice(0, 80) }}
               </template>
               <template v-else>
                 --

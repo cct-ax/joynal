@@ -259,7 +259,7 @@ null  // 204 No Content
 
 #### `GET /api/assignments/me` — 担当新人一覧取得
 
-**対象ロール**: メンター・OJT（自分の担当新人）、管理者（全新人）
+**対象ロール**: メンター・OJT（自分の担当新人）、管理者（全新人の割り当て情報）
 
 **クエリパラメータ**
 
@@ -268,6 +268,8 @@ null  // 204 No Content
 | `year` | `number` | × | 年度（省略時は現在の年度） |
 
 **レスポンス** `200 OK`
+
+メンター・OJT の場合（担当新人のみ）:
 
 ```json
 [
@@ -279,11 +281,156 @@ null  // 204 No Content
 ]
 ```
 
+管理者の場合（全割り当て情報）:
+
+```json
+[
+  {
+    "trainee_id": "uuid",
+    "trainee_name": "山田 花子",
+    "mentor_id": "uuid",
+    "mentor_name": "田中 一郎",
+    "ojt_id": "uuid",
+    "ojt_name": "佐藤 美咲"
+  }
+]
+```
+
 **エラー**
 
 | ステータス | 条件 |
 |----------|------|
 | 403 | 新人ロールが呼び出した |
+
+---
+
+#### `PUT /api/assignments` — メンター割り当て更新（upsert）
+
+**対象ロール**: 管理者のみ
+
+> `(trainee_id, year)` の組み合わせが既に存在する場合は上書き（UPDATE）。存在しない場合は新規作成（INSERT）。`year` は省略時に現在年度を自動セットする。
+
+**リクエストボディ**
+
+```json
+{
+  "traineeId": "uuid",
+  "mentorId": "uuid",
+  "ojtId": "uuid",
+  "year": 2026
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|:---:|------|
+| `traineeId` | `string` (UUID) | ○ | 対象の新人ID |
+| `mentorId` | `string` (UUID) \| `null` | ○ | メンターID（未割り当ての場合は null） |
+| `ojtId` | `string` (UUID) \| `null` | ○ | OJT担当者ID（未割り当ての場合は null） |
+| `year` | `number` | × | 年度（省略時は現在の年度） |
+
+**レスポンス** `200 OK` — 保存後のレコード
+
+**エラー**
+
+| ステータス | 条件 |
+|----------|------|
+| 400 | `traineeId` が未指定 |
+| 403 | 管理者以外のロールが呼び出した（RLS による） |
+| 404 | `traineeId` / `mentorId` / `ojtId` が存在しない |
+
+---
+
+### ユーザー管理 `/api/users`
+
+#### `GET /api/users` — ユーザー一覧取得
+
+**対象ロール**: 管理者のみ
+
+**レスポンス** `200 OK`
+
+```json
+[
+  {
+    "id": "uuid",
+    "employee_id": "E001",
+    "name": "山田 太郎",
+    "email": "yamada@example.com",
+    "role": "trainee",
+    "is_active": true,
+    "created_at": "2026-04-01T00:00:00Z",
+    "updated_at": "2026-04-01T00:00:00Z"
+  }
+]
+```
+
+**エラー**
+
+| ステータス | 条件 |
+|----------|------|
+| 403 | 管理者以外のロールが呼び出した |
+
+---
+
+#### `POST /api/users` — ユーザー招待
+
+**対象ロール**: 管理者のみ
+
+> Supabase Auth にユーザーを作成し、`profiles` テーブルにレコードを挿入する。`employee_id` は自動採番。
+
+**リクエストボディ**
+
+```json
+{
+  "name": "新しい 社員",
+  "email": "new@example.com",
+  "role": "trainee"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|:---:|------|
+| `name` | `string` | ○ | 表示名 |
+| `email` | `string` | ○ | メールアドレス（Supabase Auth に登録） |
+| `role` | `string` | ○ | `trainee` / `mentor` / `ojt` / `admin` |
+
+**レスポンス** `201 Created` — 作成後の profiles レコード
+
+**エラー**
+
+| ステータス | 条件 |
+|----------|------|
+| 400 | 必須項目不足 / 不正な role |
+| 403 | 管理者以外のロールが呼び出した |
+| 409 | 同じメールアドレスが既に存在する |
+
+---
+
+#### `PUT /api/users/:id` — ユーザー更新
+
+**対象ロール**: 管理者のみ
+
+**リクエストボディ** （変更したいフィールドのみ）
+
+```json
+{
+  "name": "更新後の名前",
+  "email": "updated@example.com",
+  "role": "mentor",
+  "is_active": false
+}
+```
+
+**レスポンス** `200 OK` — 更新後の profiles レコード
+
+> `is_active: false` に更新した場合、Supabase Auth 側でもユーザーを ban してログイン不可にする。
+
+**エラー**
+
+| ステータス | 条件 |
+|----------|------|
+| 400 | 不正な role |
+| 403 | 管理者以外のロールが呼び出した |
+| 404 | 対象ユーザーが存在しない |
 
 ---
 
@@ -314,5 +461,26 @@ await $fetch(`/api/reports/${reportId}`, { method: 'DELETE' })
 await $fetch('/api/comments', {
   method: 'PUT',
   body: { weekStart: '2026-05-19', traineeId, content: '...' }
+})
+
+// メンター割り当て更新
+await $fetch('/api/assignments', {
+  method: 'PUT',
+  body: { traineeId, mentorId, ojtId }
+})
+
+// ユーザー一覧取得（管理者）
+const users = await $fetch('/api/users')
+
+// ユーザー招待（管理者）
+await $fetch('/api/users', {
+  method: 'POST',
+  body: { name: '新しい社員', email: 'new@example.com', role: 'trainee' }
+})
+
+// ユーザー更新（管理者）
+await $fetch(`/api/users/${userId}`, {
+  method: 'PUT',
+  body: { is_active: false }
 })
 ```

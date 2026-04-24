@@ -48,7 +48,8 @@ graph TD
   subgraph ServerAPI["Server API (server/api/)"]
     ReportsAPI["reports/\nGET 週次日報一覧\nPOST 日報作成\nPUT 日報更新\nDELETE 日報削除"]
     CommentsAPI["comments/\nGET 週次コメント取得\nPUT 週次コメント保存"]
-    AssignmentsAPI["assignments/me\nGET 担当新人一覧"]
+    AssignmentsAPI["assignments/\nGET /me 担当新人一覧\nPUT メンター割り当て更新"]
+    UsersAPI["users/\nGET ユーザー一覧\nPOST ユーザー招待\nPUT ユーザー更新"]
   end
 
   subgraph Supabase["Supabase（外部サービス）"]
@@ -74,10 +75,12 @@ graph TD
   ReportPage --"$fetch"--> AssignmentsAPI
   AdminPage --"$fetch"--> ReportsAPI
   AdminPage --"$fetch"--> AssignmentsAPI
+  AdminPage --"$fetch"--> UsersAPI
 
   ReportsAPI --> SupabaseDB
   CommentsAPI --> SupabaseDB
   AssignmentsAPI --> SupabaseDB
+  UsersAPI --> SupabaseDB
 
   ReportPage -. "MS2" .-> ReportInputModal
   ReportPage -. "MS3" .-> ReportCard
@@ -154,7 +157,11 @@ graph TD
 | `reports/[id]/index.delete.ts` | `DELETE /api/reports/:id` | 日報削除 |
 | `comments/index.get.ts` | `GET /api/comments` | 週次コメント取得 |
 | `comments/index.put.ts` | `PUT /api/comments` | 週次コメント保存（upsert） |
-| `assignments/me.get.ts` | `GET /api/assignments/me` | 担当新人一覧取得 |
+| `assignments/me.get.ts` | `GET /api/assignments/me` | 担当新人一覧取得（管理者は全割り当て情報） |
+| `assignments/index.put.ts` | `PUT /api/assignments` | メンター割り当て更新（管理者のみ） |
+| `users/index.get.ts` | `GET /api/users` | ユーザー一覧取得（管理者のみ） |
+| `users/index.post.ts` | `POST /api/users` | ユーザー招待（管理者のみ） |
+| `users/[id]/index.put.ts` | `PUT /api/users/:id` | ユーザー更新（管理者のみ） |
 
 ### 今後追加するコンポーネント
 

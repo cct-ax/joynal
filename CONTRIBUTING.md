@@ -13,8 +13,8 @@
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/<org>/jornal.git
-cd jornal
+git clone https://github.com/<org>/joynal.git
+cd joynal
 
 # パッケージをインストール
 pnpm install

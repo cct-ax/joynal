@@ -111,8 +111,8 @@ CREATE TABLE public.profiles (
 | `date` | `date` | NOT NULL | 日報の日付（土日・祝日は入力しない運用） |
 | `check_in` | `time` | NOT NULL | 出勤時間 |
 | `check_out` | `time` | NOT NULL | 退勤時間 |
-| `content` | `text` | NOT NULL | やったこと（長文可）。Joy / Good / Next の3観点を含む |
-| `mood` | `smallint` | CHECK (mood BETWEEN 1 AND 5) | 気分（1〜5、任意） |
+| `content` | `text` | NOT NULL | やったこと（長文可） |
+| `mood` | `smallint` | NULL, CHECK (mood BETWEEN 1 AND 5) | 気分（1〜5、任意）。未入力の場合は NULL で保存する |
 | `created_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
 | `updated_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
 

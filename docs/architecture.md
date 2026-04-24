@@ -48,7 +48,7 @@
 ## ディレクトリ構成
 
 ```
-jornal/
+joynal/
 ├── app/                          # フロントエンド（Nuxt app ディレクトリ）
 │   ├── app.vue                   # ルートコンポーネント
 │   ├── assets/css/main.css       # グローバルスタイル
@@ -86,8 +86,14 @@ jornal/
 │       ├── comments/
 │       │   ├── index.get.ts      # GET  /api/comments     週次コメント取得
 │       │   └── index.put.ts      # PUT  /api/comments     週次コメント保存
-│       └── assignments/
-│           └── me.get.ts         # GET  /api/assignments/me 担当新人一覧
+│       ├── assignments/
+│       │   ├── me.get.ts         # GET  /api/assignments/me 担当新人一覧（管理者は全割り当て情報）
+│       │   └── index.put.ts      # PUT  /api/assignments  メンター割り当て更新（管理者のみ）
+│       └── users/
+│           ├── index.get.ts      # GET  /api/users        ユーザー一覧（管理者のみ）
+│           ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
+│           └── [id]/
+│               └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
 │
 ├── supabase/
 │   └── migrations/               # DB マイグレーション SQL

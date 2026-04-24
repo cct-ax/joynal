@@ -107,7 +107,7 @@ export type ReportCreateBody = {
   check_in: string
   check_out: string
   content: string
-  mood?: number
+  mood?: 1 | 2 | 3 | 4 | 5
 }
 
 export type CommentUpsertBody = {
