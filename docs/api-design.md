@@ -204,8 +204,10 @@ null  // 204 No Content
     "week_start": "2026-05-19",
     "trainee_id": "uuid",
     "commenter_id": "uuid",
-    "commenter_name": "田中 太郎",
-    "commenter_role": "mentor",
+    "commenter": {
+      "name": "田中 太郎",
+      "role": "mentor"
+    },
     "content": "今週もよく頑張りました。",
     "created_at": "2026-05-23T18:00:00Z",
     "updated_at": "2026-05-23T18:00:00Z"
@@ -244,7 +246,7 @@ null  // 204 No Content
 | `traineeId` | `string` (UUID) | ○ | コメント対象の新人ID |
 | `content` | `string` | ○ | コメント本文 |
 
-**レスポンス** `200 OK` — 保存後のレコード（`GET` と同じ形式の単一オブジェクト）
+**レスポンス** `200 OK` — 保存後のレコード（`commenter` フィールドなしの単一オブジェクト）
 
 **エラー**
 
@@ -274,9 +276,12 @@ null  // 204 No Content
 ```json
 [
   {
-    "id": "uuid",
-    "name": "山田 花子",
-    "employee_id": "EMP001"
+    "trainee_id": "uuid",
+    "year": 2026,
+    "trainee": {
+      "name": "山田 花子",
+      "employee_id": "E001"
+    }
   }
 ]
 ```
@@ -287,11 +292,12 @@ null  // 204 No Content
 [
   {
     "trainee_id": "uuid",
-    "trainee_name": "山田 花子",
     "mentor_id": "uuid",
-    "mentor_name": "田中 一郎",
     "ojt_id": "uuid",
-    "ojt_name": "佐藤 美咲"
+    "year": 2026,
+    "trainee": { "name": "山田 花子" },
+    "mentor": { "name": "田中 一郎" },
+    "ojt": { "name": "佐藤 美咲" }
   }
 ]
 ```
