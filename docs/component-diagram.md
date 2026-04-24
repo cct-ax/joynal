@@ -31,6 +31,7 @@ graph TD
     ReportCard["ReportCard.vue\n日報カード（インライン展開）\nクリックで詳細表示"]
     CommentInputModal["CommentInputModal.vue\n週次コメント入力モーダル\nメンター・OJT用"]
     UserAddModal["UserAddModal.vue\nユーザー追加モーダル\n管理者用"]
+    UserEditModal["UserEditModal.vue\nユーザー編集モーダル\n管理者用"]
   end
 
   subgraph Composables["Composables"]
@@ -82,6 +83,7 @@ graph TD
   ReportPage -. "MS3" .-> ReportCard
   ReportPage -. "MS3" .-> CommentInputModal
   AdminPage -. "MS4" .-> UserAddModal
+  AdminPage -. "MS4" .-> UserEditModal
 
   UseCurrentUser --> DBTypes
   ReportPage --> Models
@@ -162,3 +164,4 @@ graph TD
 | `components/ReportCard.vue` | MS3 | 日報カード。クリックでインライン展開し、詳細内容を表示 |
 | `components/CommentInputModal.vue` | MS3 | 週次コメント入力モーダル（メンター・OJTのみ） |
 | `components/UserAddModal.vue` | MS4 | ユーザー招待フォームモーダル（管理者のみ） |
+| `components/UserEditModal.vue` | MS4 | ユーザー編集モーダル（名前・メール・役割の変更、管理者のみ） |

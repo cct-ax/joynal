@@ -15,6 +15,7 @@
 erDiagram
     profiles {
         uuid id PK
+        text employee_id
         text name
         text email
         text role

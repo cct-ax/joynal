@@ -56,7 +56,8 @@ jornal/
 │   │   ├── ReportInputModal.vue  # 日報入力・編集モーダル（MS2）
 │   │   ├── ReportCard.vue        # 日報カード（インライン展開）（MS3）
 │   │   ├── CommentInputModal.vue # 週次コメント入力モーダル（MS3）
-│   │   └── UserAddModal.vue      # ユーザー追加モーダル（MS4）
+│   │   ├── UserAddModal.vue      # ユーザー追加モーダル（MS4）
+│   │   └── UserEditModal.vue     # ユーザー編集モーダル（MS4）
 │   ├── composables/
 │   │   └── useCurrentUser.ts     # ログインユーザーの profile・role を返す
 │   ├── layouts/
