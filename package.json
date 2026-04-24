@@ -48,6 +48,9 @@
       "unrs-resolver"
     ]
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "prettier": {
     "semi": false,
     "singleQuote": true,

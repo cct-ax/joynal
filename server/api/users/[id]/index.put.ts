@@ -3,6 +3,9 @@ import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/serve
 
 const VALID_ROLES = ['trainee', 'mentor', 'ojt', 'admin'] as const
 
+// 実質的な永久 ban として十分な期間（Supabase は 'none' で解除、それ以外は PostgreSQL interval 文字列）
+const BAN_DURATION_PERMANENT = '876000h' // 100年
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const id = getRouterParam(event, 'id')
@@ -34,9 +37,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: error.message })
   }
 
-  if (is_active === false) {
+  if (is_active !== undefined) {
     const serviceClient = serverSupabaseServiceRole(event)
-    const { error: banError } = await serviceClient.auth.admin.updateUserById(id!, { ban_duration: 'none' })
+    const banDuration = is_active ? 'none' : BAN_DURATION_PERMANENT
+    const { error: banError } = await serviceClient.auth.admin.updateUserById(id!, { ban_duration: banDuration })
     if (banError) {
       throw createError({ statusCode: 500, message: banError.message })
     }

@@ -1,6 +1,22 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '~/types/database.types'
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 
 const VALID_ROLES = ['trainee', 'mentor', 'ojt', 'admin'] as const
+
+async function generateEmployeeId(client: SupabaseClient<Database>): Promise<string> {
+  const { data } = await client
+    .from('profiles')
+    .select('employee_id')
+    .order('employee_id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data) return 'E001'
+
+  const num = parseInt(data.employee_id.replace(/\D/g, ''), 10)
+  return `E${String(num + 1).padStart(3, '0')}`
+}
 
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
@@ -30,10 +46,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: authError.message })
   }
 
-  // employee_id はDBトリガーで自動採番される想定 (例: 'E001', 'E002', ...)
+  const employee_id = await generateEmployeeId(client as SupabaseClient<Database>)
+
   const { data, error } = await client
     .from('profiles')
-    .insert({ id: authUser.user.id, name, email, role, employee_id: '' })
+    .insert({ id: authUser.user.id, name, email, role, employee_id })
     .select()
     .single()
 
