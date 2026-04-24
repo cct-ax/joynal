@@ -1,7 +1,8 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { CreateReportBody, ReportRow } from '#server/types/api'
+import type { DailyReport } from '~/types/models'
+import type { ReportCreateBody } from '~/types/api'
 
-export default defineEventHandler<Promise<ReportRow>>(async (event) => {
+export default defineEventHandler<Promise<DailyReport>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
@@ -9,7 +10,7 @@ export default defineEventHandler<Promise<ReportRow>>(async (event) => {
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
-  const { date, check_in, check_out, content, mood } = await readBody<CreateReportBody>(event)
+  const { date, check_in, check_out, content, mood } = await readBody<ReportCreateBody>(event)
 
   if (!date || !check_in || !check_out || !content) {
     throw createError({ statusCode: 400, message: '必須項目が不足しています' })

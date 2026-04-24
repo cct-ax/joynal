@@ -1,7 +1,7 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { AssignmentForAdminRow, AssignmentForMentorRow, AssignmentsMeQuery } from '#server/types/api'
+import type { AssignmentForAdmin, AssignmentForMentor, AssignmentsMeQuery } from '~/types/api'
 
-export default defineEventHandler<Promise<AssignmentForAdminRow[] | AssignmentForMentorRow[]>>(async (event) => {
+export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMentor[]>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
@@ -44,7 +44,7 @@ export default defineEventHandler<Promise<AssignmentForAdminRow[] | AssignmentFo
       throw createError({ statusCode: 500, message: error.message })
     }
 
-    return data as AssignmentForAdminRow[]
+    return data as AssignmentForAdmin[]
   }
 
   const { data, error } = await client
@@ -61,5 +61,5 @@ export default defineEventHandler<Promise<AssignmentForAdminRow[] | AssignmentFo
     throw createError({ statusCode: 500, message: error.message })
   }
 
-  return data as AssignmentForMentorRow[]
+  return data as AssignmentForMentor[]
 })

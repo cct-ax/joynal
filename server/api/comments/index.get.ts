@@ -1,7 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { CommentRow, CommentsQuery } from '#server/types/api'
+import type { CommentWithCommenter, CommentsQuery } from '~/types/api'
 
-export default defineEventHandler<Promise<CommentRow[]>>(async (event) => {
+export default defineEventHandler<Promise<CommentWithCommenter[]>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const { weekStart, traineeId } = getQuery(event) as Partial<CommentsQuery>
 
@@ -29,5 +29,5 @@ export default defineEventHandler<Promise<CommentRow[]>>(async (event) => {
     throw createError({ statusCode: 500, message: error.message })
   }
 
-  return data as CommentRow[]
+  return data as CommentWithCommenter[]
 })

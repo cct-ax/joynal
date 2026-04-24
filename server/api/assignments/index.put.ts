@@ -1,9 +1,10 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { AssignmentRow, UpsertAssignmentBody } from '#server/types/api'
+import type { MentorAssignment } from '~/types/models'
+import type { AssignmentUpsertBody } from '~/types/api'
 
-export default defineEventHandler<Promise<AssignmentRow>>(async (event) => {
+export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
   const client = await serverSupabaseClient(event)
-  const { traineeId, mentorId, ojtId, year } = await readBody<UpsertAssignmentBody>(event)
+  const { traineeId, mentorId, ojtId, year } = await readBody<AssignmentUpsertBody>(event)
 
   if (!traineeId) {
     throw createError({ statusCode: 400, message: 'traineeId は必須です' })

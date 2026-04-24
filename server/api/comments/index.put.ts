@@ -1,8 +1,8 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { Tables } from '~/types/database.types'
-import type { UpsertCommentBody } from '#server/types/api'
+import type { Comment } from '~/types/models'
+import type { CommentUpsertBody } from '~/types/api'
 
-export default defineEventHandler<Promise<Tables<'comments'>>>(async (event) => {
+export default defineEventHandler<Promise<Comment>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
@@ -10,7 +10,7 @@ export default defineEventHandler<Promise<Tables<'comments'>>>(async (event) => 
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
-  const { weekStart, traineeId, content } = await readBody<UpsertCommentBody>(event)
+  const { weekStart, traineeId, content } = await readBody<CommentUpsertBody>(event)
 
   if (!weekStart || !traineeId || !content) {
     throw createError({ statusCode: 400, message: '必須項目が不足しています' })

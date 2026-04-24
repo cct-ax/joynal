@@ -1,21 +1,21 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
-import type { TablesUpdate } from '~/types/database.types'
-import type { ProfileRow, UpdateUserBody } from '#server/types/api'
-import { VALID_ROLES } from '#server/types/api'
+import type { Profile, ProfileUpdate } from '~/types/models'
+import { VALID_ROLES } from '~/types/api'
+import type { UserUpdateBody } from '~/types/api'
 
 // 実質的な永久 ban（Supabase は 'none' で解除、それ以外は PostgreSQL interval 文字列）
 const BAN_DURATION_PERMANENT = '876000h'
 
-export default defineEventHandler<Promise<ProfileRow>>(async (event) => {
+export default defineEventHandler<Promise<Profile>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const id = getRouterParam(event, 'id')
-  const { name, email, role, is_active } = await readBody<UpdateUserBody>(event)
+  const { name, email, role, is_active } = await readBody<UserUpdateBody>(event)
 
   if (role !== undefined && !VALID_ROLES.includes(role)) {
     throw createError({ statusCode: 400, message: 'role は trainee / mentor / ojt / admin のいずれかを指定してください' })
   }
 
-  const updates: TablesUpdate<'profiles'> = {}
+  const updates: ProfileUpdate = {}
   if (name !== undefined) updates.name = name
   if (email !== undefined) updates.email = email
   if (role !== undefined) updates.role = role

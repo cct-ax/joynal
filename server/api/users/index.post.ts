@@ -1,10 +1,11 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
-import type { CreateUserBody, ProfileRow } from '#server/types/api'
-import { VALID_ROLES } from '#server/types/api'
+import type { Profile } from '~/types/models'
+import { VALID_ROLES } from '~/types/api'
+import type { UserCreateBody } from '~/types/api'
 
-export default defineEventHandler<Promise<ProfileRow>>(async (event) => {
+export default defineEventHandler<Promise<Profile>>(async (event) => {
   const client = await serverSupabaseClient(event)
-  const { name, email, role } = await readBody<CreateUserBody>(event)
+  const { name, email, role } = await readBody<UserCreateBody>(event)
 
   if (!name || !email || !role) {
     throw createError({ statusCode: 400, message: '必須項目が不足しています' })

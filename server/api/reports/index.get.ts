@@ -1,7 +1,8 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { ReportRow, ReportsQuery } from '#server/types/api'
+import type { DailyReport } from '~/types/models'
+import type { ReportsQuery } from '~/types/api'
 
-export default defineEventHandler<Promise<ReportRow[]>>(async (event) => {
+export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const { weekStart, userId } = getQuery(event) as Partial<ReportsQuery>
 

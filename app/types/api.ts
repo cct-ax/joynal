@@ -1,4 +1,4 @@
-import type { Tables } from '~/types/database.types'
+import type { Comment, Profile } from '~/types/models'
 
 // ----------------------------------------------------------------
 // Shared
@@ -12,95 +12,89 @@ export const VALID_ROLES: readonly UserRole[] = ['trainee', 'mentor', 'ojt', 'ad
 // Reports
 // ----------------------------------------------------------------
 
-export interface ReportsQuery {
+export type ReportsQuery = {
   weekStart: string
   userId?: string
 }
 
-export interface CreateReportBody {
+export type ReportCreateBody = {
   date: string
   check_in: string
   check_out: string
   content: string
-  mood?: number | null
+  mood?: 1 | 2 | 3 | 4 | 5
 }
 
-export interface UpdateReportBody {
+export type ReportUpdateBody = {
   check_in?: string
   check_out?: string
   content?: string
-  mood?: number | null
+  mood?: 1 | 2 | 3 | 4 | 5 | null
 }
-
-export type ReportRow = Tables<'daily_reports'>
 
 // ----------------------------------------------------------------
 // Comments
 // ----------------------------------------------------------------
 
-export interface CommentsQuery {
+export type CommentsQuery = {
   weekStart: string
   traineeId: string
 }
 
-export interface UpsertCommentBody {
+export type CommentUpsertBody = {
   weekStart: string
   traineeId: string
   content: string
 }
 
-export interface CommentRow extends Tables<'comments'> {
-  commenter: Pick<Tables<'profiles'>, 'name' | 'role'>
+export type CommentWithCommenter = Comment & {
+  commenter: Pick<Profile, 'name' | 'role'>
 }
 
 // ----------------------------------------------------------------
 // Assignments
 // ----------------------------------------------------------------
 
-export interface AssignmentsMeQuery {
+export type AssignmentsMeQuery = {
   year?: string
 }
 
-export interface UpsertAssignmentBody {
+export type AssignmentUpsertBody = {
   traineeId: string
   mentorId: string | null
   ojtId: string | null
   year?: number
 }
 
-export type AssignmentRow = Tables<'mentor_assignments'>
-
-export interface AssignmentForMentorRow {
+export type AssignmentForMentor = {
   trainee_id: string
   year: number
-  trainee: Pick<Tables<'profiles'>, 'name' | 'employee_id'>
+  trainee: Pick<Profile, 'name' | 'employee_id'>
 }
 
-export interface AssignmentForAdminRow {
+export type AssignmentForAdmin = {
   trainee_id: string
   mentor_id: string | null
   ojt_id: string | null
   year: number
-  trainee: Pick<Tables<'profiles'>, 'name'>
-  mentor: Pick<Tables<'profiles'>, 'name'> | null
-  ojt: Pick<Tables<'profiles'>, 'name'> | null
+  trainee: Pick<Profile, 'name'>
+  mentor: Pick<Profile, 'name'> | null
+  ojt: Pick<Profile, 'name'> | null
 }
 
 // ----------------------------------------------------------------
 // Users
 // ----------------------------------------------------------------
 
-export interface CreateUserBody {
+export type UserCreateBody = {
   name: string
   email: string
   role: UserRole
 }
 
-export interface UpdateUserBody {
+export type UserUpdateBody = {
   name?: string
   email?: string
   role?: UserRole
   is_active?: boolean
 }
-
-export type ProfileRow = Tables<'profiles'>
