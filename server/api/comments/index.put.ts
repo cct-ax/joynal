@@ -1,3 +1,5 @@
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { data, error } = await client
-    .from('weekly_comments')
+    .from('comments')
     .upsert(
       { week_start: weekStart, trainee_id: traineeId, commenter_id: user.id, content },
       { onConflict: 'week_start,trainee_id,commenter_id' }

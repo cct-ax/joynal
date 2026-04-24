@@ -1,3 +1,5 @@
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+
 const VALID_ROLES = ['trainee', 'mentor', 'ojt', 'admin'] as const
 
 export default defineEventHandler(async (event) => {
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'role は trainee / mentor / ojt / admin のいずれかを指定してください' })
   }
 
-  const serviceClient = await serverSupabaseServiceRole(event)
+  const serviceClient = serverSupabaseServiceRole(event)
 
   const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
     email,
@@ -28,9 +30,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: authError.message })
   }
 
+  // employee_id はDBトリガーで自動採番される想定 (例: 'E001', 'E002', ...)
   const { data, error } = await client
     .from('profiles')
-    .insert({ id: authUser.user.id, name, email, role })
+    .insert({ id: authUser.user.id, name, email, role, employee_id: '' })
     .select()
     .single()
 

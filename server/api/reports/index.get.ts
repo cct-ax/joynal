@@ -1,3 +1,5 @@
+import { serverSupabaseClient } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const query = getQuery(event)
@@ -13,10 +15,10 @@ export default defineEventHandler(async (event) => {
   const weekEndStr = weekEnd.toISOString().split('T')[0]
 
   let queryBuilder = client
-    .from('reports')
+    .from('daily_reports')
     .select('*')
     .gte('date', weekStart)
-    .lte('date', weekEndStr)
+    .lte('date', weekEndStr!)
     .order('date', { ascending: true })
 
   if (userId) {

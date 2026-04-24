@@ -1,3 +1,5 @@
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
@@ -25,15 +27,15 @@ export default defineEventHandler(async (event) => {
 
   if (profile.role === 'admin') {
     const { data, error } = await client
-      .from('assignments')
+      .from('mentor_assignments')
       .select(`
         trainee_id,
         mentor_id,
         ojt_id,
         year,
-        trainee:profiles!trainee_id(name),
-        mentor:profiles!mentor_id(name),
-        ojt:profiles!ojt_id(name)
+        trainee:profiles!mentor_assignments_trainee_id_fkey(name),
+        mentor:profiles!mentor_assignments_mentor_id_fkey(name),
+        ojt:profiles!mentor_assignments_ojt_id_fkey(name)
       `)
       .eq('year', year)
 
@@ -45,8 +47,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const { data, error } = await client
-    .from('assignments')
-    .select('trainee_id, year, trainee:profiles!trainee_id(name, employee_id)')
+    .from('mentor_assignments')
+    .select(`
+      trainee_id,
+      year,
+      trainee:profiles!mentor_assignments_trainee_id_fkey(name, employee_id)
+    `)
     .or(`mentor_id.eq.${user.id},ojt_id.eq.${user.id}`)
     .eq('year', year)
 

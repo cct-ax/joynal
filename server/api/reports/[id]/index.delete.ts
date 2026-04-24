@@ -1,8 +1,10 @@
+import { serverSupabaseClient } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const id = getRouterParam(event, 'id')
 
-  const { error } = await client.from('reports').delete().eq('id', id!)
+  const { error } = await client.from('daily_reports').delete().eq('id', id!)
 
   if (error) {
     if (error.code === 'PGRST116') {

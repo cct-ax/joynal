@@ -1,3 +1,6 @@
+import type { TablesUpdate } from '~/types/database.types'
+import { serverSupabaseClient } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const id = getRouterParam(event, 'id')
@@ -9,14 +12,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'check_out は check_in より後の時間を指定してください' })
   }
 
-  const updates: Record<string, unknown> = {}
+  const updates: TablesUpdate<'daily_reports'> = {}
   if (check_in !== undefined) updates.check_in = check_in
   if (check_out !== undefined) updates.check_out = check_out
   if (content !== undefined) updates.content = content
   if (mood !== undefined) updates.mood = mood
 
   const { data, error } = await client
-    .from('reports')
+    .from('daily_reports')
     .update(updates)
     .eq('id', id!)
     .select()

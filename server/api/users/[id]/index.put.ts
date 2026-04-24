@@ -1,3 +1,6 @@
+import type { TablesUpdate } from '~/types/database.types'
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+
 const VALID_ROLES = ['trainee', 'mentor', 'ojt', 'admin'] as const
 
 export default defineEventHandler(async (event) => {
@@ -11,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'role は trainee / mentor / ojt / admin のいずれかを指定してください' })
   }
 
-  const updates: Record<string, unknown> = {}
+  const updates: TablesUpdate<'profiles'> = {}
   if (name !== undefined) updates.name = name
   if (email !== undefined) updates.email = email
   if (role !== undefined) updates.role = role
@@ -32,7 +35,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (is_active === false) {
-    const serviceClient = await serverSupabaseServiceRole(event)
+    const serviceClient = serverSupabaseServiceRole(event)
     const { error: banError } = await serviceClient.auth.admin.updateUserById(id!, { ban_duration: 'none' })
     if (banError) {
       throw createError({ statusCode: 500, message: banError.message })

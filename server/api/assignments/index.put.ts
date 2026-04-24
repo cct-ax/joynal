@@ -1,3 +1,5 @@
+import { serverSupabaseClient } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const body = await readBody(event)
@@ -8,10 +10,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'traineeId は必須です' })
   }
 
-  const targetYear = year ?? new Date().getFullYear()
+  const targetYear: number = year ?? new Date().getFullYear()
 
   const { data, error } = await client
-    .from('assignments')
+    .from('mentor_assignments')
     .upsert(
       { trainee_id: traineeId, mentor_id: mentorId ?? null, ojt_id: ojtId ?? null, year: targetYear },
       { onConflict: 'trainee_id,year' }

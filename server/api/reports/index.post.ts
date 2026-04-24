@@ -1,3 +1,5 @@
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { data, error } = await client
-    .from('reports')
+    .from('daily_reports')
     .insert({ user_id: user.id, date, check_in, check_out, content, mood })
     .select()
     .single()

@@ -1,3 +1,5 @@
+import { serverSupabaseClient } from '#supabase/server'
+
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
   const query = getQuery(event)
@@ -9,7 +11,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { data, error } = await client
-    .from('weekly_comments')
+    .from('comments')
     .select(`
       id,
       week_start,
