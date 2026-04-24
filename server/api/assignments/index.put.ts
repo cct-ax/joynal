@@ -25,6 +25,9 @@ export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
     if (error.code === '23503') {
       throw createError({ statusCode: 404, message: '指定されたユーザーが存在しません' })
     }
+    if (error.code === '42501') {
+      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
+    }
     throw createError({ statusCode: 500, message: error.message })
   }
 

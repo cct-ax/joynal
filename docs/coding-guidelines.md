@@ -252,7 +252,7 @@ const hasReportToday = computed(() =>
 | ページ | kebab-case | `report.vue`, `reset-password.vue` |
 | コンポーネント | PascalCase | `ReportInputModal.vue`, `ReportCard.vue` |
 | composable | camelCase（use プレフィックス） | `useCurrentUser.ts` |
-| Server API | kebab-case | `index.get.ts`, `[id].put.ts` |
+| Server API | kebab-case | `index.get.ts`, `[id]/index.put.ts` |
 | 型定義 | camelCase | `database.types.ts` |
 
 ### 変数・関数

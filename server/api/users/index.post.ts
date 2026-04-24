@@ -1,10 +1,16 @@
-import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { Profile } from '~/types/models'
 import { VALID_ROLES } from '~/types/api'
 import type { UserCreateBody } from '~/types/api'
 
 export default defineEventHandler<Promise<Profile>>(async (event) => {
   const client = await serverSupabaseClient(event)
+  const user = await serverSupabaseUser(event)
+
+  if (!user) {
+    throw createError({ statusCode: 401, message: '認証が必要です' })
+  }
+
   const { name, email, role } = await readBody<UserCreateBody>(event)
 
   if (!name || !email || !role) {
@@ -16,6 +22,16 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   }
 
   const serviceClient = serverSupabaseServiceRole(event)
+
+  const { data: callerProfile } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (callerProfile?.role !== 'admin') {
+    throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
+  }
 
   const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
     email,

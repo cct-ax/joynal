@@ -28,6 +28,9 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
     if (error.code === 'PGRST116') {
       throw createError({ statusCode: 404, message: '日報が見つかりません' })
     }
+    if (error.code === '42501') {
+      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
+    }
     throw createError({ statusCode: 500, message: error.message })
   }
 

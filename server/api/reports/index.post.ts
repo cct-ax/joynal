@@ -34,6 +34,9 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
     if (error.code === '23505') {
       throw createError({ statusCode: 409, message: '同じ日付の日報が既に存在します' })
     }
+    if (error.code === '42501') {
+      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
+    }
     throw createError({ statusCode: 500, message: error.message })
   }
 
