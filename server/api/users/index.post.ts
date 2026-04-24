@@ -1,22 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '~/types/database.types'
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 
 const VALID_ROLES = ['trainee', 'mentor', 'ojt', 'admin'] as const
-
-async function generateEmployeeId(client: SupabaseClient<Database>): Promise<string> {
-  const { data } = await client
-    .from('profiles')
-    .select('employee_id')
-    .order('employee_id', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (!data) return 'E001'
-
-  const num = parseInt(data.employee_id.replace(/\D/g, ''), 10)
-  return `E${String(num + 1).padStart(3, '0')}`
-}
 
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
@@ -46,7 +30,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: authError.message })
   }
 
-  const employee_id = await generateEmployeeId(client as SupabaseClient<Database>)
+  const { data: lastUser } = await client
+    .from('profiles')
+    .select('employee_id')
+    .order('employee_id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const nextNum = lastUser ? parseInt(lastUser.employee_id.replace(/\D/g, ''), 10) + 1 : 1
+  const employee_id = `E${String(nextNum).padStart(3, '0')}`
 
   const { data, error } = await client
     .from('profiles')
