@@ -4,7 +4,7 @@
 
 ### 必要なツール
 
-- [Node.js](https://nodejs.org/) v20 以上
+- [Node.js](https://nodejs.org/) v22 以上
 - [pnpm](https://pnpm.io/) v10 以上（`npm install -g pnpm`）
 - [Git](https://git-scm.com/)
 - [VS Code](https://code.visualstudio.com/)（推奨エディタ）
