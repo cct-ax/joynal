@@ -1,10 +1,9 @@
 import { serverSupabaseClient } from '#supabase/server'
+import type { CommentRow, CommentsQuery } from '#server/types/api'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler<Promise<CommentRow[]>>(async (event) => {
   const client = await serverSupabaseClient(event)
-  const query = getQuery(event)
-
-  const { weekStart, traineeId } = query as { weekStart?: string, traineeId?: string }
+  const { weekStart, traineeId } = getQuery(event) as Partial<CommentsQuery>
 
   if (!weekStart || !traineeId) {
     throw createError({ statusCode: 400, message: 'weekStart と traineeId は必須です' })
@@ -30,5 +29,5 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: error.message })
   }
 
-  return data
+  return data as CommentRow[]
 })

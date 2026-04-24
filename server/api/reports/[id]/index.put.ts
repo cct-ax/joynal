@@ -1,12 +1,11 @@
-import type { TablesUpdate } from '~/types/database.types'
 import { serverSupabaseClient } from '#supabase/server'
+import type { TablesUpdate } from '~/types/database.types'
+import type { ReportRow, UpdateReportBody } from '#server/types/api'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler<Promise<ReportRow>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const id = getRouterParam(event, 'id')
-  const body = await readBody(event)
-
-  const { check_in, check_out, content, mood } = body ?? {}
+  const { check_in, check_out, content, mood } = await readBody<UpdateReportBody>(event)
 
   if (check_in && check_out && check_out <= check_in) {
     throw createError({ statusCode: 400, message: 'check_out は check_in より後の時間を指定してください' })

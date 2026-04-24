@@ -1,10 +1,9 @@
 import { serverSupabaseClient } from '#supabase/server'
+import type { ReportRow, ReportsQuery } from '#server/types/api'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler<Promise<ReportRow[]>>(async (event) => {
   const client = await serverSupabaseClient(event)
-  const query = getQuery(event)
-
-  const { weekStart, userId } = query as { weekStart?: string, userId?: string }
+  const { weekStart, userId } = getQuery(event) as Partial<ReportsQuery>
 
   if (!weekStart || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
     throw createError({ statusCode: 400, message: 'weekStart は YYYY-MM-DD 形式で指定してください' })
@@ -12,13 +11,13 @@ export default defineEventHandler(async (event) => {
 
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekEnd.getDate() + 6)
-  const weekEndStr = weekEnd.toISOString().split('T')[0]
+  const weekEndStr = weekEnd.toISOString().split('T')[0]!
 
   let queryBuilder = client
     .from('daily_reports')
     .select('*')
     .gte('date', weekStart)
-    .lte('date', weekEndStr!)
+    .lte('date', weekEndStr)
     .order('date', { ascending: true })
 
   if (userId) {

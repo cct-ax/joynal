@@ -1,6 +1,7 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import type { AssignmentForAdminRow, AssignmentForMentorRow, AssignmentsMeQuery } from '#server/types/api'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler<Promise<AssignmentForAdminRow[] | AssignmentForMentorRow[]>>(async (event) => {
   const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
 
@@ -8,8 +9,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
-  const query = getQuery(event)
-  const year = query.year ? Number(query.year) : new Date().getFullYear()
+  const { year: yearStr } = getQuery(event) as Partial<AssignmentsMeQuery>
+  const year = yearStr ? Number(yearStr) : new Date().getFullYear()
 
   const { data: profile, error: profileError } = await client
     .from('profiles')
@@ -43,7 +44,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: error.message })
     }
 
-    return data
+    return data as AssignmentForAdminRow[]
   }
 
   const { data, error } = await client
@@ -60,5 +61,5 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: error.message })
   }
 
-  return data
+  return data as AssignmentForMentorRow[]
 })
