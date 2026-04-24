@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Joynal — 日報管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body {
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    background: #f9fafb;
+    color: #111827;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  :root {
+    --bg: #f9fafb;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --border-focus: #6366f1;
+    --text: #111827;
+    --text-sub: #6b7280;
+    --text-xs: #9ca3af;
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-soft: #eef2ff;
+    --primary-ring: #c7d2fe;
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+    --danger-soft: #fef2f2;
+    --success: #16a34a;
+    --success-soft: #f0fdf4;
+    --neutral-50: #f9fafb;
+    --neutral-100: #f3f4f6;
+    --neutral-200: #e5e7eb;
+    --neutral-700: #374151;
+    --radius: 8px;
+    --radius-sm: 6px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05);
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ── Tweaks ───────────────────────────────────────────────────────
+const TweaksContext = React.createContext({});
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "role": "admin",
+  "userName": "山田 太郎",
+  "primaryColor": "#4f46e5",
+  "mobilePreview": true
+}/*EDITMODE-END*/;
+
+// ── Mock Data ────────────────────────────────────────────────────
+const REPORT_CONTENTS = [
+  'Reactの基礎を学習。コンポーネントの概念を理解し、簡単なToDoアプリを作成した。useState / useEffect の使い方を練習し、基本的なフォームの実装まで完了した。',
+  'Git/GitHubの使い方を習得。ブランチ運用の基本を学び、プルリクエストの流れを練習した。コンフリクトの解消方法も理解した。',
+  'HTML/CSSの基礎復習。FlexboxとGridレイアウトの演習を行い、レスポンシブ対応を確認。実際にデザインカンプから実装する練習も行った。',
+  '社内研修に参加。業務フローと社内ツールの説明を受け、開発環境のセットアップを完了した。SlackやJiraの使い方も確認した。',
+  'APIの設計について学習。RESTful設計の原則を確認し、サンプルAPIを実装した。PostmanでAPIの動作確認も実施した。',
+  'TypeScriptの型システムを学習。ジェネリクスとユーティリティ型の使い方を習得した。既存コードへの型付け作業も行った。',
+  'データベース設計の基礎を学習。正規化とインデックスの概念を理解し、ERDを作成した。Supabaseのダッシュボードで実際にテーブルを作成した。',
+  'ユニットテストの書き方を練習。JestとReact Testing Libraryの基本的な使い方を習得した。カバレッジレポートの読み方も学んだ。',
+  'チームのコードレビューに初参加。コーディング規約とレビューのポイントを学んだ。指摘事項をもとにリファクタリングを実施した。',
+  'CIパイプラインの構成を確認。GitHub Actionsのワークフローを読み解き、一部修正した。テストが自動実行される仕組みを理解した。',
+];
+
+const WEEKDAYS = ['日','月','火','水','木','金','土'];
+
+function getMonday(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+
+function addDays(d, n) {
+  const r = new Date(d); r.setDate(r.getDate() + n); return r;
+}
+
+function toDateStr(d) { return d.toISOString().slice(0,10); }
+
+function fmtDateShort(dateStr) {
+  const [,m,d] = dateStr.split('-');
+  const wd = WEEKDAYS[new Date(dateStr).getDay()];
+  return `${parseInt(m)}/${parseInt(d)}（${wd}）`;
+}
+
+function fmtWeekRange(mondayStr) {
+  const mon = new Date(mondayStr);
+  const fri = addDays(mon, 4);
+  const [y,m,d] = mondayStr.split('-');
+  const fd = String(fri.getDate()).padStart(2,'0');
+  return `${y}/${m}/${d}（月）〜 ${parseInt(fri.getMonth()+1)}/${fd}（金）`;
+}
+
+function generateReports() {
+  const reports = [];
+  let id = 1;
+  const start = new Date('2025-10-01');
+  const end = new Date('2026-04-18');
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    if (Math.abs(Math.sin(d.getTime()*0.0001)) > 0.82) continue;
+    const ds = toDateStr(d);
+    const startH = Math.random() < 0.85 ? '09:00' : '09:15';
+    const endHours = ['17:30','18:00','18:00','18:30','19:00'];
+    const endH = endHours[id % endHours.length];
+    reports.push({ id: id++, date: ds, start: startH, end: endH, content: REPORT_CONTENTS[id % REPORT_CONTENTS.length], mood: [0,0,1,2,3,3,4,5][id % 8] });
+  }
+  return reports;
+}
+
+const ALL_REPORTS = generateReports();
+
+const MOCK_COMMENTS = {
+  mentor: {
+    '2026-04-20': '今週はReactの応用まで進めており、成長スピードが上がっている。来週はチームのコードレビューに積極的に参加してほしい。',
+    '2026-04-14': 'Git/GitHubの習得が早く、理解力が高い。来週はチームでのブランチ運用を実践してほしい。',
+    '2026-04-07': '先週の課題だったテストの書き方が改善されていた。引き続きカバレッジを意識してほしい。',
+    '2026-03-31': 'チームへの貢献が見え始めた。コードレビューのコメントも的確になってきている。',
+    '2026-03-24': 'TypeScriptの型付けに苦労していたようだが、諦めずに取り組む姿勢が良かった。来週も引き続き型システムを深堀りしてほしい。',
+    '2026-03-17': 'APIの設計を自分で考えて実装できていた。RESTful設計の理解が深まっている。',
+    '2026-03-10': 'ドキュメントを丁寧に書く習慣がついてきた。他のメンバーが読みやすいコードを意識できている。',
+    '2026-03-03': '難しい課題に粘り強く取り組んでいた。詰まった際の相談タイミングも適切だった。',
+    '2026-02-24': '今週は少し詰め込みすぎかもしれない。無理をせず着実に進めていこう。来週は優先度の整理から始めると良い。',
+    '2026-02-17': 'コードの可読性が週ごとに向上している。命名規則の意識が特に良くなってきた。',
+    '2026-02-10': 'セキュリティ研修の内容を早速実装に活かしていた。学びを即実践できる点が強み。',
+    '2026-02-03': 'チームの週次振り返りで発言が増えた。自分の意見を積極的に発信してほしい。',
+    '2026-01-27': 'Docker環境の構築を一人でやり遂げた。トラブルシューティング能力が上がっている。',
+    '2026-01-20': 'Atomic Designの概念を理解し、コンポーネント設計が整理されてきた。',
+    '2026-01-13': '年明けから集中して取り組めている。このペースを維持してほしい。',
+  },
+  ojt: {
+    '2026-04-20': '日々の報告が的確で、進捗を把握しやすくなっている。困ったときにすぐ声をかけてくれて助かっています。',
+    '2026-04-14': '質問のタイミングが適切で、詰まった際の報告も素早かった。引き続き積極的に質問してください。',
+    '2026-04-07': '実装スピードが上がっている。品質も維持できており、バランスが取れている。',
+    '2026-03-31': 'ペアプロで一緒に作業したが、理解の速さに驚いた。来週はもう少し難しいタスクを渡してみます。',
+    '2026-03-24': '自走できる場面が増えてきた。分からないことを放置せず確認する姿勢が良い。',
+    '2026-03-17': 'レビューのフィードバックを次の実装にきちんと反映できている。学習サイクルが回っている。',
+    '2026-03-10': '今週は体調を崩していたようだが、無理せず回復を優先してください。来週また一緒に頑張りましょう。',
+    '2026-03-03': 'テストコードを自発的に書いていた。品質への意識が高まってきている。',
+    '2026-02-24': 'ドキュメントの質が上がった。後から見返したとき分かりやすい書き方ができている。',
+    '2026-02-17': '積極的にチームの議論に参加してくれている。視野が広がっている実感がある。',
+  }
+};
+
+const MOCK_USERS = [
+  { id:1, empId:'E001', name:'山田 太郎', email:'yamada@example.com', role:'新人', active:true },
+  { id:2, empId:'E002', name:'鈴木 花子', email:'suzuki@example.com', role:'新人', active:true },
+  { id:3, empId:'E003', name:'田中 一郎', email:'tanaka@example.com', role:'メンター', active:true },
+  { id:4, empId:'E004', name:'佐藤 美咲', email:'sato@example.com', role:'OJT', active:true },
+  { id:5, empId:'E005', name:'高橋 健二', email:'takahashi@example.com', role:'管理者', active:true },
+  { id:6, empId:'E006', name:'渡辺 由美', email:'watanabe@example.com', role:'新人', active:false },
+];
+
+const MOCK_ASSIGN = [
+  { id:1, newbie:'山田 太郎', mentor:'田中 一郎', ojt:'佐藤 美咲' },
+  { id:2, newbie:'鈴木 花子', mentor:'田中 一郎', ojt:'佐藤 美咲' },
+];
+
+// ── useContainerWidth ───────────────────────────────────────────
+function useIsMobile(breakpoint = 767) {
+  const [width, setWidth] = useState(document.documentElement.clientWidth);
+  useEffect(() => {
+    const ro = new ResizeObserver(entries => {
+      setWidth(entries[0].contentRect.width);
+    });
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, []);
+  return width <= breakpoint;
+}
+
+function useIsMobileWithOverride(tweaks) {
+  const detected = useIsMobile();
+  return tweaks.mobilePreview || detected;
+}
+
+// ── Primitive Components ──────────────────────────────────────────
+const btnBase = {
+  display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6,
+  border:'none', cursor:'pointer', fontFamily:'inherit', fontWeight:500,
+  transition:'background 0.12s, box-shadow 0.12s', whiteSpace:'nowrap',
+  borderRadius: 'var(--radius-sm)',
+};
+
+function Btn({ children, variant='solid', size='md', block, onClick, type='button', disabled, icon }) {
+  const pad = size === 'sm' ? '5px 10px' : size === 'xs' ? '3px 8px' : '7px 14px';
+  const fs = size === 'sm' ? 13 : size === 'xs' ? 12 : 14;
+  const bg = {
+    solid: 'var(--primary)', outline: 'transparent', ghost: 'transparent',
+    danger: 'var(--danger)', 'danger-outline': 'transparent', soft: 'var(--primary-soft)',
+  }[variant] || 'var(--primary)';
+  const color = {
+    solid: '#fff', outline: 'var(--primary)', ghost: 'var(--text-sub)',
+    danger: '#fff', 'danger-outline': 'var(--danger)', soft: 'var(--primary)',
+  }[variant] || '#fff';
+  const border = {
+    outline: '1px solid var(--primary-ring)', 'danger-outline': '1px solid #fca5a5',
+  }[variant] || '1px solid transparent';
+  const hoverBg = {
+    solid: 'var(--primary-hover)', outline: 'var(--primary-soft)', ghost: 'var(--neutral-100)',
+    danger: 'var(--danger-hover)', 'danger-outline': 'var(--danger-soft)', soft: '#e0e7ff',
+  }[variant] || 'var(--primary-hover)';
+
+  const [hovered, setHovered] = useState(false);
+  const s = { ...btnBase, padding:pad, fontSize:fs, background: hovered && !disabled ? hoverBg : bg,
+    color, border, opacity:disabled?0.5:1, cursor:disabled?'not-allowed':'pointer',
+    width:block?'100%':undefined };
+
+  return <button style={s} type={type} onClick={onClick} disabled={disabled}
+    onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    {children}
+  </button>;
+}
+
+function Badge({ children, color='indigo' }) {
+  const colors = {
+    indigo: { bg:'#eef2ff', color:'#4338ca' },
+    green: { bg:'#f0fdf4', color:'#15803d' },
+    red: { bg:'#fef2f2', color:'#b91c1c' },
+    yellow: { bg:'#fefce8', color:'#854d0e' },
+    gray: { bg:'#f3f4f6', color:'#374151' },
+    purple: { bg:'#faf5ff', color:'#7c3aed' },
+  };
+  const c = colors[color] || colors.gray;
+  return <span style={{ display:'inline-flex', alignItems:'center', padding:'1px 7px', borderRadius:9999,
+    fontSize:11, fontWeight:500, background:c.bg, color:c.color }}>{children}</span>;
+}
+
+function TextLink({ children, onClick }) {
+  const [h, setH] = useState(false);
+  return <a href="#" style={{ color:'var(--primary)', fontSize:13, textDecoration: h?'underline':'none' }}
+    onClick={e => { e.preventDefault(); onClick?.(); }}
+    onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>{children}</a>;
+}
+
+const inputStyle = {
+  width:'100%', padding:'7px 10px', fontSize:14,
+  fontFamily:'inherit', border:'1px solid var(--border)',
+  borderRadius:'var(--radius-sm)', background:'var(--surface)',
+  color:'var(--text)', outline:'none', transition:'border-color 0.15s, box-shadow 0.15s',
+};
+
+function Input({ type='text', value, onChange, placeholder, autoFocus }) {
+  const [f, setF] = useState(false);
+  return <input type={type} value={value} onChange={onChange} placeholder={placeholder} autoFocus={autoFocus}
+    style={{ ...inputStyle, borderColor:f?'var(--border-focus)':'var(--border)',
+      boxShadow:f?'0 0 0 3px var(--primary-ring)':undefined }}
+    onFocus={() => setF(true)} onBlur={() => setF(false)} />;
+}
+
+function Textarea({ value, onChange, rows=5, placeholder }) {
+  const [f, setF] = useState(false);
+  return <textarea value={value} onChange={onChange} rows={rows} placeholder={placeholder}
+    style={{ ...inputStyle, resize:'vertical', lineHeight:1.6,
+      borderColor:f?'var(--border-focus)':'var(--border)',
+      boxShadow:f?'0 0 0 3px var(--primary-ring)':undefined }}
+    onFocus={() => setF(true)} onBlur={() => setF(false)} />;
+}
+
+function Select({ value, onChange, options, style: extraStyle }) {
+  const [f, setF] = useState(false);
+  return <select value={value} onChange={onChange}
+    style={{ ...inputStyle, cursor:'pointer', ...extraStyle,
+      borderColor:f?'var(--border-focus)':'var(--border)',
+      boxShadow:f?'0 0 0 3px var(--primary-ring)':undefined }}
+    onFocus={() => setF(true)} onBlur={() => setF(false)}>
+    {options.map(o => <option key={typeof o==='string'?o:o.value} value={typeof o==='string'?o:o.value}>
+      {typeof o==='string'?o:o.label}</option>)}
+  </select>;
+}
+
+function Field({ label, error, children, required, hint }) {
+  return <div style={{ marginBottom:16 }}>
+    {label && <label style={{ display:'block', fontSize:13, fontWeight:500, marginBottom:5, color:'var(--neutral-700)' }}>
+      {label}{required && <span style={{ color:'var(--danger)', marginLeft:3 }}>*</span>}
+    </label>}
+    {children}
+    {hint && !error && <p style={{ fontSize:12, color:'var(--text-sub)', marginTop:4 }}>{hint}</p>}
+    {error && <p style={{ fontSize:12, color:'var(--danger)', marginTop:4 }}>{error}</p>}
+  </div>;
+}
+
+// ── Card ──────────────────────────────────────────────────────────
+function Card({ children, style }) {
+  return <div style={{ background:'var(--surface)', border:'1px solid var(--border)',
+    borderRadius:'var(--radius)', boxShadow:'var(--shadow-sm)', ...style }}>{children}</div>;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function Toast({ message, type='success', onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
+  const bg = type === 'success' ? 'var(--success)' : 'var(--danger)';
+  const icon = type === 'success' ? '✓' : '✕';
+  return <div style={{ position:'fixed', bottom:24, right:24, zIndex:9999, display:'flex', alignItems:'center',
+    gap:10, background:'#1f2937', color:'#fff', padding:'10px 16px', borderRadius:'var(--radius)',
+    boxShadow:'var(--shadow-lg)', fontSize:13, fontWeight:500, animation:'slideUp 0.2s ease' }}>
+    <span style={{ width:18, height:18, background:bg, borderRadius:'50%', display:'flex', alignItems:'center',
+      justifyContent:'center', fontSize:11, flexShrink:0 }}>{icon}</span>
+    {message}
+  </div>;
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+function Modal({ title, onClose, children, size='md', fullScreenOnMobile }) {
+  const _tweaksCtx = React.useContext(TweaksContext);
+  const isMobile = useIsMobileWithOverride(_tweaksCtx);
+  const fs = fullScreenOnMobile && isMobile;
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
+
+  return <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.4)',
+    display:'flex', alignItems: fs?'stretch':'center', justifyContent: fs?'stretch':'center',
+    padding: fs ? 0 : 16, overflowY:'auto' }}
+    onClick={e => { if (e.target === e.currentTarget && !fs) onClose(); }}>
+    <div style={{ background:'var(--surface)', borderRadius: fs ? 0 : 'var(--radius)',
+      width: fs ? '100%' : '100%', maxWidth: size==='lg' ? 640 : size==='sm' ? 380 : 480,
+      boxShadow:'var(--shadow-lg)', display:'flex', flexDirection:'column',
+      margin: fs ? 0 : 'auto', animation:'fadeIn 0.15s ease',
+      maxHeight: fs ? '100dvh' : 'calc(100dvh - 32px)', overflow:'hidden' }}>
+      <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--border)',
+        display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+        <span style={{ fontWeight:600, fontSize:15 }}>{title}</span>
+        <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer',
+          fontSize:20, color:'var(--text-sub)', lineHeight:1, padding:2 }}>×</button>
+      </div>
+      <div style={{ padding:20, overflowY:'auto', flex:1 }}>{children}</div>
+    </div>
+  </div>;
+}
+
+// ── Header ────────────────────────────────────────────────────────
+function Header({ user, onLogout, rightSlot }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pwModal, setPwModal] = useState(false);
+  const menuRef = useRef();
+
+  useEffect(() => {
+    function h(e) { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); }
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  return <>
+    <header style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)',
+      height:52, display:'flex', alignItems:'center', padding:'0 20px',
+      position:'sticky', top:0, zIndex:100, justifyContent:'space-between', gap:16 }}>
+      <span onClick={() => onNav?.('report')} style={{ fontWeight:700, fontSize:18,
+        letterSpacing:'-0.02em', cursor:'pointer', color:'var(--text)', userSelect:'none' }}>
+        Joynal
+      </span>
+      {rightSlot && <div style={{ flex:1 }}>{rightSlot}</div>}
+      <div ref={menuRef} style={{ position:'relative', flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:13, color:'var(--text-sub)' }}>{user?.name}</span>
+          <button onClick={() => setMenuOpen(v => !v)}
+            style={{ display:'flex', alignItems:'center',
+            justifyContent:'center', background:'none', border:'1px solid var(--border)',
+            borderRadius:'var(--radius-sm)', cursor:'pointer', padding:'5px 8px',
+            color:'var(--text-sub)', transition:'background 0.1s', fontSize:16, lineHeight:1 }}
+            onMouseEnter={e => e.currentTarget.style.background='var(--neutral-100)'}
+            onMouseLeave={e => e.currentTarget.style.background='none'}
+            title="メニュー">
+            ⋯
+          </button>
+        </div>
+        {menuOpen && <div style={{ position:'absolute', right:0, top:'calc(100% + 4px)', width:168,
+          background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)',
+          boxShadow:'var(--shadow-lg)', zIndex:200, overflow:'hidden', animation:'fadeIn 0.1s ease' }}>
+          <button onClick={() => { setMenuOpen(false); setPwModal(true); }} style={{ ...menuItemStyle }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            パスワード変更
+          </button>
+          <div style={{ height:1, background:'var(--border)', margin:'2px 0' }} />
+          <button onClick={() => { setMenuOpen(false); onLogout?.(); }} style={{ ...menuItemStyle, color:'var(--danger)' }}>
+            ログアウト
+          </button>
+        </div>}
+      </div>
+    </header>
+
+    {pwModal && <Modal title="パスワード変更" onClose={() => setPwModal(false)} size="sm">
+      <PwChangeForm onClose={() => setPwModal(false)} />
+    </Modal>}
+  </>;
+}
+
+const menuItemStyle = {
+  display:'block', width:'100%', padding:'9px 14px', background:'none', border:'none',
+  cursor:'pointer', fontFamily:'inherit', fontSize:13, textAlign:'left', color:'var(--text)',
+  transition:'background 0.1s',
+};
+
+function PwChangeForm({ onClose }) {
+  const [f, setF] = useState({ current:'', next:'', confirm:'' });
+  const [err, setErr] = useState({});
+  function submit(e) {
+    e.preventDefault();
+    const errs = {};
+    if (!f.current) errs.current = '入力してください';
+    if (!f.next) errs.next = '入力してください';
+    if (f.next !== f.confirm) errs.confirm = 'パスワードが一致しません';
+    if (Object.keys(errs).length) { setErr(errs); return; }
+    onClose();
+  }
+  return <form onSubmit={submit}>
+    <Field label="現在のパスワード" error={err.current} required>
+      <Input type="password" value={f.current} onChange={e => setF({...f, current:e.target.value})} />
+    </Field>
+    <Field label="新しいパスワード" error={err.next} required>
+      <Input type="password" value={f.next} onChange={e => setF({...f, next:e.target.value})} />
+    </Field>
+    <Field label="新しいパスワード（確認）" error={err.confirm} required>
+      <Input type="password" value={f.confirm} onChange={e => setF({...f, confirm:e.target.value})} />
+    </Field>
+    <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:4 }}>
+      <Btn variant="ghost" onClick={onClose}>キャンセル</Btn>
+      <Btn type="submit">変更する</Btn>
+    </div>
+  </form>;
+}
+
+// ── 1. Login ──────────────────────────────────────────────────────
+function LoginScreen({ onLogin, onReset }) {
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [errors, setErrors] = useState({});
+
+  function submit(e) {
+    e.preventDefault();
+    const errs = {};
+    if (!email) errs.email = 'メールアドレスを入力してください';
+    if (!pass) errs.pass = 'パスワードを入力してください';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    onLogin({ email, name:'山田 太郎', role:'newbie' });
+  }
+
+  return <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column',
+    alignItems:'center', justifyContent:'center', padding:20, background:'var(--bg)' }}>
+    <div style={{ marginBottom:32, textAlign:'center' }}>
+      <span style={{ fontWeight:700, fontSize:32, letterSpacing:'-0.04em', color:'var(--text)' }}>Joynal</span>
+      <p style={{ color:'var(--text-sub)', fontSize:13, marginTop:4 }}>新人研修 日報管理システム</p>
+    </div>
+    <Card style={{ width:'100%', maxWidth:380, padding:28 }}>
+      <form onSubmit={submit}>
+        <Field label="メールアドレス" error={errors.email} required>
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="mail@example.com" />
+        </Field>
+        <Field label="パスワード" error={errors.pass} required>
+          <Input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" />
+        </Field>
+        <Btn type="submit" block style={{ marginTop:4 }}>ログイン</Btn>
+        <div style={{ textAlign:'center', marginTop:16 }}>
+          <TextLink onClick={onReset}>パスワードをお忘れの方はこちら</TextLink>
+        </div>
+      </form>
+    </Card>
+    <p style={{ marginTop:20, color:'var(--text-xs)', fontSize:12 }}>ロール切替はTweaksパネルから</p>
+  </div>;
+}
+
+// ── 2. Password Reset ─────────────────────────────────────────────
+function ResetScreen({ onBack }) {
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+
+  return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center',
+    justifyContent:'center', padding:20, background:'var(--bg)' }}>
+    <Card style={{ width:'100%', maxWidth:380, padding:28 }}>
+      <h2 style={{ fontWeight:700, fontSize:20, letterSpacing:'-0.02em', marginBottom:6 }}>パスワードリセット</h2>
+      {!sent ? <>
+        <p style={{ color:'var(--text-sub)', fontSize:13, marginBottom:20 }}>登録済みのメールアドレスを入力してください。</p>
+        <form onSubmit={e => { e.preventDefault(); if (!email) { setError('入力してください'); return; } setSent(true); }}>
+          <Field label="メールアドレス" error={error} required>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="mail@example.com" />
+          </Field>
+          <Btn type="submit" block>リセットメールを送信</Btn>
+        </form>
+      </> : <div style={{ textAlign:'center', padding:'16px 0' }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>📧</div>
+        <p style={{ fontWeight:600, marginBottom:6 }}>送信しました</p>
+        <p style={{ color:'var(--text-sub)', fontSize:13 }}>メールをご確認ください。</p>
+      </div>}
+      <div style={{ marginTop:20 }}>
+        <TextLink onClick={onBack}>← ログイン画面に戻る</TextLink>
+      </div>
+    </Card>
+  </div>;
+}
+
+// ── Star Rating ─────────────────────────────────────────────────
+function StarRating({ value, onChange, readOnly, size=20 }) {
+  const [hovered, setHovered] = useState(0);
+  return <div style={{ display:'flex', gap:2 }}>
+    {[1,2,3,4,5].map(n => {
+      const filled = (hovered || value || 0) >= n;
+      return <span key={n}
+        onClick={() => !readOnly && onChange(value === n ? 0 : n)}
+        onMouseEnter={() => !readOnly && setHovered(n)}
+        onMouseLeave={() => !readOnly && setHovered(0)}
+        style={{ fontSize:size, cursor: readOnly ? 'default' : 'pointer',
+          color: filled ? '#f59e0b' : '#d1d5db',
+          transition:'color 0.1s', lineHeight:1, userSelect:'none' }}>★</span>;
+    })}
+  </div>;
+}
+
+// ── Report Modal (newbie) ─────────────────────────────────────────
+function ReportModal({ initial, dateStr, onSave, onDelete, onClose }) {
+  const isEdit = !!initial;
+  const [form, setForm] = useState(initial || { date: dateStr || toDateStr(new Date()), start:'09:00', end:'18:00', content:'', mood:0 });
+  const [errors, setErrors] = useState({});
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const _tweaksCtx = React.useContext(TweaksContext);
+  const isMobile = useIsMobileWithOverride(_tweaksCtx);
+
+  function validate() {
+    const e = {};
+    if (!form.start) e.start = '出勤時間を入力してください';
+    if (!form.end) e.end = '退勤時間を入力してください';
+    if (!form.content.trim()) e.content = 'やったことを入力してください';
+    return e;
+  }
+  function submit(e) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    onSave(form);
+  }
+
+  const dateLabel = form.date ? fmtDateShort(form.date) : '';
+
+  return <Modal title={isEdit ? '日報を編集' : '日報を入力'} onClose={onClose} size="lg" fullScreenOnMobile>
+    {confirmDelete ? <div style={{ textAlign:'center', padding:'20px 0' }}>
+      <p style={{ fontWeight:600, marginBottom:8 }}>この日報を削除しますか？</p>
+      <p style={{ color:'var(--text-sub)', fontSize:13, marginBottom:20 }}>削除すると元に戻せません。</p>
+      <div style={{ display:'flex', justifyContent:'center', gap:8 }}>
+        <Btn variant="ghost" onClick={() => setConfirmDelete(false)}>キャンセル</Btn>
+        <Btn variant="danger" onClick={() => { onDelete(initial.id); onClose(); }}>削除する</Btn>
+      </div>
+    </div> : <form onSubmit={submit}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16,
+        padding:'8px 12px', background:'var(--neutral-100)', borderRadius:'var(--radius-sm)' }}>
+        <span style={{ fontSize:13, fontWeight:600 }}>{dateLabel}</span>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        <Field label="出勤時間" error={errors.start} required>
+          <input type="time" value={form.start} onChange={e => setForm({...form, start:e.target.value})} style={inputStyle} />
+        </Field>
+        <Field label="退勤時間" error={errors.end} required>
+          <input type="time" value={form.end} onChange={e => setForm({...form, end:e.target.value})} style={inputStyle} />
+        </Field>
+      </div>
+      <Field label="やったこと" error={errors.content} required>
+        <Textarea value={form.content} onChange={e => setForm({...form, content:e.target.value})} rows={8}
+          placeholder="本日の業務内容を記入してください" />
+      </Field>
+      <Field label="気分" hint="任意 — クリックで選択、もう一度クリックで解除">
+        <StarRating value={form.mood || 0} onChange={v => setForm({...form, mood:v})} />
+      </Field>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:4 }}>
+        <div>
+          {isEdit && <Btn variant="danger-outline" size="sm" onClick={() => setConfirmDelete(true)}>削除</Btn>}
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <Btn variant="ghost" onClick={onClose}>キャンセル</Btn>
+          <Btn type="submit">{isEdit ? '更新' : '保存'}</Btn>
+        </div>
+      </div>
+    </form>}
+  </Modal>;
+}
+
+// ── Comment Modal ─────────────────────────────────────────────────
+function CommentModal({ weekStr, initial, onSave, onClose }) {
+  const [text, setText] = useState(initial || '');
+  const isEdit = !!initial;
+  function submit(e) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    onSave(text);
+    onClose();
+  }
+  return <Modal title={isEdit ? '週次コメントを編集' : '週次コメントを入力'} onClose={onClose} size="lg" fullScreenOnMobile>
+    <p style={{ fontSize:13, color:'var(--text-sub)', marginBottom:16 }}>{fmtWeekRange(weekStr)}</p>
+    <form onSubmit={submit}>
+      <Field label="コメント" required>
+        <Textarea value={text} onChange={e => setText(e.target.value)} rows={8}
+          placeholder="今週の業務を通じて感じたことや、来週に向けてのコメントを記入してください" />
+      </Field>
+      <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}>
+        <Btn variant="ghost" onClick={onClose}>キャンセル</Btn>
+        <Btn type="submit" disabled={!text.trim()}>{isEdit ? '更新' : '保存'}</Btn>
+      </div>
+    </form>
+  </Modal>;
+}
+
+// ── Week Picker Modal ─────────────────────────────────────────────
+function WeekPickerModal({ currentWeek, onSelect, onClose }) {
+  const initial = new Date(currentWeek);
+  const [viewYear, setViewYear] = useState(initial.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initial.getMonth());
+  const [hoverWeek, setHoverWeek] = useState(null);
+
+  const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y-1); }
+    else setViewMonth(m => m-1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y+1); }
+    else setViewMonth(m => m+1);
+  }
+
+  // Build calendar grid
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Mon=0
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(viewYear, viewMonth, d));
+  // Pad to complete weeks
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i+7));
+
+  const today = toDateStr(new Date());
+
+  return <div style={{ position:'fixed', inset:0, zIndex:600, background:'rgba(0,0,0,0.4)',
+    display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+    onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div style={{ background:'var(--surface)', borderRadius:'var(--radius)', boxShadow:'var(--shadow-lg)',
+      width:320, overflow:'hidden', animation:'fadeIn 0.15s ease' }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'14px 16px', borderBottom:'1px solid var(--border)' }}>
+        <button onClick={prevMonth} style={{ background:'none', border:'none', cursor:'pointer',
+          fontSize:16, color:'var(--text-sub)', padding:'2px 8px', borderRadius:'var(--radius-sm)' }}>‹</button>
+        <span style={{ fontWeight:600, fontSize:15 }}>{viewYear}年 {MONTHS[viewMonth]}</span>
+        <button onClick={nextMonth} style={{ background:'none', border:'none', cursor:'pointer',
+          fontSize:16, color:'var(--text-sub)', padding:'2px 8px', borderRadius:'var(--radius-sm)' }}>›</button>
+      </div>
+      {/* Day headers */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)',
+        padding:'8px 12px 4px', gap:2 }}>
+        {['月','火','水','木','金','土','日'].map(d =>
+          <div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:600,
+            color: d==='土'?'#0891b2': d==='日'?'#dc2626':'var(--text-sub)', padding:'2px 0' }}>{d}</div>)}
+      </div>
+      {/* Weeks */}
+      <div style={{ padding:'4px 12px 12px', display:'flex', flexDirection:'column', gap:2 }}>
+        {weeks.map((week, wi) => {
+          const mondayCell = week.find(d => d && d.getDay() === 1) || week.find(d => d);
+          const weekMonStr = mondayCell ? toDateStr(getMonday(mondayCell)) : null;
+          const isSelected = weekMonStr === currentWeek;
+          const isHovered = weekMonStr && weekMonStr === hoverWeek;
+          return <div key={wi} style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2,
+            background: isSelected ? 'var(--primary-soft)' : isHovered ? 'var(--neutral-100)' : 'transparent',
+            borderRadius:'var(--radius-sm)', cursor:'pointer', transition:'background 0.1s' }}
+            onClick={() => { if (weekMonStr) { onSelect(weekMonStr); onClose(); }}}
+            onMouseEnter={() => setHoverWeek(weekMonStr)}
+            onMouseLeave={() => setHoverWeek(null)}>
+            {week.map((d, di) => {
+              const ds = d ? toDateStr(d) : null;
+              const isToday = ds === today;
+              const isWeekend = d && (d.getDay() === 0 || d.getDay() === 6);
+              return <div key={di} style={{ textAlign:'center', padding:'5px 2px', fontSize:13,
+                fontWeight: isToday ? 700 : isSelected ? 600 : 400,
+                color: !d ? 'transparent' : isToday ? 'var(--primary)' : isWeekend ? '#9ca3af' : 'var(--text)',
+                borderRadius:'var(--radius-sm)',
+              }}>{d ? d.getDate() : '·'}</div>;
+            })}
+          </div>;
+        })}
+      </div>
+      <div style={{ padding:'8px 12px 14px', display:'flex', justifyContent:'center' }}>
+        <Btn variant="ghost" size="sm" onClick={onClose}>キャンセル</Btn>
+      </div>
+    </div>
+  </div>;
+}
+
+// ── Week Navigator ────────────────────────────────────────────────
+function WeekNav({ weekStart, onChange, isMobile }) {
+  const todayMonday = toDateStr(getMonday(new Date()));
+  const isToday = weekStart === todayMonday;
+  const [showPicker, setShowPicker] = useState(false);
+
+  function prev() {
+    const d = new Date(weekStart); d.setDate(d.getDate() - 7);
+    onChange(toDateStr(d));
+  }
+  function next() {
+    const d = new Date(weekStart); d.setDate(d.getDate() + 7);
+    onChange(toDateStr(d));
+  }
+
+  const dateLabel = <span onClick={() => setShowPicker(true)}
+    style={{ display:'block', fontWeight:500, textAlign:'center',
+      padding: isMobile ? '5px 8px' : '5px 10px',
+      fontSize: isMobile ? 13 : 14,
+      background:'var(--neutral-100)', borderRadius:'var(--radius-sm)',
+      userSelect:'none', borderBottom:'1px dashed var(--border-focus)', cursor:'pointer' }}>
+    {fmtWeekRange(weekStart)}
+  </span>;
+
+  return <>
+    {isMobile
+      ? <div style={{ display:'flex', alignItems:'center', gap:8, width:'100%' }}>
+          <Btn variant="outline" size="sm" onClick={prev}>←</Btn>
+          <div style={{ flex:1 }}>{dateLabel}</div>
+          <Btn variant="outline" size="sm" onClick={next}>→</Btn>
+          {!isToday && <Btn variant="soft" size="sm" onClick={() => onChange(todayMonday)}>今週</Btn>}
+        </div>
+      : <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+          <Btn variant="outline" size="sm" onClick={prev}>← 前の週</Btn>
+          {dateLabel}
+          <Btn variant="outline" size="sm" onClick={next}>次の週 →</Btn>
+          {!isToday && <Btn variant="soft" size="sm" onClick={() => onChange(todayMonday)}>今週</Btn>}
+        </div>
+    }
+    {showPicker && <WeekPickerModal currentWeek={weekStart} onSelect={onChange} onClose={() => setShowPicker(false)} />}
+  </>;
+}
+
+// ── Day Row ───────────────────────────────────────────────────────
+function DayRow({ dateStr, report, role, onInput, onEdit, onToggleDetail, isExpanded, isMobile }) {
+  const isWeekend = [0,6].includes(new Date(dateStr).getDay());
+  if (isWeekend) return null;
+  const hasReport = !!report;
+  const isNewbie = role === 'newbie';
+  const today = toDateStr(new Date());
+  const isToday = dateStr === today;
+
+  const PencilIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+
+  const actionBtn = isNewbie ? (
+    hasReport
+      ? <Btn variant="ghost" size="sm" onClick={() => onEdit(report)}><PencilIcon /></Btn>
+      : <Btn variant="ghost" size="sm" onClick={() => onInput(dateStr)}><PencilIcon /></Btn>
+  ) : (
+    hasReport
+      ? <Btn variant="ghost" size="sm" onClick={() => onToggleDetail(dateStr)}>
+          {isExpanded ? '▲' : '▼'}
+        </Btn>
+      : null
+  );
+
+  if (isMobile) return <div style={{ borderBottom:'1px solid var(--border)' }}>
+    <div style={{ padding:'12px 16px', background: isToday ? '#fafafa' : 'var(--surface)', cursor: hasReport ? 'pointer' : 'default' }}
+      onClick={() => hasReport && onToggleDetail(dateStr)}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: hasReport ? 4 : 0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:13, fontWeight:600, color: isToday ? 'var(--primary)' : 'var(--text)' }}>{fmtDateShort(dateStr)}</span>
+          {hasReport && <span style={{ fontSize:12, color:'var(--text-sub)' }}>{report.start} 〜 {report.end}</span>}
+          {!hasReport && <span style={{ fontSize:12, color:'var(--text-xs)' }}>未入力</span>}
+        </div>
+        <div style={{ display:'flex', gap:6, alignItems:'center' }} onClick={e => e.stopPropagation()}>
+          {actionBtn}
+        </div>
+      </div>
+      {hasReport && !isExpanded && <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
+        <p style={{ fontSize:13, color:'var(--text-sub)', overflow:'hidden',
+          textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>{report.content.slice(0,60)}…</p>
+        {report.mood > 0 && <StarRating value={report.mood} readOnly size={12} />}
+      </div>}
+    </div>
+    {isExpanded && hasReport && <div style={{ padding:'12px 16px', background:'#fafbff',
+      borderTop:'1px solid var(--border)', animation:'fadeIn 0.15s ease' }}>
+      <p style={{ fontSize:14, lineHeight:1.85, wordBreak:'break-all', whiteSpace:'pre-wrap' }}>{report.content}</p>
+    </div>}
+  </div>;
+
+  return <div style={{ borderBottom:'1px solid var(--border)' }}>
+    <div style={{ display:'flex', alignItems:'center', minHeight:48,
+      background: isToday ? '#fafafa' : 'var(--surface)',
+      cursor: hasReport ? 'pointer' : 'default', transition:'background 0.1s' }}
+      onClick={() => hasReport && onToggleDetail(dateStr)}>
+      <div style={{ width:130, flexShrink:0, padding:'10px 16px', display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ fontSize:13, fontWeight: isToday ? 600 : 400,
+          color: isToday ? 'var(--primary)' : 'var(--text)' }}>{fmtDateShort(dateStr)}</span>
+        {isToday && <span style={{ width:6, height:6, borderRadius:'50%',
+          background:'var(--primary)', display:'inline-block', flexShrink:0 }} />}
+      </div>
+      <div style={{ width:140, flexShrink:0, padding:'10px 8px', fontSize:13, color:'var(--text-sub)' }}>
+        {hasReport ? `${report.start} 〜 ${report.end}` : '——'}
+      </div>
+      <div style={{ flex:1, padding:'10px 8px', fontSize:13, color: hasReport ? 'var(--text)' : 'var(--text-xs)',
+        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+        {hasReport ? report.content.slice(0, 80) + (report.content.length > 80 ? '…' : '') : '未入力'}
+      </div>
+      <div style={{ width:80, flexShrink:0, padding:'10px 8px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        {hasReport && report.mood > 0 && <StarRating value={report.mood} readOnly size={14} />}
+      </div>
+      <div style={{ width:90, flexShrink:0, padding:'10px 12px', display:'flex', justifyContent:'flex-end' }}
+        onClick={e => e.stopPropagation()}>
+        {actionBtn}
+      </div>
+    </div>
+    {isExpanded && hasReport && <div style={{ padding:'16px 20px', background:'#fafbff',
+      borderTop:'1px solid var(--border)', animation:'fadeIn 0.15s ease' }}>
+      <div style={{ display:'flex', gap:16, flexWrap:'wrap', marginBottom:12 }}>
+        <span style={{ fontSize:13, color:'var(--text-sub)' }}>出勤 <strong style={{color:'var(--text)'}}>{report.start}</strong></span>
+        <span style={{ fontSize:13, color:'var(--text-sub)' }}>退勤 <strong style={{color:'var(--text)'}}>{report.end}</strong></span>
+        {report.mood > 0 && <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:13, color:'var(--text-sub)' }}>気分 <StarRating value={report.mood} readOnly size={14} /></span>}
+      </div>
+      <p style={{ fontSize:14, lineHeight:1.85, textWrap:'pretty', wordBreak:'break-all', whiteSpace:'pre-wrap' }}>{report.content}</p>
+    </div>}
+  </div>;
+}
+
+// ── Comment Area ──────────────────────────────────────────────────
+function CommentArea({ weekStart, role, mentorComment, ojtComment, onEditComment, isMobile }) {
+  const canComment = role === 'mentor' || role === 'ojt';
+  const myComment = role === 'mentor' ? mentorComment : ojtComment;
+
+  return <div style={{ padding:'20px 24px', borderTop:'2px solid var(--border)' }}>
+    <h4 style={{ fontSize:13, fontWeight:600, color:'var(--text-sub)', marginBottom:16,
+      textTransform:'uppercase', letterSpacing:'0.06em' }}>週次コメント</h4>
+    <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:16 }}>
+      {/* Mentor comment */}
+      <div style={{ background:'var(--neutral-100)', borderRadius:'var(--radius)', padding:'14px 16px' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <Badge color="indigo">メンター</Badge>
+            <span style={{ fontSize:12, color:'var(--text-sub)' }}>田中 一郎</span>
+          </div>
+          {role === 'mentor' && <Btn variant="ghost" size="xs" onClick={() => onEditComment('mentor')}>
+            {mentorComment ? '編集' : '入力'}
+          </Btn>}
+        </div>
+        <p style={{ fontSize:13, lineHeight:1.7, color: mentorComment ? 'var(--text)' : 'var(--text-xs)',
+          fontStyle: mentorComment ? 'normal' : 'italic' }}>
+          {mentorComment || 'コメントはまだありません'}
+        </p>
+      </div>
+      {/* OJT comment */}
+      <div style={{ background:'var(--neutral-100)', borderRadius:'var(--radius)', padding:'14px 16px' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <Badge color="purple">OJT</Badge>
+            <span style={{ fontSize:12, color:'var(--text-sub)' }}>佐藤 美咲</span>
+          </div>
+          {role === 'ojt' && <Btn variant="ghost" size="xs" onClick={() => onEditComment('ojt')}>
+            {ojtComment ? '編集' : '入力'}
+          </Btn>}
+        </div>
+        <p style={{ fontSize:13, lineHeight:1.7, color: ojtComment ? 'var(--text)' : 'var(--text-xs)',
+          fontStyle: ojtComment ? 'normal' : 'italic' }}>
+          {ojtComment || 'コメントはまだありません'}
+        </p>
+      </div>
+    </div>
+  </div>;
+}
+
+// ── 3. Report Screen (shared) ─────────────────────────────────────
+function ReportScreen({ user, onLogout, onNav, tweaks }) {
+  const role = user.role; // 'newbie' | 'mentor' | 'ojt' | 'admin'
+  const isAdmin = role === 'admin';
+  const isNewbie = role === 'newbie';
+
+  const todayMonday = toDateStr(getMonday(new Date()));
+  const [weekStart, setWeekStart] = useState(todayMonday);
+  const [selectedNewbie, setSelectedNewbie] = useState(isAdmin ? '' : '山田 太郎');
+  const [reports, setReports] = useState(ALL_REPORTS);
+  const [comments, setComments] = useState(MOCK_COMMENTS);
+  const [expandedDate, setExpandedDate] = useState(null);
+  const [reportModal, setReportModal] = useState(null);
+  const [commentModal, setCommentModal] = useState(null);
+  const [toast, setToast] = useState(null);
+  const _tweaksCtx = React.useContext(TweaksContext);
+  const isMobile = useIsMobileWithOverride(_tweaksCtx);
+
+  // Days Mon-Fri for current week
+  const weekDays = useMemo(() => {
+    const mon = new Date(weekStart);
+    return Array.from({length:5}, (_, i) => toDateStr(addDays(mon, i)));
+  }, [weekStart]);
+
+  // Reports for this week
+  const weekReports = useMemo(() => {
+    const map = {};
+    reports.forEach(r => { if (weekDays.includes(r.date)) map[r.date] = r; });
+    return map;
+  }, [reports, weekDays]);
+
+  // Comments
+  const mentorComment = comments.mentor?.[weekStart];
+  const ojtComment = comments.ojt?.[weekStart];
+
+  function saveReport(form) {
+    if (reportModal?.report) {
+      setReports(rs => rs.map(r => r.id === reportModal.report.id ? {...r, ...form} : r));
+      setToast({ msg:'日報を更新しました' });
+    } else {
+      setReports(rs => [...rs, { id: Date.now(), ...form, date: reportModal.date }]);
+      setToast({ msg:'日報を保存しました' });
+    }
+    setReportModal(null);
+  }
+
+  function deleteReport(id) {
+    setReports(rs => rs.filter(r => r.id !== id));
+    setToast({ msg:'日報を削除しました' });
+  }
+
+  function saveComment(who, text) {
+    setComments(c => ({ ...c, [who]: { ...c[who], [weekStart]: text } }));
+    setToast({ msg:'コメントを保存しました' });
+  }
+
+  function toggleDetail(dateStr) {
+    setExpandedDate(v => v === dateStr ? null : dateStr);
+  }
+
+  const showContent = !isAdmin || !!selectedNewbie;
+
+  // Newbie selector (non-newbie roles)
+  const newbieSelector = !isNewbie && <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+    <span style={{ fontSize:13, color:'var(--text-sub)', whiteSpace:'nowrap' }}>対象:</span>
+    <select value={selectedNewbie}
+      onChange={e => { setSelectedNewbie(e.target.value); setExpandedDate(null); }}
+      style={{ ...inputStyle, width:'auto', minWidth:140 }}>
+      {isAdmin && <option value=''>選択してください</option>}
+      <option>山田 太郎</option>
+      <option>鈴木 花子</option>
+    </select>
+  </div>;
+
+  const adminTabs = isAdmin && onNav ? (
+    <div style={{ borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
+      <div style={{ maxWidth:960, margin:'0 auto', padding:'0 16px', display:'flex', gap:2 }}>
+        {[{id:'report',label:'日報'},{id:'admin',label:'管理'}].map(t =>
+          <button key={t.id} onClick={() => onNav(t.id)} style={{
+            padding:'10px 20px', background:'none', border:'none', cursor:'pointer',
+            fontFamily:'inherit', fontSize:14, fontWeight:500,
+            color: 'report'===t.id ? 'var(--primary)' : 'var(--text-sub)',
+            borderBottom: 'report'===t.id ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom:-1, transition:'color 0.1s',
+          }}>{t.label}</button>)}
+      </div>
+    </div>
+  ) : null;
+
+  return <>
+    <Header user={user} onLogout={onLogout} />
+    {adminTabs}
+    <main style={{ maxWidth:960, margin:'0 auto', padding:'20px 16px' }}>
+
+      {!showContent ? (
+        <Card style={{ padding:40, display:'flex', flexDirection:'column', alignItems:'center',
+          justifyContent:'center', minHeight:280, textAlign:'center', gap:16 }}>
+          <span style={{ fontSize:36, opacity:0.4 }}>📋</span>
+          <p style={{ color:'var(--text-sub)', fontSize:14 }}>表示したい新人の日報を選んでください</p>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <select value={selectedNewbie} onChange={e => setSelectedNewbie(e.target.value)}
+              style={{ ...inputStyle, width:'auto', minWidth:160 }}>
+              <option value=''>選択してください</option>
+              <option>山田 太郎</option>
+              <option>鈴木 花子</option>
+            </select>
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          {/* Week nav */}
+          <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--border)',
+            display:'flex', flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
+            justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+            <WeekNav weekStart={weekStart} onChange={ws => { setWeekStart(ws); setExpandedDate(null); }} isMobile={isMobile} />
+            {!isNewbie && (!isMobile) && <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <select value={selectedNewbie} onChange={e => { setSelectedNewbie(e.target.value); setExpandedDate(null); }}
+                style={{ ...inputStyle, width:'auto', minWidth:140 }}>
+                {isAdmin && <option value=''>選択してください</option>}
+                <option>山田 太郎</option>
+                <option>鈴木 花子</option>
+              </select>
+            </div>}
+          </div>
+          {!isNewbie && isMobile && <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--border)', background:'var(--neutral-50)' }}>
+            <select value={selectedNewbie} onChange={e => { setSelectedNewbie(e.target.value); setExpandedDate(null); }}
+              style={{ ...inputStyle, width:'100%' }}>
+              {isAdmin && <option value=''>選択してください</option>}
+              <option>山田 太郎</option>
+              <option>鈴木 花子</option>
+            </select>
+          </div>}
+
+          {/* Table header - desktop only */}
+          {!isMobile && <div style={{ display:'flex', alignItems:'center', background:'var(--neutral-50)',
+            borderBottom:'1px solid var(--border)', fontSize:12, fontWeight:600,
+            color:'var(--text-sub)', letterSpacing:'0.04em' }}>
+              <div style={{ width:130, flexShrink:0, padding:'8px 16px' }}>日付</div>
+            <div style={{ width:140, flexShrink:0, padding:'8px 8px' }}>出退勤</div>
+            <div style={{ flex:1, padding:'8px 8px' }}>やったこと</div>
+            <div style={{ width:80, flexShrink:0, padding:'8px 8px', textAlign:'center' }}>気分</div>
+            <div style={{ width:90, flexShrink:0, padding:'8px 12px' }}></div>
+          </div>}
+
+          {/* Day rows */}
+          {weekDays.map(dateStr => (
+            <DayRow key={dateStr} dateStr={dateStr} report={weekReports[dateStr]}
+              role={role}
+              onInput={(ds) => setReportModal({ date: ds })}
+              onEdit={(rep) => setReportModal({ report: rep, date: rep.date })}
+              onToggleDetail={toggleDetail}
+              isExpanded={expandedDate === dateStr}
+              isMobile={isMobile} />
+          ))}
+
+          {/* Comment area */}
+          <CommentArea weekStart={weekStart} role={role}
+            mentorComment={mentorComment} ojtComment={ojtComment}
+            onEditComment={(who) => setCommentModal({ who, initial: who === 'mentor' ? mentorComment : ojtComment })}
+            isMobile={isMobile} />
+        </Card>
+      )}
+    </main>
+
+    {reportModal && <ReportModal
+      initial={reportModal.report}
+      dateStr={reportModal.date}
+      onSave={saveReport}
+      onDelete={deleteReport}
+      onClose={() => setReportModal(null)} />}
+
+    {commentModal && <CommentModal
+      weekStr={weekStart}
+      initial={commentModal.initial}
+      onSave={(text) => saveComment(commentModal.who, text)}
+      onClose={() => setCommentModal(null)} />}
+
+    {toast && <Toast message={toast.msg} onClose={() => setToast(null)} />}
+  </>;
+}
+
+// ── 4. Admin Screen ───────────────────────────────────────────────
+function AdminScreen({ user, onLogout, onNav, tweaks }) {
+  const [tab, setTab] = useState('users');
+  const [users, setUsers] = useState(MOCK_USERS);
+  const [assign, setAssign] = useState(MOCK_ASSIGN);
+  const [editUser, setEditUser] = useState(null); // user being edited
+  const [addModal, setAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name:'', email:'', role:'新人' });
+  const [toast, setToast] = useState(null);
+
+  function addUser(e) {
+    e.preventDefault();
+    if (!newUser.name || !newUser.email) return;
+    setUsers(u => [...u, { id:Date.now(), empId:`E00${u.length+1}`, ...newUser, active:true }]);
+    setAddModal(false);
+    setNewUser({ name:'', email:'', role:'新人' });
+    setToast({ msg:'ユーザーを招待しました' });
+  }
+
+  const tabs = [
+    { id:'users', label:'ユーザー管理' },
+    { id:'assign', label:'メンター割り当て' },
+  ];
+
+  const roleColors = { '新人':'indigo', 'メンター':'green', 'OJT':'purple', '管理者':'gray' };
+
+  const adminTabs2 = onNav ? (
+    <div style={{ borderBottom:'1px solid var(--border)', background:'var(--surface)' }}>
+      <div style={{ maxWidth:1000, margin:'0 auto', padding:'0 16px', display:'flex', gap:2 }}>
+        {[{id:'report',label:'日報'},{id:'admin',label:'管理'}].map(t =>
+          <button key={t.id} onClick={() => onNav(t.id)} style={{
+            padding:'10px 20px', background:'none', border:'none', cursor:'pointer',
+            fontFamily:'inherit', fontSize:14, fontWeight:500,
+            color: 'admin'===t.id ? 'var(--primary)' : 'var(--text-sub)',
+            borderBottom: 'admin'===t.id ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom:-1, transition:'color 0.1s',
+          }}>{t.label}</button>)}
+      </div>
+    </div>
+  ) : null;
+
+  return <>
+    <Header user={user} onLogout={onLogout} />
+    {adminTabs2}
+    <main style={{ maxWidth:1000, margin:'0 auto', padding:'20px 16px' }}>
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:'1px solid var(--border)', paddingBottom:0 }}>
+        {tabs.map(t => <button key={t.id} onClick={() => setTab(t.id)} style={{
+          padding:'8px 20px', background:'none', border:'none', cursor:'pointer',
+          fontFamily:'inherit', fontSize:14, fontWeight:500,
+          color: tab === t.id ? 'var(--primary)' : 'var(--text-sub)',
+          borderBottom: tab === t.id ? '2px solid var(--primary)' : '2px solid transparent',
+          marginBottom:-1, transition:'color 0.1s',
+        }}>{t.label}</button>)}
+      </div>
+
+      {tab === 'users' && <>
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>
+          <Btn onClick={() => setAddModal(true)}>＋ ユーザーを追加</Btn>
+        </div>
+        <Card style={{ overflow:'hidden' }}>
+          {/* Table */}
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
+              <thead>
+                <tr style={{ background:'var(--neutral-50)', borderBottom:'1px solid var(--border)' }}>
+                  {['社員ID','名前','メール','役割','操作'].map(h =>
+                    <th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:12,
+                      fontWeight:600, color:'var(--text-sub)', whiteSpace:'nowrap' }}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => <tr key={u.id} style={{ borderBottom:'1px solid var(--border)',
+                  opacity: u.active ? 1 : 0.45 }}>
+                  <td style={{ padding:'12px 16px', color:'var(--text-sub)', fontSize:13 }}>{u.empId}</td>
+                  <td style={{ padding:'12px 16px', fontWeight:500, whiteSpace:'nowrap' }}>
+                    {u.name}
+                  </td>
+                  <td style={{ padding:'12px 16px', color:'var(--text-sub)', whiteSpace:'nowrap' }}>{u.email}</td>
+                  <td style={{ padding:'12px 16px', whiteSpace:'nowrap' }}><Badge color={roleColors[u.role] || 'gray'}>{u.role}</Badge></td>
+                  <td style={{ padding:'12px 16px' }}>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <Btn variant="outline" size="xs" onClick={() => setEditUser({...u})}>編集</Btn>
+                      {u.active
+                        ? <Btn variant="danger-outline" size="xs"
+                            onClick={() => { setUsers(us => us.map(x => x.id===u.id?{...x,active:false}:x)); setToast({msg:'無効化しました'}); }}>
+                            無効化
+                          </Btn>
+                        : <Btn variant="outline" size="xs"
+                            onClick={() => { setUsers(us => us.map(x => x.id===u.id?{...x,active:true}:x)); setToast({msg:'有効化しました'}); }}>
+                            有効化
+                          </Btn>
+                      }
+                    </div>
+                  </td>
+                </tr>)}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </>}
+
+      {tab === 'assign' && <>
+
+        <Card style={{ overflow:'hidden' }}>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:14 }}>
+              <thead>
+                <tr style={{ background:'var(--neutral-50)', borderBottom:'1px solid var(--border)' }}>
+                  {['新人','メンター','OJT'].map(h =>
+                    <th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:12,
+                      fontWeight:600, color:'var(--text-sub)' }}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {assign.map(a => <tr key={a.id} style={{ borderBottom:'1px solid var(--border)' }}>
+                  <td style={{ padding:'12px 16px', fontWeight:500, whiteSpace:'nowrap' }}>{a.newbie}</td>
+                  <td style={{ padding:'12px 16px', whiteSpace:'nowrap' }}>
+                    <select value={a.mentor}
+                      onChange={e => setAssign(as => as.map(x => x.id===a.id?{...x,mentor:e.target.value}:x))}
+                      style={{ ...inputStyle, width:'auto', padding:'4px 8px', fontSize:13 }}>
+                      <option>田中 一郎</option><option>渡辺 由美</option>
+                    </select>
+                  </td>
+                  <td style={{ padding:'12px 16px', whiteSpace:'nowrap' }}>
+                    <select value={a.ojt}
+                      onChange={e => setAssign(as => as.map(x => x.id===a.id?{...x,ojt:e.target.value}:x))}
+                      style={{ ...inputStyle, width:'auto', padding:'4px 8px', fontSize:13 }}>
+                      <option>佐藤 美咲</option><option>高橋 健二</option>
+                    </select>
+                  </td>
+                </tr>)}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <div style={{ display:'flex', justifyContent:'flex-end', marginTop:16 }}>
+          <Btn onClick={() => setToast({msg:'割り当てを保存しました'})}>保存</Btn>
+        </div>
+      </>}
+    </main>
+    {editUser && <Modal title="ユーザーを編集" onClose={() => setEditUser(null)} size="sm">
+      <form onSubmit={e => { e.preventDefault(); setUsers(us => us.map(x => x.id===editUser.id?editUser:x)); setEditUser(null); setToast({msg:'更新しました'}); }}>
+        <Field label="名前" required><Input value={editUser.name} onChange={e => setEditUser({...editUser,name:e.target.value})} /></Field>
+        <Field label="メールアドレス" required><Input type="email" value={editUser.email} onChange={e => setEditUser({...editUser,email:e.target.value})} /></Field>
+        <Field label="役割">
+          <select value={editUser.role} onChange={e => setEditUser({...editUser,role:e.target.value})} style={inputStyle}>
+            {['新人','メンター','OJT','管理者'].map(r => <option key={r}>{r}</option>)}
+          </select>
+        </Field>
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:4 }}>
+          <Btn variant="ghost" onClick={() => setEditUser(null)}>キャンセル</Btn>
+          <Btn type="submit">保存</Btn>
+        </div>
+      </form>
+    </Modal>}
+    {addModal && <Modal title="ユーザーを追加" onClose={() => setAddModal(false)} size="sm">
+      <form onSubmit={addUser}>
+        <Field label="名前" required><Input value={newUser.name} onChange={e => setNewUser({...newUser,name:e.target.value})} /></Field>
+        <Field label="メールアドレス" required><Input type="email" value={newUser.email} onChange={e => setNewUser({...newUser,email:e.target.value})} /></Field>
+        <Field label="役割">
+          <select value={newUser.role} onChange={e => setNewUser({...newUser,role:e.target.value})} style={inputStyle}>
+            {['新人','メンター','OJT','管理者'].map(r => <option key={r}>{r}</option>)}
+          </select>
+        </Field>
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:4 }}>
+          <Btn variant="ghost" onClick={() => setAddModal(false)}>キャンセル</Btn>
+          <Btn type="submit">招待する</Btn>
+        </div>
+      </form>
+    </Modal>}
+    {toast && <Toast message={toast.msg} onClose={() => setToast(null)} />}
+  </>;
+}
+
+// ── App ───────────────────────────────────────────────────────────
+const ROLE_MAP = {
+  newbie: { name:'山田 太郎', role:'newbie' },
+  mentor: { name:'田中 一郎', role:'mentor' },
+  ojt:    { name:'佐藤 美咲', role:'ojt' },
+  admin:  { name:'高橋 健二', role:'admin' },
+};
+
+function App() {
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const [screen, setScreen] = useState('login'); // login | reset | report | admin
+  const [user, setUser] = useState(null);
+  const [tweakVisible, setTweakVisible] = useState(false);
+
+  // Tweaks integration
+  useEffect(() => {
+    window.addEventListener('message', e => {
+      if (e.data?.type === '__activate_edit_mode') setTweakVisible(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweakVisible(false);
+    });
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    // Auto-login on load based on tweak role
+    const roleKey = TWEAK_DEFAULTS.role || 'newbie';
+    const resolved = ROLE_MAP[roleKey] || ROLE_MAP.newbie;
+    setUser(resolved);
+    setScreen('report');
+  }, []);
+
+  // Auto-update when role tweak changes
+  useEffect(() => {
+    const resolved = ROLE_MAP[tweaks.role] || ROLE_MAP.newbie;
+    setUser(resolved);
+    setScreen('report');
+  }, [tweaks.role]);
+
+  function login(u) {
+    const roleKey = tweaks.role || 'newbie';
+    const resolved = ROLE_MAP[roleKey] || ROLE_MAP.newbie;
+    setUser(resolved);
+    setScreen('report');
+  }
+
+  function logout() { setUser(null); setScreen('login'); }
+
+  function applyTweak(key, val) {
+    const next = { ...tweaks, [key]: val };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [key]: val } }, '*');
+  }
+
+  // Apply primary color
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary', tweaks.primaryColor || '#4f46e5');
+  }, [tweaks.primaryColor]);
+
+  return <TweaksContext.Provider value={tweaks}>
+    {screen === 'login' && <LoginScreen onLogin={login} onReset={() => setScreen('reset')} />}
+    {screen === 'reset' && <ResetScreen onBack={() => setScreen('login')} />}
+    {screen === 'report' && <ReportScreen user={user} onLogout={logout} onNav={setScreen} tweaks={tweaks} />}
+    {screen === 'admin' && <AdminScreen user={user} onLogout={logout} onNav={setScreen} tweaks={tweaks} />}
+
+    {/* Tweaks panel */}
+    {tweakVisible && <div style={{ position:'fixed', bottom:20, right:20, zIndex:9000,
+      background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--radius)',
+      boxShadow:'var(--shadow-lg)', padding:16, width:240, animation:'slideUp 0.2s ease' }}>
+      <p style={{ fontWeight:600, fontSize:13, marginBottom:12 }}>Tweaks</p>
+      <Field label="ロール">
+        <select value={tweaks.role} onChange={e => applyTweak('role', e.target.value)} style={inputStyle}>
+          <option value="newbie">新人</option>
+          <option value="mentor">メンター</option>
+          <option value="ojt">OJT</option>
+          <option value="admin">管理者</option>
+        </select>
+      </Field>
+      <Field label="アクセントカラー">
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {['#4f46e5','#0891b2','#059669','#d97706','#dc2626'].map(c =>
+            <button key={c} onClick={() => applyTweak('primaryColor', c)} style={{
+              width:24, height:24, borderRadius:'50%', background:c, border:'none',
+              cursor:'pointer', outline: tweaks.primaryColor === c ? `3px solid ${c}` : '3px solid transparent',
+              outlineOffset:2,
+            }} />)}
+        </div>
+      </Field>
+      <Field label="">
+        <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:13 }}>
+          <input type="checkbox" checked={!!tweaks.mobilePreview}
+            onChange={e => applyTweak('mobilePreview', e.target.checked)} />
+          スマホ表示でプレビュー
+        </label>
+      </Field>
+      <div style={{ marginTop:8 }}>
+        <Btn variant="soft" size="sm" block onClick={() => {
+          const roleKey = tweaks.role || 'newbie';
+          const resolved = ROLE_MAP[roleKey] || ROLE_MAP.newbie;
+          setUser(resolved);
+          setScreen('report');
+        }}>このロールで画面を開く</Btn>
+      </div>
+    </div>}
+  </TweaksContext.Provider>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
