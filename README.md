@@ -14,6 +14,7 @@
 | --------------- | ---------------------------------- |
 | フロントエンド  | Nuxt 4                             |
 | UI ライブラリ   | Nuxt UI v3（Tailwind CSS v4 含む） |
+| データアクセス  | Nuxt Server API（`server/api/`）   |
 | バックエンド/DB | Supabase（認証・DB・RLS）          |
 | ホスティング    | Cloudflare Pages                   |
 
@@ -79,7 +80,15 @@ app/
 ├── layouts/          # レイアウト（default.vue）
 ├── middleware/        # 認証ミドルウェア
 ├── pages/            # ページ（login / report / admin / confirm / reset-password）
-└── types/            # 型定義（database.types.ts）
+└── types/
+    ├── database.types.ts  # Supabase 自動生成（編集禁止）
+    ├── models.ts          # DB テーブル型エイリアス
+    ├── api.ts             # API リクエスト・レスポンス型
+    └── schemas.ts         # Zod スキーマ（フォームバリデーション用）
+server/api/           # Server API（ブラウザから直接 Supabase を呼ばない）
+├── reports/          # 日報 CRUD
+├── comments/         # 週次コメント取得・保存
+└── assignments/      # 担当新人一覧
 docs/                 # 設計ドキュメント・開発計画
 supabase/migrations/  # DBマイグレーション
 ```
@@ -90,6 +99,9 @@ supabase/migrations/  # DBマイグレーション
 
 | ドキュメント | 内容 |
 | --- | --- |
+| [docs/architecture.md](docs/architecture.md) | アーキテクチャ設計・データフロー |
+| [docs/api-design.md](docs/api-design.md) | Server API エンドポイント仕様 |
+| [docs/coding-guidelines.md](docs/coding-guidelines.md) | コーディング規約 |
 | [docs/component-diagram.md](docs/component-diagram.md) | コンポーネント構成図 |
 | [docs/requirements.md](docs/requirements.md) | 要件定義 |
 | [docs/screen-flow.md](docs/screen-flow.md) | 画面一覧・画面遷移図 |

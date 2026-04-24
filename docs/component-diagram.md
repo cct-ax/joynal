@@ -31,15 +31,23 @@ graph TD
     ReportCard["ReportCard.vue\n日報カード（インライン展開）\nクリックで詳細表示"]
     CommentInputModal["CommentInputModal.vue\n週次コメント入力モーダル\nメンター・OJT用"]
     UserAddModal["UserAddModal.vue\nユーザー追加モーダル\n管理者用"]
-    FormExample["FormExample.vue\nフォームサンプル\n（実装参考用）"]
   end
 
   subgraph Composables["Composables"]
     UseCurrentUser["useCurrentUser.ts\nprofile / role\nisAdmin / isMentor\nisOjt / isTrainee"]
   end
 
-  subgraph Types["型定義"]
-    DBTypes["types/database.types.ts\nTables, Insert, Update"]
+  subgraph Types["型定義 (app/types/)"]
+    DBTypes["database.types.ts\nSupabase 自動生成（編集禁止）"]
+    Models["models.ts\nDailyReport / Comment\nProfile / などのエイリアス"]
+    ApiTypes["api.ts\nReportCreateBody\nCommentUpsertBody など"]
+    Schemas["schemas.ts\nreportSchema\ncommentSchema（Zod）"]
+  end
+
+  subgraph ServerAPI["Server API (server/api/)"]
+    ReportsAPI["reports/\nGET 週次日報一覧\nPOST 日報作成\nPUT 日報更新\nDELETE 日報削除"]
+    CommentsAPI["comments/\nGET 週次コメント取得\nPUT 週次コメント保存"]
+    AssignmentsAPI["assignments/me\nGET 担当新人一覧"]
   end
 
   subgraph Supabase["Supabase（外部サービス）"]
@@ -55,14 +63,20 @@ graph TD
   ReportPage --> UseCurrentUser
   AdminPage --> UseCurrentUser
   UseCurrentUser --> SupabaseAuth
-  UseCurrentUser --> SupabaseDB
 
   LoginPage --> SupabaseAuth
   ResetPage --> SupabaseAuth
   ConfirmPage --> SupabaseAuth
 
-  ReportPage --> SupabaseDB
-  AdminPage --> SupabaseDB
+  ReportPage --"$fetch"--> ReportsAPI
+  ReportPage --"$fetch"--> CommentsAPI
+  ReportPage --"$fetch"--> AssignmentsAPI
+  AdminPage --"$fetch"--> ReportsAPI
+  AdminPage --"$fetch"--> AssignmentsAPI
+
+  ReportsAPI --> SupabaseDB
+  CommentsAPI --> SupabaseDB
+  AssignmentsAPI --> SupabaseDB
 
   ReportPage -. "MS2" .-> ReportInputModal
   ReportPage -. "MS3" .-> ReportCard
@@ -70,8 +84,13 @@ graph TD
   AdminPage -. "MS4" .-> UserAddModal
 
   UseCurrentUser --> DBTypes
-  ReportPage --> DBTypes
-  AdminPage --> DBTypes
+  ReportPage --> Models
+  ReportPage --> Schemas
+  AdminPage --> Models
+  ReportsAPI --> Models
+  ReportsAPI --> ApiTypes
+  CommentsAPI --> ApiTypes
+  Models --> DBTypes
 ```
 
 ---
@@ -113,6 +132,27 @@ graph TD
 | ファイル | 役割 |
 |---------|------|
 | `composables/useCurrentUser.ts` | ログインユーザーの `profiles` レコードを取得。`role` / `isAdmin` / `isMentor` / `isOjt` / `isTrainee` をリアクティブに返す。複数ページで共通利用 |
+
+### 型定義 (`app/types/`)
+
+| ファイル | 役割 |
+|---------|------|
+| `types/database.types.ts` | Supabase から自動生成。**編集禁止**（`pnpm supabase:types` で再生成） |
+| `types/models.ts` | DB テーブル型のエイリアス（`DailyReport` / `Comment` / `Profile` など）|
+| `types/api.ts` | Server API のリクエスト・レスポンス型 |
+| `types/schemas.ts` | Zod スキーマ（フォームバリデーション用）と導出した型 |
+
+### Server API (`server/api/`)
+
+| ファイル | エンドポイント | 役割 |
+|---------|-------------|------|
+| `reports/index.get.ts` | `GET /api/reports` | 週の日報一覧取得 |
+| `reports/index.post.ts` | `POST /api/reports` | 日報作成 |
+| `reports/[id]/index.put.ts` | `PUT /api/reports/:id` | 日報更新 |
+| `reports/[id]/index.delete.ts` | `DELETE /api/reports/:id` | 日報削除 |
+| `comments/index.get.ts` | `GET /api/comments` | 週次コメント取得 |
+| `comments/index.put.ts` | `PUT /api/comments` | 週次コメント保存（upsert） |
+| `assignments/me.get.ts` | `GET /api/assignments/me` | 担当新人一覧取得 |
 
 ### 今後追加するコンポーネント
 
