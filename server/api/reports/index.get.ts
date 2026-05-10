@@ -11,7 +11,7 @@ export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
   }
 
   const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekEnd.getDate() + 6)
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
   const weekEndStr = weekEnd.toISOString().split('T')[0]!
 
   let queryBuilder = client

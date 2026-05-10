@@ -1,7 +1,13 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event)
+  const user = await serverSupabaseUser(event)
+
+  if (!user) {
+    throw createError({ statusCode: 401, message: '認証が必要です' })
+  }
+
   const id = getRouterParam(event, 'id')
 
   const { error, count } = await client

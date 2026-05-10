@@ -1,9 +1,15 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import type { DailyReport, DailyReportUpdate } from '#shared/types/models'
 import type { ReportUpdateBody } from '#shared/types/api'
 
 export default defineEventHandler<Promise<DailyReport>>(async (event) => {
   const client = await serverSupabaseClient(event)
+  const user = await serverSupabaseUser(event)
+
+  if (!user) {
+    throw createError({ statusCode: 401, message: '認証が必要です' })
+  }
+
   const id = getRouterParam(event, 'id')
   const { check_in, check_out, content, mood } = await readBody<ReportUpdateBody>(event)
 
