@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { DailyReport } from '~/types/models'
-import type { ReportsQuery } from '~/types/api'
+import type { DailyReport } from '#shared/types/models'
+import type { ReportsQuery } from '#shared/types/api'
 
 export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
   const client = await serverSupabaseClient(event)

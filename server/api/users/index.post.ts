@@ -1,7 +1,7 @@
 import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
-import type { Profile } from '~/types/models'
-import { VALID_ROLES } from '~/types/api'
-import type { UserCreateBody } from '~/types/api'
+import type { Profile } from '#shared/types/models'
+import { VALID_ROLES } from '#shared/types/api'
+import type { UserCreateBody } from '#shared/types/api'
 
 export default defineEventHandler<Promise<Profile>>(async (event) => {
   const client = await serverSupabaseClient(event)

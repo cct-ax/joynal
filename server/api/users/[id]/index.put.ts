@@ -1,7 +1,7 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
-import type { Profile, ProfileUpdate } from '~/types/models'
-import { VALID_ROLES } from '~/types/api'
-import type { UserUpdateBody } from '~/types/api'
+import type { Profile, ProfileUpdate } from '#shared/types/models'
+import { VALID_ROLES } from '#shared/types/api'
+import type { UserUpdateBody } from '#shared/types/api'
 
 // 実質的な永久 ban（Supabase は 'none' で解除、それ以外は PostgreSQL interval 文字列）
 const BAN_DURATION_PERMANENT = '876000h'

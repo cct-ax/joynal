@@ -1,5 +1,5 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { CommentWithCommenter, CommentsQuery } from '~/types/api'
+import type { CommentWithCommenter, CommentsQuery } from '#shared/types/api'
 
 export default defineEventHandler<Promise<CommentWithCommenter[]>>(async (event) => {
   const client = await serverSupabaseClient(event)

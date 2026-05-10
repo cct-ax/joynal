@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { MentorAssignment } from '~/types/models'
-import type { AssignmentUpsertBody } from '~/types/api'
+import type { MentorAssignment } from '#shared/types/models'
+import type { AssignmentUpsertBody } from '#shared/types/api'
 
 export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
   const client = await serverSupabaseClient(event)

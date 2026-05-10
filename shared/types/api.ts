@@ -1,4 +1,4 @@
-import type { Comment, Profile } from '~/types/models'
+import type { Comment, Profile } from './models'
 
 // ----------------------------------------------------------------
 // Shared

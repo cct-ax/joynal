@@ -1,6 +1,6 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { Comment } from '~/types/models'
-import type { CommentUpsertBody } from '~/types/api'
+import type { Comment } from '#shared/types/models'
+import type { CommentUpsertBody } from '#shared/types/api'
 
 export default defineEventHandler<Promise<Comment>>(async (event) => {
   const client = await serverSupabaseClient(event)

@@ -1,5 +1,5 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { AssignmentForAdmin, AssignmentForMentor, AssignmentsMeQuery } from '~/types/api'
+import type { AssignmentForAdmin, AssignmentForMentor, AssignmentsMeQuery } from '#shared/types/api'
 
 export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMentor[]>>(async (event) => {
   const client = await serverSupabaseClient(event)

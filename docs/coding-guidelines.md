@@ -62,17 +62,26 @@ const handleError = (error: unknown): string => {
 
 ## 型定義の管理
 
-### `app/types/` に集約する
+### 型定義の置き場所
 
-型・インターフェース・Zod スキーマはすべて `app/types/` に置く。コンポーネントや composable の中にインラインで型を定義しない。
+Nuxt 4 の公式ディレクトリ構成に従い、型定義はスコープによって分ける。
 
 ```
 app/types/
 ├── database.types.ts   # Supabase 自動生成（編集禁止）
+└── schemas.ts          # Zod スキーマ（フロント専用）
+
+shared/types/
 ├── models.ts           # DB テーブル型のエイリアス
-├── api.ts              # API リクエスト・レスポンスの型
-└── schemas.ts          # Zod スキーマ（フォームバリデーション用）
+└── api.ts              # API リクエスト・レスポンスの型・共有定数
 ```
+
+| ファイル | 場所 | 理由 |
+|---------|------|------|
+| `database.types.ts` | `app/types/` | `@nuxtjs/supabase` が `~/` エイリアスで参照するため |
+| `models.ts` | `shared/types/` | app・server 両方で参照される |
+| `api.ts` | `shared/types/` | app・server 両方で参照される |
+| `schemas.ts` | `app/types/` | フロントのフォームバリデーション専用 |
 
 ### `database.types.ts` は編集しない
 
@@ -80,20 +89,20 @@ app/types/
 DB の型を使いたい場合は `models.ts` でエイリアスを定義してそこからインポートする。
 
 ```typescript
-// app/types/models.ts
-import type { Tables, Insert, Update } from '~/types/database.types'
+// shared/types/models.ts
+import type { Tables, TablesInsert, TablesUpdate } from '~/types/database.types'
 
 export type DailyReport = Tables<'daily_reports'>
-export type DailyReportInsert = Insert<'daily_reports'>
-export type DailyReportUpdate = Update<'daily_reports'>
+export type DailyReportInsert = TablesInsert<'daily_reports'>
+export type DailyReportUpdate = TablesUpdate<'daily_reports'>
 
 export type Comment = Tables<'comments'>
 export type Profile = Tables<'profiles'>
 ```
 
 ```typescript
-// コンポーネント側
-import type { DailyReport } from '~/types/models'
+// コンポーネント・server ハンドラー側（#shared エイリアスを使う）
+import type { DailyReport } from '#shared/types/models'
 ```
 
 ### API の型は `api.ts` に書く
@@ -101,7 +110,7 @@ import type { DailyReport } from '~/types/models'
 Server API のリクエスト・レスポンスに使う型はここに集める。
 
 ```typescript
-// app/types/api.ts
+// shared/types/api.ts
 export type ReportCreateBody = {
   date: string
   check_in: string
