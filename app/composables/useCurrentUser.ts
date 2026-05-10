@@ -16,12 +16,14 @@ export const useCurrentUser = () => {
         pending.value = false
         return
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
-      profile.value = data
+      if (!error) {
+        profile.value = data
+      }
       pending.value = false
     },
     { immediate: true }

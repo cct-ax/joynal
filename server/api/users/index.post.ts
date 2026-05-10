@@ -39,7 +39,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   })
 
   if (authError) {
-    if (authError.message.includes('already registered')) {
+    if (authError.status === 422) {
       throw createError({ statusCode: 409, message: '同じメールアドレスが既に存在します' })
     }
     throw createError({ statusCode: 500, message: authError.message })
@@ -62,6 +62,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     .single()
 
   if (error) {
+    await serviceClient.auth.admin.deleteUser(authUser.user.id)
     throw createError({ statusCode: 500, message: error.message })
   }
 

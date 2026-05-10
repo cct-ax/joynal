@@ -1,4 +1,4 @@
-import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { Profile, ProfileUpdate } from '#shared/types/models'
 import { VALID_ROLES } from '#shared/types/api'
 import type { UserUpdateBody } from '#shared/types/api'
@@ -8,6 +8,22 @@ const BAN_DURATION_PERMANENT = '876000h'
 
 export default defineEventHandler<Promise<Profile>>(async (event) => {
   const client = await serverSupabaseClient(event)
+  const user = await serverSupabaseUser(event)
+
+  if (!user) {
+    throw createError({ statusCode: 401, message: '認証が必要です' })
+  }
+
+  const { data: callerProfile } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (callerProfile?.role !== 'admin') {
+    throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
+  }
+
   const id = getRouterParam(event, 'id')
   const { name, email, role, is_active } = await readBody<UserUpdateBody>(event)
 
