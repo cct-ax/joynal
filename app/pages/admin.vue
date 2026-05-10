@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { Tables } from '~/types/database.types'
+import type { Profile, MentorAssignment } from '#shared/types/models'
 
-type Profile = Tables<'profiles'>
-type MentorAssignment = Tables<'mentor_assignments'>
 type ActiveTab = 'users' | 'assignments'
 
 const activeTab = ref<ActiveTab>('users')

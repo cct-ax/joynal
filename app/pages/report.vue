@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import type { Tables } from '~/types/database.types'
-
-type Profile = Tables<'profiles'>
-type DailyReport = Tables<'daily_reports'>
-type Role = 'trainee' | 'mentor' | 'ojt' | 'admin'
+import type { Profile, DailyReport } from '#shared/types/models'
+import type { UserRole } from '#shared/types/api'
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
 // --- ロール & 対象新人 ---
-const role = ref<Role | null>(null)
+const role = ref<UserRole | null>(null)
 const selectedTraineeId = ref<string | null>(null)
 const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
 

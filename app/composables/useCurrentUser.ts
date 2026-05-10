@@ -1,7 +1,5 @@
-import type { Tables } from '~/types/database.types'
-
-type Profile = Tables<'profiles'>
-type Role = 'trainee' | 'mentor' | 'ojt' | 'admin'
+import type { Profile } from '#shared/types/models'
+import type { UserRole } from '#shared/types/api'
 
 export const useCurrentUser = () => {
   const supabase = useSupabaseClient()
@@ -29,7 +27,7 @@ export const useCurrentUser = () => {
     { immediate: true }
   )
 
-  const role = computed(() => profile.value?.role as Role | null)
+  const role = computed(() => profile.value?.role as UserRole | null)
   const isAdmin = computed(() => role.value === 'admin')
   const isMentor = computed(() => role.value === 'mentor')
   const isOjt = computed(() => role.value === 'ojt')
