@@ -13,6 +13,11 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
   const id = getRouterParam(event, 'id')
   const { check_in, check_out, content, mood } = await readBody<ReportUpdateBody>(event)
 
+  const TIME_PATTERN = /^\d{2}:\d{2}$/
+  if ((check_in !== undefined && !TIME_PATTERN.test(check_in)) || (check_out !== undefined && !TIME_PATTERN.test(check_out))) {
+    throw createError({ statusCode: 400, message: 'check_in / check_out は HH:MM 形式で指定してください' })
+  }
+
   if (check_in && check_out && check_out <= check_in) {
     throw createError({ statusCode: 400, message: 'check_out は check_in より後の時間を指定してください' })
   }
@@ -37,7 +42,8 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
     if (error.code === '42501') {
       throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
     }
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/reports/:id PUT]', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   return data

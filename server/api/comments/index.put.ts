@@ -16,6 +16,14 @@ export default defineEventHandler<Promise<Comment>>(async (event) => {
     throw createError({ statusCode: 400, message: '必須項目が不足しています' })
   }
 
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+    throw createError({ statusCode: 400, message: 'weekStart は YYYY-MM-DD 形式で指定してください' })
+  }
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(traineeId)) {
+    throw createError({ statusCode: 400, message: 'traineeId は UUID 形式で指定してください' })
+  }
+
   const { data, error } = await client
     .from('comments')
     .upsert(
@@ -29,7 +37,8 @@ export default defineEventHandler<Promise<Comment>>(async (event) => {
     if (error.code === '42501') {
       throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
     }
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/comments PUT]', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   return data

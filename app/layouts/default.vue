@@ -3,18 +3,7 @@ const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const router = useRouter()
 
-const isAdmin = ref(false)
-
-const onUserChange = async (currentUser: ReturnType<typeof useSupabaseUser>['value']) => {
-  if (!currentUser?.id) {
-    isAdmin.value = false
-    return
-  }
-  const { data } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single()
-  isAdmin.value = data?.role === 'admin'
-}
-
-watch(user, onUserChange, { immediate: true })
+const { isAdmin } = useCurrentUser()
 
 const signOut = async () => {
   await supabase.auth.signOut()

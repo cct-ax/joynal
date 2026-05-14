@@ -7,16 +7,17 @@ const activeTab = ref<ActiveTab>('users')
 
 // --- ユーザー管理 ---
 const users = ref<Profile[]>([])
-// TODO: profiles テーブルから全ユーザーを取得して users に格納する
+// TODO: $fetch('/api/users') で全ユーザーを取得して users に格納する
 // TODO: 「＋ ユーザーを追加」モーダルの open/close 制御を実装する
 
 // --- メンター割り当て ---
 const selectedYear = ref(new Date().getFullYear())
 const assignments = ref<MentorAssignment[]>([])
-// TODO: mentor_assignments テーブルから selectedYear の割り当てを取得して assignments に格納する
-// TODO: profiles テーブルから role='mentor' のユーザーを取得する（割り当てドロップダウン用）
-// TODO: profiles テーブルから role='ojt' のユーザーを取得する（割り当てドロップダウン用）
-// TODO: 「保存」ボタンで割り当て内容を mentor_assignments に UPSERT する
+// TODO: $fetch('/api/assignments/me', { query: { year: selectedYear.value } }) で割り当てを取得して assignments に格納する
+// TODO: users からロールでフィルタしてメンター・OJTの選択肢を生成する（別途 API コールは不要）
+//   const mentors = computed(() => users.value.filter(u => u.role === 'mentor'))
+//   const ojts = computed(() => users.value.filter(u => u.role === 'ojt'))
+// TODO: 「保存」ボタンで $fetch('/api/assignments', { method: 'PUT', body: { traineeId, mentorId, ojtId, year } }) を呼ぶ
 </script>
 
 <template>

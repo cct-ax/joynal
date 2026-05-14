@@ -12,6 +12,10 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
   const { year: yearStr } = getQuery(event) as Partial<AssignmentsMeQuery>
   const year = yearStr ? Number(yearStr) : new Date().getFullYear()
 
+  if (Number.isNaN(year)) {
+    throw createError({ statusCode: 400, message: 'year は数値で指定してください' })
+  }
+
   const { data: profile, error: profileError } = await client
     .from('profiles')
     .select('role')
@@ -19,7 +23,8 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
     .single()
 
   if (profileError) {
-    throw createError({ statusCode: 500, message: profileError.message })
+    console.error('[api/assignments/me GET] profile fetch', profileError)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   if (profile.role === 'trainee') {
@@ -41,7 +46,8 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
       .eq('year', year)
 
     if (error) {
-      throw createError({ statusCode: 500, message: error.message })
+      console.error('[api/assignments/me GET] admin query', error)
+      throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
     }
 
     return data as AssignmentForAdmin[]
@@ -58,7 +64,8 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
     .eq('year', year)
 
   if (error) {
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/assignments/me GET] mentor query', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   return data as AssignmentForMentor[]

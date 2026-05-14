@@ -17,6 +17,10 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     throw createError({ statusCode: 400, message: '必須項目が不足しています' })
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw createError({ statusCode: 400, message: 'email の形式が正しくありません' })
+  }
+
   if (!VALID_ROLES.includes(role)) {
     throw createError({ statusCode: 400, message: 'role は trainee / mentor / ojt / admin のいずれかを指定してください' })
   }
@@ -42,7 +46,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     if (authError.status === 422) {
       throw createError({ statusCode: 409, message: '同じメールアドレスが既に存在します' })
     }
-    throw createError({ statusCode: 500, message: authError.message })
+    console.error('[api/users POST] auth.admin.createUser', authError)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   const { data: lastUser } = await client
@@ -63,7 +68,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
 
   if (error) {
     await serviceClient.auth.admin.deleteUser(authUser.user.id)
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/users POST] profile insert', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   setResponseStatus(event, 201)

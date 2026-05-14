@@ -28,7 +28,8 @@ export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
   const { data, error } = await queryBuilder
 
   if (error) {
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/reports GET]', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   return data

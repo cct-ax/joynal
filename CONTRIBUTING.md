@@ -21,7 +21,10 @@ pnpm install
 
 # 環境変数を設定
 cp .env.example .env
-# .env を開いて Supabase の URL と anon key を入力する（PLに確認）
+# .env を開いて以下の値を入力する（PLに確認）
+# - NUXT_PUBLIC_SUPABASE_URL: Supabase プロジェクトの URL
+# - NUXT_PUBLIC_SUPABASE_KEY: Supabase の anon key
+# - NUXT_SUPABASE_SERVICE_ROLE_KEY: Supabase の service role key（ユーザー招待・無効化機能に必要）
 
 # 開発サーバーを起動
 pnpm dev
@@ -170,10 +173,11 @@ toast.add({ title: 'エラーが発生しました', color: 'error' })
 ## よく使うコマンド
 
 ```bash
-pnpm dev          # 開発サーバー起動
-pnpm lint         # コードのチェック（エラーがないか確認）
-pnpm lint:fix     # コードの自動修正
-pnpm format       # フォーマット整形
+pnpm dev              # 開発サーバー起動
+pnpm lint             # コードのチェック（エラーがないか確認）
+pnpm lint:fix         # コードの自動修正
+pnpm format           # フォーマット整形
+pnpm supabase:types   # Supabase の型定義を再生成（DBスキーマを変更した後に実行）
 ```
 
 PR を出す前に `pnpm lint` を実行してエラーがないことを確認してください。

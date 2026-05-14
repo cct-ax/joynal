@@ -33,15 +33,20 @@ const toast = useToast()
 const loading = ref(false)
 
 // ④ 送信時の処理（バリデーションが通った後に呼ばれる）
-const onSubmit = async (event: FormSubmitEvent<Schema>) => {
+// 実装時は _event を event に変えて event.data を $fetch のボディに渡すこと:
+//   await $fetch('/api/reports', { method: 'POST', body: event.data })
+const onSubmit = async (_event: FormSubmitEvent<Schema>) => {
   loading.value = true
 
-  // ここで Supabase にデータを保存する
-  // 例:
-  // const { error } = await supabase.from('daily_reports').insert({ ... })
-  // if (error) { toast.add({ title: 'エラーが発生しました', color: 'error' }); return }
+  // 実装例（_event を event に変えること）:
+  // try {
+  //   await $fetch('/api/reports', { method: 'POST', body: event.data })
+  // } catch {
+  //   toast.add({ title: 'エラーが発生しました', color: 'error' })
+  //   loading.value = false
+  //   return
+  // }
 
-  // 成功時のフィードバック
   toast.add({ title: '保存しました', color: 'success' })
 
   // フォームをリセット
@@ -50,9 +55,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   state.date = undefined
 
   loading.value = false
-
-  // event.data に型付きのフォーム値が入っている
-  console.log(event.data)
 }
 </script>
 

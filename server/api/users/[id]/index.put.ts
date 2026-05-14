@@ -51,7 +51,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     if (error.code === '42501') {
       throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
     }
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/users/:id PUT] profile update', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   if (is_active !== undefined) {
@@ -59,7 +60,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     const banDuration = is_active ? 'none' : BAN_DURATION_PERMANENT
     const { error: banError } = await serviceClient.auth.admin.updateUserById(id!, { ban_duration: banDuration })
     if (banError) {
-      throw createError({ statusCode: 500, message: banError.message })
+      console.error('[api/users/:id PUT] auth.admin.updateUserById', banError)
+      throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
     }
   }
 

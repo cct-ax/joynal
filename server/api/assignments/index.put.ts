@@ -16,6 +16,10 @@ export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
     throw createError({ statusCode: 400, message: 'traineeId は必須です' })
   }
 
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(traineeId)) {
+    throw createError({ statusCode: 400, message: 'traineeId は UUID 形式で指定してください' })
+  }
+
   const targetYear: number = year ?? new Date().getFullYear()
 
   const { data, error } = await client
@@ -34,7 +38,8 @@ export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
     if (error.code === '42501') {
       throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
     }
-    throw createError({ statusCode: 500, message: error.message })
+    console.error('[api/assignments PUT]', error)
+    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   return data

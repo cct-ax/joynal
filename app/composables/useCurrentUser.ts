@@ -2,7 +2,6 @@ import type { Profile } from '#shared/types/models'
 import type { UserRole } from '#shared/types/api'
 
 export const useCurrentUser = () => {
-  const supabase = useSupabaseClient()
   const user = useSupabaseUser()
 
   const profile = ref<Profile | null>(null)
@@ -16,13 +15,10 @@ export const useCurrentUser = () => {
         pending.value = false
         return
       }
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single()
-      if (!error) {
-        profile.value = data
+      try {
+        profile.value = await $fetch<Profile>('/api/users/me')
+      } catch {
+        profile.value = null
       }
       pending.value = false
     },

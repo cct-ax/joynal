@@ -81,14 +81,16 @@ app/
 ├── middleware/        # 認証ミドルウェア
 ├── pages/            # ページ（login / report / admin / confirm / reset-password）
 └── types/
-    ├── database.types.ts  # Supabase 自動生成（編集禁止）
-    ├── models.ts          # DB テーブル型エイリアス
-    ├── api.ts             # API リクエスト・レスポンス型
+    ├── database.types.ts  # Supabase 自動生成（pnpm supabase:types で再生成、編集禁止）
     └── schemas.ts         # Zod スキーマ（フォームバリデーション用）
+shared/types/         # app・server 両方から参照される共有型定義
+├── models.ts         # DB テーブル型エイリアス
+└── api.ts            # API リクエスト・レスポンスの型・共有定数
 server/api/           # Server API（ブラウザから直接 Supabase を呼ばない）
 ├── reports/          # 日報 CRUD
 ├── comments/         # 週次コメント取得・保存
-└── assignments/      # 担当新人一覧
+├── assignments/      # 担当新人一覧・割り当て
+└── users/            # ユーザー管理（me・一覧・作成・更新）
 docs/                 # 設計ドキュメント・開発計画
 supabase/migrations/  # DBマイグレーション
 ```

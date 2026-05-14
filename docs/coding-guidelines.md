@@ -299,16 +299,24 @@ UserAddModal       // ユーザー + 追加 + モーダル
 
 ### `$fetch` を使う（Supabase クライアントを直接呼ばない）
 
+フロントエンドから Supabase の DB テーブルを直接参照することは**一切禁止**です。例外はありません。認証ユーザーのプロフィールやロールが必要な場合も、専用の composable・API 経由で取得してください。
+
 ```typescript
 // ✗ 悪い例（フロントから直接 Supabase を呼ぶ）
 const supabase = useSupabaseClient()
 const { data } = await supabase.from('daily_reports').select('*')
+const { data: profile } = await supabase.from('profiles').select('role')  // ← ロール取得も禁止
 
 // ✓ よい例（Server API 経由）
 const reports = await $fetch('/api/reports', {
   query: { weekStart: '2026-05-19' }
 })
+
+// ✓ ログインユーザーのロール・プロフィールは useCurrentUser composable を使う
+const { role, isTrainee, isMentor, isOjt, isAdmin, profile, pending } = useCurrentUser()
 ```
+
+> `useCurrentUser` は内部で `$fetch('/api/users/me')` を呼び出しており、DB を直接参照しません。
 
 ### エラーハンドリングを必ず書く
 

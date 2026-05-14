@@ -2,16 +2,16 @@
 import type { Profile, DailyReport } from '#shared/types/models'
 import type { UserRole } from '#shared/types/api'
 
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
-
 // --- ロール & 対象新人 ---
+// TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）
+// const { role: currentRole, isTrainee, isMentor, isOjt, isAdmin, pending } = useCurrentUser()
 const role = ref<UserRole | null>(null)
 const selectedTraineeId = ref<string | null>(null)
 const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
 
-// TODO: ログインユーザーのロールを profiles テーブルから取得して role に格納する
-// TODO: メンター・OJT は担当新人を mentor_assignments から、管理者は全新人を profiles から取得して trainees に格納する
+// TODO: ロール取得後、$fetch を使って担当新人一覧を取得して trainees に格納する
+//   メンター・OJT: $fetch('/api/assignments/me', { query: { year } }) → trainee フィールドを展開
+//   管理者: $fetch('/api/users') → role === 'trainee' のみフィルタ
 
 // --- 週ナビゲーション ---
 const getThisMonday = (): Date => {
@@ -67,12 +67,15 @@ const toDateString = (date: Date) => date.toISOString().slice(0, 10)
 // --- 日報データ ---
 // key: 'YYYY-MM-DD', value: daily_report レコード
 const reports = ref<Record<string, DailyReport>>({})
-// TODO: currentWeekStart と対象ユーザーID をもとに daily_reports テーブルから取得して reports に格納する
+// TODO: currentWeekStart と対象ユーザーID をもとに日報を取得して reports に格納する
+//   $fetch('/api/reports', { query: { weekStart: toDateString(currentWeekStart.value), userId: selectedTraineeId.value ?? undefined } })
+//   取得した配列を Record<string, DailyReport> に変換: Object.fromEntries(data.map(r => [r.date, r]))
 
 // --- コメントデータ ---
 const mentorComment = ref<string | null>(null)
 const ojtComment = ref<string | null>(null)
-// TODO: currentWeekStart と selectedTraineeId をもとに comments テーブルから取得する
+// TODO: currentWeekStart と selectedTraineeId をもとにコメントを取得する
+//   $fetch('/api/comments', { query: { weekStart: toDateString(currentWeekStart.value), traineeId: selectedTraineeId.value } })
 
 // --- モーダル ---
 // TODO: 日報入力・編集モーダルの open/close 制御と選択中の日付状態を実装する（新人用）
@@ -80,10 +83,6 @@ const ojtComment = ref<string | null>(null)
 
 const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
 const showEmptyAdminMessage = computed(() => role.value === 'admin' && !selectedTraineeId.value)
-
-// supabase・user は TODO のデータ取得処理で使用する
-void supabase
-void user
 </script>
 
 <template>
