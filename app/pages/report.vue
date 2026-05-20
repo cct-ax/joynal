@@ -5,7 +5,7 @@ import type { UserRole } from '#shared/types/api'
 // --- ロール & 対象新人 ---
 // TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）
 // const { role: currentRole, isTrainee, isMentor, isOjt, isAdmin, pending } = useCurrentUser()
-const role = ref<UserRole | null>(null)
+const role = ref<UserRole | null>('trainee')
 const selectedTraineeId = ref<string | null>(null)
 const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
 
@@ -25,6 +25,8 @@ const getThisMonday = (): Date => {
 }
 
 const currentWeekStart = ref(getThisMonday())
+const DAY_LABELS = ['月', '火', '水', '木', '金'] as const
+const MAX_MOOD = 5
 
 const weekDays = computed(() =>
   Array.from({ length: 5 }, (_, index) => {
@@ -37,7 +39,8 @@ const weekDays = computed(() =>
 const weekLabel = computed(() => {
   const weekStart = currentWeekStart.value
   const weekEnd = weekDays.value.at(-1)!
-  const formatMonthDay = (date: Date) => `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
+  const formatMonthDay = (date: Date) =>
+    `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
   return `${weekStart.getFullYear()}/${formatMonthDay(weekStart)}（月）〜 ${formatMonthDay(weekEnd)}（金）`
 })
 
@@ -57,12 +60,19 @@ const goToThisWeek = () => {
   currentWeekStart.value = getThisMonday()
 }
 
-const DAY_LABELS = ['月', '火', '水', '木', '金'] as const
-
 const formatDate = (date: Date) =>
   `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
 
-const toDateString = (date: Date) => date.toISOString().slice(0, 10)
+const toDateString = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const isCurrentWeek = computed(
+  () => toDateString(currentWeekStart.value) === toDateString(getThisMonday())
+)
 
 // --- 日報データ ---
 // key: 'YYYY-MM-DD', value: daily_report レコード
@@ -83,117 +93,310 @@ const ojtComment = ref<string | null>(null)
 
 const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
 const showEmptyAdminMessage = computed(() => role.value === 'admin' && !selectedTraineeId.value)
+
+type WeekDayItem = {
+  date: Date
+  dateKey: string
+  weekday: (typeof DAY_LABELS)[number]
+  report: DailyReport | undefined
+  isToday: boolean
+}
+
+const weekDayItems = computed<WeekDayItem[]>(() => {
+  const todayKey = toDateString(new Date())
+  return weekDays.value.map((date, index) => {
+    const dateKey = toDateString(date)
+    return {
+      date,
+      dateKey,
+      weekday: DAY_LABELS[index] ?? DAY_LABELS[0],
+      report: reports.value[dateKey],
+      isToday: dateKey === todayKey
+    }
+  })
+})
+
+const trimContent = (content: string, maxLength: number): string =>
+  content.length > maxLength ? `${content.slice(0, maxLength)}...` : content
+
+const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => index + 1))
 </script>
 
 <template>
-  <div>
-    <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
-    <div v-if="showTraineeSelector">
-      <label>対象:</label>
-      <select v-model="selectedTraineeId">
-        <option
-          value=""
-          disabled
-        >
-          新人を選択してください
-        </option>
-        <option
-          v-for="t in trainees"
-          :key="t.id"
-          :value="t.id"
-        >
-          {{ t.name }}
-        </option>
-      </select>
-    </div>
-
-    <!-- 管理者で新人未選択の場合 -->
-    <div v-if="showEmptyAdminMessage">
-      <p>表示したい新人の日報を選んでください</p>
-    </div>
-
-    <template v-else>
-      <!-- 週ナビゲーション -->
-      <div>
-        <button @click="prevWeek">
-          ＜ 前の週
-        </button>
-        <span>{{ weekLabel }}</span>
-        <button @click="goToThisWeek">
-          今週
-        </button>
-        <button @click="nextWeek">
-          次の週 ＞
-        </button>
+  <div class="min-h-[calc(100vh-52px)] bg-[#f9fafb] px-4 py-5 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl space-y-4">
+      <div class="flex flex-col gap-1">
+        <h1 class="text-lg font-semibold text-[#111827]">
+          日報
+        </h1>
+        <p class="text-sm text-[#6b7280]">
+          週ごとの日報を入力・確認できます。
+        </p>
       </div>
 
-      <!-- 週間日報リスト（月〜金） -->
-      <table>
-        <tbody>
-          <tr
-            v-for="(day, index) in weekDays"
-            :key="index"
+      <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
+      <section
+        v-if="showTraineeSelector"
+        class="rounded-lg border border-[#e5e7eb] bg-white p-4 shadow-sm"
+      >
+        <label
+          for="trainee-selector"
+          class="mb-2 block text-sm font-medium text-[#374151]"
+        >
+          対象
+        </label>
+        <select
+          id="trainee-selector"
+          v-model="selectedTraineeId"
+          class="w-full rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition focus:border-[#6366f1] focus:ring-4 focus:ring-[#c7d2fe] sm:max-w-xs"
+        >
+          <option
+            value=""
+            disabled
           >
-            <!-- 日付・曜日 -->
-            <td>{{ formatDate(day) }}（{{ DAY_LABELS[index] }}）</td>
+            新人を選択してください
+          </option>
+          <option
+            v-for="t in trainees"
+            :key="t.id"
+            :value="t.id"
+          >
+            {{ t.name }}
+          </option>
+        </select>
+      </section>
 
-            <!-- 出勤〜退勤・やったこと -->
-            <td>
-              <template v-if="reports[toDateString(day)]">
-                {{ reports[toDateString(day)]?.check_in }} 〜 {{ reports[toDateString(day)]?.check_out }}
-                <br>
-                {{ reports[toDateString(day)]?.content.slice(0, 80) }}
-              </template>
-              <template v-else>
-                --
-              </template>
-            </td>
+      <!-- 管理者で新人未選択の場合 -->
+      <section
+        v-if="showEmptyAdminMessage"
+        class="flex min-h-72 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white p-8 text-center shadow-sm"
+      >
+        <p class="text-sm text-[#6b7280]">
+          表示したい新人の日報を選んでください
+        </p>
+      </section>
 
-            <!-- ロール別操作ボタン -->
-            <td>
-              <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
-              <template v-if="role === 'trainee'">
-                <button v-if="!reports[toDateString(day)]">
-                  <!-- TODO: 入力モーダルを開く -->
-                  入力
-                </button>
-                <button v-else>
-                  <!-- TODO: 編集モーダルを開く -->
-                  編集
-                </button>
-              </template>
+      <template v-else>
+        <!-- 週ナビゲーション -->
+        <section class="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-sm">
+          <div
+            class="flex flex-col gap-3 border-b border-[#e5e7eb] p-4 md:flex-row md:items-center md:justify-between"
+          >
+            <div
+              class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap"
+            >
+              <button
+                type="button"
+                class="inline-flex min-h-9 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                @click="prevWeek"
+              >
+                <span class="sm:hidden">前週</span>
+                <span class="hidden sm:inline">← 前の週</span>
+              </button>
 
-              <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
-              <template v-else-if="reports[toDateString(day)]">
-                <button>
-                  <!-- TODO: 詳細モーダルを開く -->
-                  詳細
-                </button>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <div
+                class="min-h-9 min-w-0 rounded-md bg-[#f3f4f6] px-3 py-2 text-center text-xs font-medium text-[#111827] sm:text-sm"
+              >
+                {{ weekLabel }}
+              </div>
 
-      <!-- 週次コメントエリア -->
-      <div>
-        <!-- メンターコメント -->
-        <div>
-          <h3>メンターコメント</h3>
-          <!-- TODO: role === 'mentor' の場合はテキストエリアで編集可能にする -->
-          <p>{{ mentorComment ?? 'コメントはまだありません' }}</p>
-        </div>
+              <button
+                type="button"
+                class="inline-flex min-h-9 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                @click="nextWeek"
+              >
+                <span class="sm:hidden">次週</span>
+                <span class="hidden sm:inline">次の週 →</span>
+              </button>
+            </div>
 
-        <!-- OJTコメント -->
-        <div>
-          <h3>OJTコメント</h3>
-          <!-- TODO: role === 'ojt' の場合はテキストエリアで編集可能にする -->
-          <p>{{ ojtComment ?? 'コメントはまだありません' }}</p>
-        </div>
-      </div>
-    </template>
+            <button
+              type="button"
+              class="inline-flex min-h-9 w-full items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] sm:w-auto"
+              :class="
+                isCurrentWeek
+                  ? 'bg-[#f3f4f6] text-[#9ca3af]'
+                  : 'bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff]'
+              "
+              @click="goToThisWeek"
+            >
+              今週
+            </button>
+          </div>
 
-    <!-- TODO: 日報入力・編集モーダルコンポーネントをここに配置する（新人用） -->
-    <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
+          <!-- 週間日報リスト（月〜金） -->
+          <div
+            class="hidden border-b border-[#e5e7eb] bg-[#f9fafb] text-xs font-semibold tracking-wide text-[#6b7280] md:grid md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem]"
+          >
+            <div class="px-4 py-2">
+              日付
+            </div>
+            <div class="px-2 py-2">
+              出退勤
+            </div>
+            <div class="px-2 py-2">
+              やったこと
+            </div>
+            <div class="px-2 py-2 text-center">
+              気分
+            </div>
+            <div class="px-3 py-2" />
+          </div>
+
+          <div>
+            <article
+              v-for="item in weekDayItems"
+              :key="item.dateKey"
+              class="border-b border-[#e5e7eb] bg-white last:border-b-0"
+              :class="item.isToday ? 'bg-[#fafafa]' : ''"
+            >
+              <div
+                class="grid gap-3 p-4 md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem] md:items-center md:gap-0 md:p-0"
+              >
+                <div class="flex items-center gap-2 md:px-4 md:py-3">
+                  <span
+                    class="text-sm font-semibold md:font-medium"
+                    :class="item.isToday ? 'text-[#4f46e5]' : 'text-[#111827]'"
+                  >
+                    {{ formatDate(item.date) }}（{{ item.weekday }}）
+                  </span>
+                  <span
+                    v-if="item.isToday"
+                    class="h-1.5 w-1.5 rounded-full bg-[#4f46e5]"
+                  />
+                </div>
+
+                <div class="text-sm text-[#6b7280] md:px-2 md:py-3">
+                  <template v-if="item.report">
+                    {{ item.report.check_in }} 〜 {{ item.report.check_out }}
+                  </template>
+                  <template v-else>
+                    --
+                  </template>
+                </div>
+
+                <div class="min-w-0 md:px-2 md:py-3">
+                  <p
+                    v-if="item.report"
+                    class="truncate text-sm text-[#111827]"
+                  >
+                    {{ trimContent(item.report.content, 80) }}
+                  </p>
+                  <p
+                    v-else
+                    class="text-sm text-[#9ca3af]"
+                  >
+                    未入力
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-0.5 md:justify-center md:px-2 md:py-3">
+                  <template v-if="item.report?.mood">
+                    <span
+                      v-for="star in moodStars"
+                      :key="star"
+                      class="text-sm"
+                      :class="star <= (item.report.mood ?? 0) ? 'text-amber-400' : 'text-[#d1d5db]'"
+                    >
+                      ★
+                    </span>
+                  </template>
+                  <span
+                    v-else
+                    class="text-sm text-[#d1d5db]"
+                  > -- </span>
+                </div>
+
+                <div class="flex justify-end md:px-3 md:py-3">
+                  <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
+                  <template v-if="role === 'trainee'">
+                    <button
+                      v-if="!item.report"
+                      type="button"
+                      class="inline-flex min-h-8 items-center justify-center rounded-md border border-transparent bg-[#4f46e5] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                    >
+                      <!-- TODO: 入力モーダルを開く -->
+                      入力
+                    </button>
+                    <button
+                      v-else
+                      type="button"
+                      class="inline-flex min-h-8 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                    >
+                      <!-- TODO: 編集モーダルを開く -->
+                      編集
+                    </button>
+                  </template>
+
+                  <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
+                  <template v-else-if="item.report">
+                    <button
+                      type="button"
+                      class="inline-flex min-h-8 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                    >
+                      <!-- TODO: 詳細モーダルを開く -->
+                      詳細
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- 週次コメントエリア -->
+          <div class="border-t-2 border-[#e5e7eb] p-4 sm:p-5">
+            <h2 class="mb-4 text-xs font-semibold tracking-wide text-[#6b7280]">
+              週次コメント
+            </h2>
+            <div class="grid gap-4 md:grid-cols-2">
+              <!-- メンターコメント -->
+              <section class="rounded-lg bg-[#f3f4f6] p-4">
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex rounded-full bg-[#f0fdf4] px-2 py-0.5 text-xs font-medium text-[#15803d]"
+                  >
+                    メンター
+                  </span>
+                  <h3 class="text-sm font-medium text-[#111827]">
+                    メンターコメント
+                  </h3>
+                </div>
+                <!-- TODO: role === 'mentor' の場合はテキストエリアで編集可能にする -->
+                <p
+                  class="text-sm leading-7"
+                  :class="mentorComment ? 'text-[#111827]' : 'italic text-[#9ca3af]'"
+                >
+                  {{ mentorComment ?? 'コメントはまだありません' }}
+                </p>
+              </section>
+
+              <!-- OJTコメント -->
+              <section class="rounded-lg bg-[#f3f4f6] p-4">
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex rounded-full bg-[#faf5ff] px-2 py-0.5 text-xs font-medium text-[#7c3aed]"
+                  >
+                    OJT
+                  </span>
+                  <h3 class="text-sm font-medium text-[#111827]">
+                    OJTコメント
+                  </h3>
+                </div>
+                <!-- TODO: role === 'ojt' の場合はテキストエリアで編集可能にする -->
+                <p
+                  class="text-sm leading-7"
+                  :class="ojtComment ? 'text-[#111827]' : 'italic text-[#9ca3af]'"
+                >
+                  {{ ojtComment ?? 'コメントはまだありません' }}
+                </p>
+              </section>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <!-- TODO: 日報入力・編集モーダルコンポーネントをここに配置する（新人用） -->
+      <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
+    </div>
   </div>
 </template>
