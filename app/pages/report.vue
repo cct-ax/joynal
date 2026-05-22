@@ -310,22 +310,32 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 <div class="flex justify-end md:px-3 md:py-3">
                   <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
                   <template v-if="role === 'trainee'">
-                    <button
+                    <UButton
                       v-if="!item.report"
                       type="button"
-                      class="inline-flex min-h-8 items-center justify-center rounded-md border border-transparent bg-[#4f46e5] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                      icon="i-lucide-pencil"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      square
+                      aria-label="日報を入力"
+                      title="日報を入力"
                     >
                       <!-- TODO: 入力モーダルを開く -->
-                      入力
-                    </button>
-                    <button
+                    </UButton>
+                    <UButton
                       v-else
                       type="button"
-                      class="inline-flex min-h-8 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                      icon="i-lucide-pencil"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      square
+                      aria-label="日報を編集"
+                      title="日報を編集"
                     >
                       <!-- TODO: 編集モーダルを開く -->
-                      編集
-                    </button>
+                    </UButton>
                   </template>
 
                   <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
