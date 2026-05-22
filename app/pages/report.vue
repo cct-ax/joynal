@@ -127,15 +127,6 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 <template>
   <div class="min-h-[calc(100vh-52px)] bg-[#f9fafb] px-4 py-5 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl space-y-4">
-      <div class="flex flex-col gap-1">
-        <h1 class="text-lg font-semibold text-[#111827]">
-          日報
-        </h1>
-        <p class="text-sm text-[#6b7280]">
-          週ごとの日報を入力・確認できます。
-        </p>
-      </div>
-
       <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
       <section
         v-if="showTraineeSelector"
