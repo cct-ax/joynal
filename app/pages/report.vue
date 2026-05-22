@@ -53,6 +53,10 @@ const prevWeek = () => {
 }
 
 const nextWeek = () => {
+  if (!canGoNextWeek.value) {
+    return
+  }
+
   const date = new Date(currentWeekStart.value)
   date.setDate(date.getDate() + 7)
   currentWeekStart.value = date
@@ -71,6 +75,10 @@ const toDateString = (date: Date) => {
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+const canGoNextWeek = computed(
+  () => toDateString(currentWeekStart.value) < toDateString(getThisMonday())
+)
 
 const isCurrentWeek = computed(
   () => toDateString(currentWeekStart.value) === toDateString(getThisMonday())
@@ -181,7 +189,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
             >
               <button
                 type="button"
-                class="inline-flex min-h-9 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                class="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
                 @click="prevWeek"
               >
                 <span class="sm:hidden">前週</span>
@@ -196,7 +204,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
               <button
                 type="button"
-                class="inline-flex min-h-9 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                class="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] disabled:cursor-not-allowed disabled:border-[#e5e7eb] disabled:bg-[#f9fafb] disabled:text-[#9ca3af] disabled:hover:bg-[#f9fafb]"
+                :disabled="!canGoNextWeek"
                 @click="nextWeek"
               >
                 <span class="sm:hidden">次週</span>
@@ -206,7 +215,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
             <button
               type="button"
-              class="inline-flex min-h-9 w-full items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] sm:w-auto"
+              class="inline-flex min-h-9 w-full cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] sm:w-auto"
               :class="
                 isCurrentWeek
                   ? 'bg-[#f3f4f6] text-[#9ca3af]'
@@ -336,7 +345,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                   <template v-else-if="item.report">
                     <button
                       type="button"
-                      class="inline-flex min-h-8 items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                      class="inline-flex min-h-8 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
                     >
                       <!-- TODO: 詳細モーダルを開く -->
                       詳細
