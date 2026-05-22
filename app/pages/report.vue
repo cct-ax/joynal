@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Profile, DailyReport } from '#shared/types/models'
 import type { UserRole } from '#shared/types/api'
+import type { ReportWeekday, WeekDayItem } from '~/types/report'
 
 // --- ロール & 対象新人 ---
 // TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）
@@ -25,7 +26,8 @@ const getThisMonday = (): Date => {
 }
 
 const currentWeekStart = ref(getThisMonday())
-const DAY_LABELS = ['月', '火', '水', '木', '金'] as const
+const DAY_LABELS: readonly ReportWeekday[] = ['月', '火', '水', '木', '金']
+const DEFAULT_DAY_LABEL: ReportWeekday = '月'
 const MAX_MOOD = 5
 
 const weekDays = computed(() =>
@@ -94,14 +96,6 @@ const ojtComment = ref<string | null>(null)
 const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
 const showEmptyAdminMessage = computed(() => role.value === 'admin' && !selectedTraineeId.value)
 
-type WeekDayItem = {
-  date: Date
-  dateKey: string
-  weekday: (typeof DAY_LABELS)[number]
-  report: DailyReport | undefined
-  isToday: boolean
-}
-
 const weekDayItems = computed<WeekDayItem[]>(() => {
   const todayKey = toDateString(new Date())
   return weekDays.value.map((date, index) => {
@@ -109,7 +103,7 @@ const weekDayItems = computed<WeekDayItem[]>(() => {
     return {
       date,
       dateKey,
-      weekday: DAY_LABELS[index] ?? DAY_LABELS[0],
+      weekday: DAY_LABELS[index] ?? DEFAULT_DAY_LABEL,
       report: reports.value[dateKey],
       isToday: dateKey === todayKey
     }
