@@ -126,7 +126,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
 <template>
   <div class="min-h-[calc(100vh-52px)] bg-[#f9fafb] px-4 py-5 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-5xl space-y-4">
+    <div class="mx-auto max-w-[960px] space-y-4">
       <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
       <section
         v-if="showTraineeSelector"
@@ -173,40 +173,49 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
         <!-- 週ナビゲーション -->
         <section class="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-sm">
           <div
-            class="flex flex-col gap-3 border-b border-[#e5e7eb] p-4 md:flex-row md:items-center md:justify-between"
+            class="flex flex-col gap-2 border-b border-[#e5e7eb] p-3 sm:p-4 md:flex-row md:items-center md:justify-between"
           >
             <div
               class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap"
             >
               <button
                 type="button"
-                class="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-0 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] sm:w-auto sm:px-3"
+                aria-label="前の週"
                 @click="prevWeek"
               >
-                <span class="sm:hidden">前週</span>
+                <UIcon
+                  name="i-lucide-chevron-left"
+                  class="size-4 sm:hidden"
+                />
                 <span class="hidden sm:inline">← 前の週</span>
               </button>
 
               <div
-                class="min-h-9 min-w-0 rounded-md bg-[#f3f4f6] px-3 py-2 text-center text-xs font-medium text-[#111827] sm:text-sm"
+                class="min-h-9 min-w-0 truncate whitespace-nowrap rounded-md bg-[#f3f4f6] px-2 py-2 text-center text-xs font-medium text-[#111827] sm:px-3 sm:text-sm"
               >
                 {{ weekLabel }}
               </div>
 
               <button
                 type="button"
-                class="inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] disabled:cursor-not-allowed disabled:border-[#e5e7eb] disabled:bg-[#f9fafb] disabled:text-[#9ca3af] disabled:hover:bg-[#f9fafb]"
+                class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-0 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] disabled:cursor-not-allowed disabled:border-[#e5e7eb] disabled:bg-[#f9fafb] disabled:text-[#9ca3af] disabled:hover:bg-[#f9fafb] sm:w-auto sm:px-3"
                 :disabled="!canGoNextWeek"
+                aria-label="次の週"
                 @click="nextWeek"
               >
-                <span class="sm:hidden">次週</span>
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  class="size-4 sm:hidden"
+                />
                 <span class="hidden sm:inline">次の週 →</span>
               </button>
             </div>
 
             <button
               type="button"
-              class="inline-flex min-h-9 w-full cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] sm:w-auto"
+              class="inline-flex min-h-9 w-auto cursor-pointer items-center justify-center self-end rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] disabled:cursor-not-allowed sm:self-auto"
+              :disabled="isCurrentWeek"
               :class="
                 isCurrentWeek
                   ? 'bg-[#f3f4f6] text-[#9ca3af]'
@@ -244,12 +253,110 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
               class="border-b border-[#e5e7eb] bg-white last:border-b-0"
               :class="item.isToday ? 'bg-[#fafafa]' : ''"
             >
+              <div class="p-4 md:hidden">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <span
+                        class="text-[13px] font-semibold"
+                        :class="item.isToday ? 'text-[#4f46e5]' : 'text-[#111827]'"
+                      >
+                        {{ formatDate(item.date) }}（{{ item.weekday }}）
+                      </span>
+                      <span
+                        v-if="item.isToday"
+                        class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4f46e5]"
+                      />
+                      <span
+                        v-if="item.report"
+                        class="truncate text-xs text-[#6b7280]"
+                      >
+                        {{ item.report.check_in }} 〜 {{ item.report.check_out }}
+                      </span>
+                      <span
+                        v-else
+                        class="text-xs text-[#9ca3af]"
+                      >
+                        未入力
+                      </span>
+                    </div>
+
+                    <div
+                      v-if="item.report"
+                      class="mt-1 flex min-w-0 items-center gap-2"
+                    >
+                      <p class="min-w-0 flex-1 truncate text-[13px] text-[#6b7280]">
+                        {{ trimContent(item.report.content, 60) }}
+                      </p>
+                      <div
+                        v-if="item.report.mood"
+                        class="flex shrink-0 items-center gap-0.5"
+                      >
+                        <span
+                          v-for="star in moodStars"
+                          :key="star"
+                          class="text-xs"
+                          :class="star <= (item.report.mood ?? 0) ? 'text-amber-400' : 'text-[#d1d5db]'"
+                        >
+                          ★
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="shrink-0">
+                    <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
+                    <template v-if="role === 'trainee'">
+                      <UButton
+                        v-if="!item.report"
+                        type="button"
+                        icon="i-lucide-pencil"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        square
+                        class="cursor-pointer"
+                        aria-label="日報を入力"
+                        title="日報を入力"
+                      >
+                        <!-- TODO: 入力モーダルを開く -->
+                      </UButton>
+                      <UButton
+                        v-else
+                        type="button"
+                        icon="i-lucide-pencil"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        square
+                        class="cursor-pointer"
+                        aria-label="日報を編集"
+                        title="日報を編集"
+                      >
+                        <!-- TODO: 編集モーダルを開く -->
+                      </UButton>
+                    </template>
+
+                    <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
+                    <template v-else-if="item.report">
+                      <button
+                        type="button"
+                        class="inline-flex min-h-8 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                      >
+                        <!-- TODO: 詳細モーダルを開く -->
+                        詳細
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
               <div
-                class="grid gap-3 p-4 md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem] md:items-center md:gap-0 md:p-0"
+                class="hidden md:grid md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem] md:items-center md:gap-0"
               >
                 <div class="flex items-center gap-2 md:px-4 md:py-3">
                   <span
-                    class="text-sm font-semibold md:font-medium"
+                    class="text-sm font-medium"
                     :class="item.isToday ? 'text-[#4f46e5]' : 'text-[#111827]'"
                   >
                     {{ formatDate(item.date) }}（{{ item.weekday }}）
@@ -312,6 +419,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       variant="ghost"
                       size="sm"
                       square
+                      class="cursor-pointer"
                       aria-label="日報を入力"
                       title="日報を入力"
                     >
@@ -325,6 +433,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       variant="ghost"
                       size="sm"
                       square
+                      class="cursor-pointer"
                       aria-label="日報を編集"
                       title="日報を編集"
                     >
