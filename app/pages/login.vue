@@ -29,45 +29,93 @@ const signIn = async () => {
 </script>
 
 <template>
-  <div>
-    <h1>Joynal</h1>
-    <p>今日の「楽しい」を、明日の成長へ</p>
-
-    <form @submit.prevent="signIn">
-      <div>
-        <label for="email">メールアドレス</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-        >
+  <div class="flex min-h-screen items-center justify-center bg-[#f9fafb] px-5 py-8">
+    <div class="w-full max-w-sm">
+      <div class="mb-8 text-center">
+        <h1 class="text-[32px] font-bold leading-none text-[#111827]">
+          Joynal
+        </h1>
+        <p class="mt-2 text-sm text-[#6b7280]">
+          今日の「楽しい」を、明日の成長へ
+        </p>
       </div>
 
-      <div>
-        <label for="password">パスワード</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          autocomplete="current-password"
-        >
-      </div>
-
-      <p v-if="errorMessage">
-        {{ errorMessage }}
-      </p>
-
-      <button
-        type="submit"
-        :disabled="loading"
+      <UCard
+        :ui="{
+          root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
+          body: 'p-7'
+        }"
       >
-        {{ loading ? 'ログイン中...' : 'ログイン' }}
-      </button>
-    </form>
+        <form
+          class="space-y-4"
+          @submit.prevent="signIn"
+        >
+          <div>
+            <label
+              for="email"
+              class="mb-1.5 block text-sm font-medium text-[#374151]"
+            >
+              メールアドレス
+            </label>
+            <UInput
+              id="email"
+              v-model="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="mail@example.com"
+              class="w-full"
+              :ui="{ base: 'w-full' }"
+            />
+          </div>
 
-    <NuxtLink to="/reset-password">パスワードをお忘れですか？</NuxtLink>
+          <div>
+            <label
+              for="password"
+              class="mb-1.5 block text-sm font-medium text-[#374151]"
+            >
+              パスワード
+            </label>
+            <UInput
+              id="password"
+              v-model="password"
+              type="password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••"
+              class="w-full"
+              :ui="{ base: 'w-full' }"
+            />
+          </div>
+
+          <p
+            v-if="errorMessage"
+            class="text-sm text-[#dc2626]"
+          >
+            {{ errorMessage }}
+          </p>
+
+          <UButton
+            type="submit"
+            color="primary"
+            block
+            :loading="loading"
+            :disabled="loading"
+            class="mt-1 cursor-pointer justify-center bg-[#4f46e5] hover:bg-[#4338ca]"
+          >
+            {{ loading ? 'ログイン中...' : 'ログイン' }}
+          </UButton>
+        </form>
+
+        <div class="mt-4 text-center">
+          <NuxtLink
+            to="/reset-password"
+            class="text-sm text-[#4f46e5] transition hover:underline"
+          >
+            パスワードをお忘れの方はこちら
+          </NuxtLink>
+        </div>
+      </UCard>
+    </div>
   </div>
 </template>
