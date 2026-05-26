@@ -7,8 +7,14 @@ import type { ReportWeekday, WeekDayItem } from '~/types/report'
 // TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）
 // const { role: currentRole, isTrainee, isMentor, isOjt, isAdmin, pending } = useCurrentUser()
 const role = ref<UserRole | null>('trainee')
-const selectedTraineeId = ref<string | null>(null)
+const selectedTraineeId = ref<string | undefined>(undefined)
 const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
+const traineeSelectItems = computed(() =>
+  trainees.value.map(trainee => ({
+    label: trainee.name,
+    value: trainee.id
+  }))
+)
 
 // TODO: ロール取得後、$fetch を使って担当新人一覧を取得して trainees に格納する
 //   メンター・OJT: $fetch('/api/assignments/me', { query: { year } }) → trainee フィールドを展開
@@ -128,59 +134,62 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
   <div class="min-h-[calc(100vh-52px)] bg-[#f9fafb] px-4 py-5 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-[960px] space-y-4">
       <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
-      <section
+      <UCard
         v-if="showTraineeSelector"
-        class="rounded-lg border border-[#e5e7eb] bg-white p-4 shadow-sm"
+        :ui="{
+          root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
+          body: 'p-4'
+        }"
       >
-        <label
-          for="trainee-selector"
-          class="mb-2 block text-sm font-medium text-[#374151]"
+        <UFormField
+          label="対象"
+          name="trainee-selector"
         >
-          対象
-        </label>
-        <select
-          id="trainee-selector"
-          v-model="selectedTraineeId"
-          class="w-full rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-[#111827] outline-none transition focus:border-[#6366f1] focus:ring-4 focus:ring-[#c7d2fe] sm:max-w-xs"
-        >
-          <option
-            value=""
-            disabled
-          >
-            新人を選択してください
-          </option>
-          <option
-            v-for="t in trainees"
-            :key="t.id"
-            :value="t.id"
-          >
-            {{ t.name }}
-          </option>
-        </select>
-      </section>
+          <USelect
+            id="trainee-selector"
+            v-model="selectedTraineeId"
+            :items="traineeSelectItems"
+            value-key="value"
+            label-key="label"
+            placeholder="新人を選択してください"
+            class="w-full sm:max-w-xs"
+            :ui="{ base: 'w-full' }"
+          />
+        </UFormField>
+      </UCard>
 
       <!-- 管理者で新人未選択の場合 -->
-      <section
+      <UCard
         v-if="showEmptyAdminMessage"
-        class="flex min-h-72 items-center justify-center rounded-lg border border-[#e5e7eb] bg-white p-8 text-center shadow-sm"
+        :ui="{
+          root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
+          body: 'flex min-h-72 items-center justify-center p-8 text-center'
+        }"
       >
         <p class="text-sm text-[#6b7280]">
           表示したい新人の日報を選んでください
         </p>
-      </section>
+      </UCard>
 
       <template v-else>
         <!-- 週ナビゲーション -->
-        <section class="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-sm">
+        <UCard
+          :ui="{
+            root: 'overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
+            body: 'p-0 sm:p-0'
+          }"
+        >
           <div
             class="flex flex-col gap-2 border-b border-[#e5e7eb] p-3 sm:p-4 md:flex-row md:items-center md:justify-between"
           >
             <div
               class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap"
             >
-              <button
+              <UButton
                 type="button"
-                class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-0 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] sm:w-auto sm:px-3"
+                color="primary"
+                variant="outline"
+                class="h-9 w-9 cursor-pointer justify-center !border-[#c7d2fe] !bg-white px-0 !text-[#4f46e5] !ring-1 !ring-[#c7d2fe] hover:!bg-[#eef2ff] hover:!ring-[#c7d2fe] focus:!ring-4 focus:!ring-[#c7d2fe] sm:w-auto sm:px-3"
                 aria-label="前の週"
                 @click="prevWeek"
               >
@@ -188,8 +197,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                   name="i-lucide-chevron-left"
                   class="size-4 sm:hidden"
                 />
-                <span class="hidden sm:inline">← 前の週</span>
-              </button>
+                <span class="hidden sm:inline">前の週</span>
+              </UButton>
 
               <div
                 class="min-h-9 min-w-0 truncate whitespace-nowrap rounded-md bg-[#f3f4f6] px-2 py-2 text-center text-xs font-medium text-[#111827] sm:px-3 sm:text-sm"
@@ -197,9 +206,11 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 {{ weekLabel }}
               </div>
 
-              <button
+              <UButton
                 type="button"
-                class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-0 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] disabled:cursor-not-allowed disabled:border-[#e5e7eb] disabled:bg-[#f9fafb] disabled:text-[#9ca3af] disabled:hover:bg-[#f9fafb] sm:w-auto sm:px-3"
+                color="primary"
+                variant="outline"
+                class="h-9 w-9 cursor-pointer justify-center !border-[#c7d2fe] !bg-white px-0 !text-[#4f46e5] !ring-1 !ring-[#c7d2fe] hover:!bg-[#eef2ff] hover:!ring-[#c7d2fe] focus:!ring-4 focus:!ring-[#c7d2fe] disabled:cursor-not-allowed disabled:!border-[#e5e7eb] disabled:!bg-[#f9fafb] disabled:!text-[#9ca3af] disabled:!ring-[#e5e7eb] disabled:hover:!bg-[#f9fafb] sm:w-auto sm:px-3"
                 :disabled="!canGoNextWeek"
                 aria-label="次の週"
                 @click="nextWeek"
@@ -208,23 +219,19 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                   name="i-lucide-chevron-right"
                   class="size-4 sm:hidden"
                 />
-                <span class="hidden sm:inline">次の週 →</span>
-              </button>
+                <span class="hidden sm:inline">次の週</span>
+              </UButton>
             </div>
 
-            <button
+            <UButton
               type="button"
-              class="inline-flex min-h-9 w-auto cursor-pointer items-center justify-center self-end rounded-md px-3 py-1.5 text-sm font-medium transition focus:outline-none focus:ring-4 focus:ring-[#c7d2fe] disabled:cursor-not-allowed sm:self-auto"
+              variant="soft"
+              class="min-h-9 w-auto cursor-pointer justify-center self-end !bg-[#eef2ff] !text-[#4f46e5] hover:!bg-[#e0e7ff] disabled:cursor-not-allowed disabled:!bg-[#f3f4f6] disabled:!text-[#9ca3af] sm:self-auto"
               :disabled="isCurrentWeek"
-              :class="
-                isCurrentWeek
-                  ? 'bg-[#f3f4f6] text-[#9ca3af]'
-                  : 'bg-[#eef2ff] text-[#4f46e5] hover:bg-[#e0e7ff]'
-              "
               @click="goToThisWeek"
             >
               今週
-            </button>
+            </UButton>
           </div>
 
           <!-- 週間日報リスト（月〜金） -->
@@ -339,13 +346,16 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
                     <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
                     <template v-else-if="item.report">
-                      <button
+                      <UButton
                         type="button"
-                        class="inline-flex min-h-8 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                        label="詳細"
+                        color="primary"
+                        variant="outline"
+                        size="sm"
+                        class="cursor-pointer"
                       >
                         <!-- TODO: 詳細モーダルを開く -->
-                        詳細
-                      </button>
+                      </UButton>
                     </template>
                   </div>
                 </div>
@@ -443,13 +453,16 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
                   <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
                   <template v-else-if="item.report">
-                    <button
+                    <UButton
                       type="button"
-                      class="inline-flex min-h-8 cursor-pointer items-center justify-center rounded-md border border-[#c7d2fe] bg-white px-3 py-1.5 text-sm font-medium text-[#4f46e5] transition hover:bg-[#eef2ff] focus:outline-none focus:ring-4 focus:ring-[#c7d2fe]"
+                      label="詳細"
+                      color="primary"
+                      variant="outline"
+                      size="sm"
+                      class="cursor-pointer"
                     >
                       <!-- TODO: 詳細モーダルを開く -->
-                      詳細
-                    </button>
+                    </UButton>
                   </template>
                 </div>
               </div>
@@ -465,11 +478,12 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
               <!-- メンターコメント -->
               <section class="rounded-lg bg-[#f3f4f6] p-4">
                 <div class="mb-2 flex flex-wrap items-center gap-2">
-                  <span
-                    class="inline-flex rounded-full bg-[#f0fdf4] px-2 py-0.5 text-xs font-medium text-[#15803d]"
-                  >
-                    メンター
-                  </span>
+                  <UBadge
+                    color="success"
+                    variant="soft"
+                    size="sm"
+                    label="メンター"
+                  />
                   <h3 class="text-sm font-medium text-[#111827]">
                     メンターコメント
                   </h3>
@@ -486,11 +500,12 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
               <!-- OJTコメント -->
               <section class="rounded-lg bg-[#f3f4f6] p-4">
                 <div class="mb-2 flex flex-wrap items-center gap-2">
-                  <span
-                    class="inline-flex rounded-full bg-[#faf5ff] px-2 py-0.5 text-xs font-medium text-[#7c3aed]"
-                  >
-                    OJT
-                  </span>
+                  <UBadge
+                    color="secondary"
+                    variant="soft"
+                    size="sm"
+                    label="OJT"
+                  />
                   <h3 class="text-sm font-medium text-[#111827]">
                     OJTコメント
                   </h3>
@@ -505,7 +520,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
               </section>
             </div>
           </div>
-        </section>
+        </UCard>
       </template>
 
       <!-- TODO: 日報入力・編集モーダルコンポーネントをここに配置する（新人用） -->
