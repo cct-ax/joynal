@@ -179,11 +179,9 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
             body: 'p-0 sm:p-0'
           }"
         >
-          <div
-            class="flex flex-col gap-2 border-b border-[#e5e7eb] p-3 sm:p-4 md:flex-row md:items-center md:justify-between"
-          >
+          <div class="border-b border-[#e5e7eb] p-3 sm:p-4">
             <div
-              class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap"
+              class="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem_auto] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
             >
               <UButton
                 type="button"
@@ -221,17 +219,17 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 />
                 <span class="hidden sm:inline">次の週</span>
               </UButton>
-            </div>
 
-            <UButton
-              type="button"
-              variant="soft"
-              class="min-h-9 w-auto cursor-pointer justify-center self-end !bg-[#eef2ff] !text-[#4f46e5] hover:!bg-[#e0e7ff] disabled:cursor-not-allowed disabled:!bg-[#f3f4f6] disabled:!text-[#9ca3af] sm:self-auto"
-              :disabled="isCurrentWeek"
-              @click="goToThisWeek"
-            >
-              今週
-            </UButton>
+              <UButton
+                type="button"
+                variant="soft"
+                class="min-h-9 w-auto cursor-pointer justify-center !bg-[#eef2ff] px-3 !text-[#4f46e5] hover:!bg-[#e0e7ff] disabled:cursor-not-allowed disabled:!bg-[#f3f4f6] disabled:!text-[#9ca3af]"
+                :disabled="isCurrentWeek"
+                @click="goToThisWeek"
+              >
+                今週
+              </UButton>
+            </div>
           </div>
 
           <!-- 週間日報リスト（月〜金） -->
