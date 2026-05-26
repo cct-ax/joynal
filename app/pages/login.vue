@@ -46,17 +46,16 @@ const signIn = async () => {
           body: 'p-7'
         }"
       >
-        <form
+        <UForm
           class="space-y-4"
-          @submit.prevent="signIn"
+          @submit="signIn"
         >
-          <div>
-            <label
-              for="email"
-              class="mb-1.5 block text-sm font-medium text-[#374151]"
-            >
-              メールアドレス
-            </label>
+          <UFormField
+            label="メールアドレス"
+            name="email"
+            required
+            :ui="{ label: 'mb-1.5 block text-sm font-medium text-[#374151]' }"
+          >
             <UInput
               id="email"
               v-model="email"
@@ -67,15 +66,14 @@ const signIn = async () => {
               class="w-full"
               :ui="{ base: 'w-full' }"
             />
-          </div>
+          </UFormField>
 
-          <div>
-            <label
-              for="password"
-              class="mb-1.5 block text-sm font-medium text-[#374151]"
-            >
-              パスワード
-            </label>
+          <UFormField
+            label="パスワード"
+            name="password"
+            required
+            :ui="{ label: 'mb-1.5 block text-sm font-medium text-[#374151]' }"
+          >
             <UInput
               id="password"
               v-model="password"
@@ -86,7 +84,7 @@ const signIn = async () => {
               class="w-full"
               :ui="{ base: 'w-full' }"
             />
-          </div>
+          </UFormField>
 
           <p
             v-if="errorMessage"
@@ -105,7 +103,7 @@ const signIn = async () => {
           >
             {{ loading ? 'ログイン中...' : 'ログイン' }}
           </UButton>
-        </form>
+        </UForm>
 
         <div class="mt-4 text-center">
           <NuxtLink
