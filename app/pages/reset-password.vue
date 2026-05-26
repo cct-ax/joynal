@@ -45,17 +45,16 @@ const sendResetEmail = async () => {
         </p>
       </div>
 
-      <form
+      <UForm
         class="space-y-4"
-        @submit.prevent="sendResetEmail"
+        @submit="sendResetEmail"
       >
-        <div>
-          <label
-            for="email"
-            class="mb-1.5 block text-sm font-medium text-[#374151]"
-          >
-            メールアドレス
-          </label>
+        <UFormField
+          label="メールアドレス"
+          name="email"
+          required
+          :ui="{ label: 'mb-1.5 block text-sm font-medium text-[#374151]' }"
+        >
           <UInput
             id="email"
             v-model="email"
@@ -66,7 +65,7 @@ const sendResetEmail = async () => {
             class="w-full"
             :ui="{ base: 'w-full' }"
           />
-        </div>
+        </UFormField>
 
         <p
           v-if="successMessage"
@@ -91,7 +90,7 @@ const sendResetEmail = async () => {
         >
           {{ loading ? '送信中...' : 'リセットメールを送信' }}
         </UButton>
-      </form>
+      </UForm>
 
       <div class="mt-5">
         <NuxtLink
