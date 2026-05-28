@@ -193,7 +193,7 @@ defineExpose({ submit, onDelete })
             <UInputTime
               v-model="checkInTime"
               :hour-cycle="24"
-              class="w-full"
+              class="w-full justify-center"
             />
           </UFormField>
           <UFormField
@@ -204,7 +204,7 @@ defineExpose({ submit, onDelete })
             <UInputTime
               v-model="checkOutTime"
               :hour-cycle="24"
-              class="w-full"
+              class="w-full justify-center"
             />
           </UFormField>
         </div>
