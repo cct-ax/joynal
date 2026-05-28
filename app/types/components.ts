@@ -5,7 +5,7 @@
  * - 共通値型（MoodValue 等）は `shared/types/api.ts` から import する
  * - 本ファイルは defineExpose の型のみ。テストから型推論で参照する目的
  */
-import type { ReportSchema } from '#shared/types/schemas'
+import type { PasswordChangeSchema, ReportSchema } from '#shared/types/schemas'
 
 /**
  * ReportInputModal が defineExpose で公開する API。
@@ -14,4 +14,12 @@ import type { ReportSchema } from '#shared/types/schemas'
 export type ReportInputModalExposed = {
   submit: (data: ReportSchema) => Promise<void>
   onDelete: () => Promise<void>
+}
+
+/**
+ * PasswordChangeModal が defineExpose で公開する API。
+ * テストから submit を直接呼ぶ際に使用する。
+ */
+export type PasswordChangeModalExposed = {
+  submit: (data: PasswordChangeSchema) => Promise<void>
 }

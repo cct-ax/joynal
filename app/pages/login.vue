@@ -4,9 +4,7 @@ import { loginSchema, type LoginSchema } from '#shared/types/schemas'
 
 definePageMeta({ layout: false })
 
-const supabase = useSupabaseClient()
-const router = useRouter()
-const authError = useSupabaseAuthError()
+const apiError = useApiError()
 
 const state = reactive<Partial<LoginSchema>>({
   email: undefined,
@@ -17,14 +15,15 @@ const loading = ref(false)
 const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
   loading.value = true
   try {
-    const { error } = await supabase.auth.signInWithPassword(event.data)
-    if (error) {
-      authError.notify(error, {
-        title: 'メールアドレスまたはパスワードが正しくありません'
-      })
-      return
-    }
-    await router.push('/report')
+    await $fetch('/api/auth/login', { method: 'POST', body: event.data })
+    // サーバーが Set-Cookie でセッションを発行するため、フルリロード（external）で
+    // @nuxtjs/supabase クライアントにセッションを反映させてから /report へ遷移する。
+    await navigateTo('/report', { external: true })
+  } catch (error: unknown) {
+    apiError.notify(error, {
+      statusMessages: { 401: 'メールアドレスまたはパスワードが正しくありません' },
+      fallback: 'ログインに失敗しました'
+    })
   } finally {
     loading.value = false
   }
