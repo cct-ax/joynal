@@ -83,6 +83,100 @@ export const assignmentSchema = z.object({
   year: z.number().int().optional()
 })
 
+// ----------------------------------------------------------------
+// サーバー API 用スキーマ（query / body / route param）
+// フロントの reportSchema 等とは別に、ネットワーク境界で使う「unknown を絞り込む」ためのスキーマ
+// ----------------------------------------------------------------
+
+/** ルートパラメータの id 検証（UUID） */
+export const uuidSchema = z.uuid('有効な ID を指定してください')
+
+const ymdRegex = /^\d{4}-\d{2}-\d{2}$/
+const timeRegex = /^\d{2}:\d{2}$/
+
+/** GET /api/reports クエリ */
+export const reportsQuerySchema = z.object({
+  weekStart: z
+    .string()
+    .regex(ymdRegex, 'weekStart は YYYY-MM-DD 形式で指定してください'),
+  userId: z.uuid().optional()
+})
+
+/** POST /api/reports ボディ。フロントの reportSchema と同じルール + サーバーでも mood 範囲を強制 */
+export const reportCreateBodySchema = z
+  .object({
+    date: z.string().regex(ymdRegex, 'date は YYYY-MM-DD 形式で指定してください'),
+    check_in: z.string().regex(timeRegex, 'check_in は HH:MM 形式で指定してください'),
+    check_out: z.string().regex(timeRegex, 'check_out は HH:MM 形式で指定してください'),
+    content: z.string().min(1, 'content は必須です'),
+    mood: moodSchema
+  })
+  .refine(v => v.check_out > v.check_in, {
+    path: ['check_out'],
+    message: 'check_out は check_in より後の時刻を指定してください'
+  })
+
+/** PUT /api/reports/[id] ボディ。すべて optional、両方存在時のみ refine */
+export const reportUpdateBodySchema = z
+  .object({
+    check_in: z.string().regex(timeRegex).optional(),
+    check_out: z.string().regex(timeRegex).optional(),
+    content: z.string().min(1).optional(),
+    mood: z
+      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
+      .nullable()
+      .optional()
+  })
+  .refine(v => !v.check_in || !v.check_out || v.check_out > v.check_in, {
+    path: ['check_out'],
+    message: 'check_out は check_in より後の時刻を指定してください'
+  })
+
+/** GET /api/comments クエリ */
+export const commentsQuerySchema = z.object({
+  weekStart: z.string().regex(ymdRegex),
+  traineeId: z.uuid()
+})
+
+/** PUT /api/comments ボディ */
+export const commentUpsertBodySchema = z.object({
+  weekStart: z.string().regex(ymdRegex),
+  traineeId: z.uuid(),
+  content: z.string().min(1, 'content は必須です')
+})
+
+/** GET /api/assignments/me クエリ。year は URL 上では文字列で来るので coerce で数値化 */
+export const assignmentsMeQuerySchema = z.object({
+  year: z.coerce.number().int().optional()
+})
+
+/** PUT /api/assignments ボディ */
+export const assignmentUpsertBodySchema = z.object({
+  traineeId: z.uuid(),
+  mentorId: z.uuid().nullable(),
+  ojtId: z.uuid().nullable(),
+  year: z.number().int().optional()
+})
+
+/** POST /api/users ボディ */
+export const userCreateBodySchema = z.object({
+  name: z.string().min(1, 'name は必須です').max(255),
+  email: z.email('有効なメールアドレスを指定してください'),
+  role: z.enum(['trainee', 'mentor', 'ojt', 'admin'] as const)
+})
+
+/** PUT /api/users/[id] ボディ */
+export const userUpdateBodySchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  email: z.email().optional(),
+  role: z.enum(['trainee', 'mentor', 'ojt', 'admin'] as const).optional(),
+  is_active: z.boolean().optional()
+})
+
+// ----------------------------------------------------------------
+// 型の導出
+// ----------------------------------------------------------------
+
 export type ReportSchema = z.output<typeof reportSchema>
 export type CommentSchema = z.output<typeof commentSchema>
 export type LoginSchema = z.output<typeof loginSchema>
