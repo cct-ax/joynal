@@ -24,9 +24,9 @@ describe('WeekPickerModal', () => {
       props: { open: true, currentWeek: new Date(2026, 4, 25) }
     })
     // 次の月ボタンを探す（aria-label="次の月"）
-    const nextMonthButton = document.querySelector('button[aria-label="次の月"]')
+    const nextMonthButton = document.querySelector<HTMLButtonElement>('button[aria-label="次の月"]')
     expect(nextMonthButton).not.toBeNull()
-    ;(nextMonthButton as HTMLButtonElement).click()
+    nextMonthButton!.click()
     await new Promise(r => setTimeout(r, 0))
     expect(document.body.textContent).toContain('6月')
   })
