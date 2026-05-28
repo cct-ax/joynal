@@ -11,24 +11,22 @@
  * UIcon 経由よりも素直なため。
  */
 import { Icon } from '@iconify/vue'
-
-// 1〜5 のみ有効。DB 側の CHECK 制約と一致する。
-type MoodStar = 1 | 2 | 3 | 4 | 5
-// テンプレートから渡す際の型は緩めて number | null を許容する
-type MoodValueIn = number | null | undefined
-// emit する値は厳密に 1〜5 または null
-type MoodValueOut = MoodStar | null
+import type { MoodValue } from '#shared/types/api'
 
 const props = withDefaults(
   defineProps<{
-    modelValue: MoodValueIn
+    /** DailyReport.mood が number | null のため受け取り側は緩めに許容する */
+    modelValue: MoodValue | number | null | undefined
     readonly?: boolean
     size?: 'xs' | 'sm' | 'md'
   }>(),
   { readonly: false, size: 'md' }
 )
 
-const emit = defineEmits<{ 'update:modelValue': [value: MoodValueOut] }>()
+const emit = defineEmits<{
+  /** 解除（再クリック）時は null、選択時は MoodValue を返す */
+  'update:modelValue': [value: MoodValue | null]
+}>()
 
 const STARS = [1, 2, 3, 4, 5] as const
 
@@ -47,7 +45,7 @@ const sizeClass = computed(() => {
   }
 })
 
-const onClick = (n: MoodStar): void => {
+const onClick = (n: MoodValue): void => {
   if (props.readonly) return
   emit('update:modelValue', props.modelValue === n ? null : n)
 }
