@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { reportSchema, commentSchema, userCreateSchema, assignmentSchema } from './schemas'
+import {
+  assignmentSchema,
+  commentSchema,
+  loginSchema,
+  passwordChangeSchema,
+  reportSchema,
+  resetPasswordSchema,
+  userCreateSchema
+} from './schemas'
 
 /**
  * テストの書き方サンプル。
@@ -50,6 +58,101 @@ describe('reportSchema', () => {
       mood: 6
     })
     expect(result.success).toBe(false)
+  })
+
+  it('退勤時間が出勤時間より前ならエラー', () => {
+    const result = reportSchema.safeParse({
+      date: '2026-05-19',
+      check_in: '18:00',
+      check_out: '09:00',
+      content: '内容'
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const checkOutError = result.error.issues.find((i) => i.path[0] === 'check_out')
+      expect(checkOutError?.message).toBe('退勤時間は出勤時間より後を指定してください')
+    }
+  })
+
+  it('退勤時間と出勤時間が同じならエラー', () => {
+    const result = reportSchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:00',
+      check_out: '09:00',
+      content: '内容'
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('loginSchema', () => {
+  it('有効なログインデータを受け入れる', () => {
+    const result = loginSchema.safeParse({
+      email: 'yamada@example.com',
+      password: 'secret123'
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('不正なメールはエラー', () => {
+    const result = loginSchema.safeParse({
+      email: 'not-an-email',
+      password: 'secret123'
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('空のパスワードはエラー', () => {
+    const result = loginSchema.safeParse({
+      email: 'yamada@example.com',
+      password: ''
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('resetPasswordSchema', () => {
+  it('有効なメールを受け入れる', () => {
+    expect(
+      resetPasswordSchema.safeParse({ email: 'yamada@example.com' }).success
+    ).toBe(true)
+  })
+
+  it('不正なメールはエラー', () => {
+    expect(resetPasswordSchema.safeParse({ email: 'foo' }).success).toBe(false)
+  })
+})
+
+describe('passwordChangeSchema', () => {
+  it('有効なパスワード変更データを受け入れる', () => {
+    const result = passwordChangeSchema.safeParse({
+      current: 'old-secret',
+      next: 'new-secret-123',
+      confirm: 'new-secret-123'
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('新しいパスワードが 8 文字未満はエラー', () => {
+    const result = passwordChangeSchema.safeParse({
+      current: 'old',
+      next: 'short',
+      confirm: 'short'
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('確認パスワード不一致はエラー', () => {
+    const result = passwordChangeSchema.safeParse({
+      current: 'old',
+      next: 'new-secret-123',
+      confirm: 'different-secret'
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const confirmError = result.error.issues.find((i) => i.path[0] === 'confirm')
+      expect(confirmError?.message).toContain('一致しません')
+    }
   })
 })
 
