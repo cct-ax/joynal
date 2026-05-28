@@ -17,10 +17,6 @@ const emit = defineEmits<{
   'select': [value: Date]
 }>()
 
-const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'] as const
-
-const DAY_HEADER = ['月', '火', '水', '木', '金', '土', '日'] as const
-
 const openModel = computed({
   get: () => props.open,
   set: (v: boolean) => emit('update:open', v)
@@ -127,7 +123,7 @@ const onWeekClick = (week: (Date | null)[]): void => {
         <!-- 曜日ヘッダー -->
         <div class="grid grid-cols-7 gap-1 text-xs font-semibold text-center mb-1">
           <div
-            v-for="(d, idx) in DAY_HEADER"
+            v-for="(d, idx) in DAY_HEADER_MON_START"
             :key="d"
             :class="{
               'text-cyan-600': idx === 5,
