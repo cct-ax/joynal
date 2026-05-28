@@ -13,7 +13,7 @@ export const reportSchema = z
     content: z.string().min(1, 'やったことは必須です'),
     mood: z.number().int().min(1).max(5).optional()
   })
-  .refine((v) => !v.check_in || !v.check_out || v.check_out > v.check_in, {
+  .refine(v => !v.check_in || !v.check_out || v.check_out > v.check_in, {
     path: ['check_out'],
     message: '退勤時間は出勤時間より後を指定してください'
   })
@@ -50,7 +50,7 @@ export const passwordChangeSchema = z
     next: z.string().min(8, '新しいパスワードは8文字以上で入力してください'),
     confirm: z.string().min(1, '確認用パスワードを入力してください')
   })
-  .refine((v) => v.next === v.confirm, {
+  .refine(v => v.next === v.confirm, {
     path: ['confirm'],
     message: '新しいパスワードと確認用パスワードが一致しません'
   })

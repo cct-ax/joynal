@@ -69,7 +69,7 @@ describe('reportSchema', () => {
     })
     expect(result.success).toBe(false)
     if (!result.success) {
-      const checkOutError = result.error.issues.find((i) => i.path[0] === 'check_out')
+      const checkOutError = result.error.issues.find(i => i.path[0] === 'check_out')
       expect(checkOutError?.message).toBe('退勤時間は出勤時間より後を指定してください')
     }
   })
@@ -150,7 +150,7 @@ describe('passwordChangeSchema', () => {
     })
     expect(result.success).toBe(false)
     if (!result.success) {
-      const confirmError = result.error.issues.find((i) => i.path[0] === 'confirm')
+      const confirmError = result.error.issues.find(i => i.path[0] === 'confirm')
       expect(confirmError?.message).toContain('一致しません')
     }
   })
