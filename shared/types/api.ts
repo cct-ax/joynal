@@ -8,6 +8,13 @@ export type UserRole = 'trainee' | 'mentor' | 'ojt' | 'admin'
 
 export const VALID_ROLES: readonly UserRole[] = ['trainee', 'mentor', 'ojt', 'admin']
 
+/**
+ * 日報の気分（mood）の値域。
+ * DB の CHECK 制約（1〜5）と Zod スキーマ・MoodStars コンポーネント・API ボディ型を統一する。
+ * null は「未入力に戻す」操作（PUT で明示的に解除）を表す。
+ */
+export type MoodValue = 1 | 2 | 3 | 4 | 5
+
 // ----------------------------------------------------------------
 // Reports
 // ----------------------------------------------------------------
@@ -22,14 +29,14 @@ export type ReportCreateBody = {
   check_in: string
   check_out: string
   content: string
-  mood?: 1 | 2 | 3 | 4 | 5
+  mood?: MoodValue
 }
 
 export type ReportUpdateBody = {
   check_in?: string
   check_out?: string
   content?: string
-  mood?: 1 | 2 | 3 | 4 | 5 | null
+  mood?: MoodValue | null
 }
 
 // ----------------------------------------------------------------
