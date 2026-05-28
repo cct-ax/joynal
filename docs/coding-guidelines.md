@@ -416,3 +416,153 @@ docs: API設計書にコメントエンドポイントを追加
 | 1ファイルに複数コンポーネントを定義する | 見通しが悪くなる |
 | `main` に直接 push する | レビューなしで本番に反映されてしまう |
 | シークレット（パスワード・APIキー）をコードに書く | `.env` に書き、コードには書かない |
+
+---
+
+## モーダル設計パターン
+
+モーダル（`UModal` / `ConfirmDialog` 等）の open/close 制御は、用途に応じて 3 つのパターンを使い分けます。汎用 composable で抽象化せず、用途ごとに素直に書くのが「お手本」です。
+
+### パターン 1: 単一ロケーション制御
+
+1 ファイル内で開閉が完結する場合は、素の `ref(false)` で書く。
+
+```vue
+<script setup lang="ts">
+const pwModalOpen = ref(false)
+</script>
+
+<template>
+  <UButton @click="pwModalOpen = true">パスワード変更</UButton>
+  <PasswordChangeModal v-model:open="pwModalOpen" />
+</template>
+```
+
+**使用例**: `AppHeader.vue` の `pwModalOpen`、`ReportInputModal.vue` の `confirmDeleteOpen`、`WeekNavigator.vue` の `pickerOpen`
+
+### パターン 2: 対象データを持って開く
+
+「どの行を編集するか」の情報と一緒にモーダルを開く場合、`selectedXxx: Ref<T | null>` を主とし、open は computed で派生させる。
+
+```vue
+<script setup lang="ts">
+const selectedReport = ref<DailyReport | null>(null)
+const selectedDate = ref<string | null>(null)
+
+// 開閉は selectedDate の有無で派生
+const isModalOpen = computed({
+  get: () => selectedDate.value !== null,
+  set: (v: boolean) => {
+    if (!v) {
+      // 閉じる時に同時に対象データもクリア
+      selectedReport.value = null
+      selectedDate.value = null
+    }
+  }
+})
+
+const openEdit = (report: DailyReport): void => {
+  selectedReport.value = report
+  selectedDate.value = report.date
+}
+</script>
+
+<template>
+  <ReportInputModal
+    v-model:open="isModalOpen"
+    :date="selectedDate"
+    :report="selectedReport"
+  />
+</template>
+```
+
+**使用例**: `report.vue` の `selectedReport` / `selectedDate` / `isModalOpen`
+
+### パターン 3: 削除確認は `ConfirmDialog` を再利用
+
+破壊的操作の確認は独自実装せず、`ConfirmDialog` を使う。
+
+```vue
+<script setup lang="ts">
+const confirmDeleteOpen = ref(false)
+const deleteLoading = ref(false)
+
+const onDelete = async (): Promise<void> => {
+  deleteLoading.value = true
+  try {
+    await $fetch(`/api/reports/${id}`, { method: 'DELETE' })
+    confirmDeleteOpen.value = false
+  } finally {
+    deleteLoading.value = false
+  }
+}
+</script>
+
+<template>
+  <UButton @click="confirmDeleteOpen = true">削除</UButton>
+  <ConfirmDialog
+    v-model:open="confirmDeleteOpen"
+    title="日報を削除"
+    message="この日報を削除します。よろしいですか？"
+    :loading="deleteLoading"
+    @confirm="onDelete"
+  />
+</template>
+```
+
+### やらないこと
+
+- `useModalState` のような汎用 composable で `ref(false)` を抽象化する → 読みやすさが下がる、3 パターンで構造が異なる
+- モーダル内に「確認モード」を組み込む（design プロトの React 版にあるパターン）→ `ConfirmDialog` を独立コンポーネントとして使う方がテスト容易
+
+---
+
+## エラー処理パターン
+
+`$fetch` と Supabase auth でエラー形状が異なるため、専用 composable をそれぞれ使う。
+
+### `$fetch` 系: `useApiError`
+
+```vue
+<script setup lang="ts">
+const apiError = useApiError()
+
+const submit = async (): Promise<void> => {
+  try {
+    await $fetch('/api/reports', { method: 'POST', body })
+  } catch (error: unknown) {
+    apiError.notify(error, {
+      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+      fallback: '保存に失敗しました'
+    })
+  }
+}
+</script>
+```
+
+- `statusMessages`: 特定 statusCode → 固定メッセージ
+- 400 の場合は自動的にサーバーの `data.message` を優先表示
+- 上記にマッチしなければ `fallback`
+
+### Supabase auth 系: `useSupabaseAuthError`
+
+```vue
+<script setup lang="ts">
+const supabase = useSupabaseClient()
+const authError = useSupabaseAuthError()
+
+const onSubmit = async (): Promise<void> => {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) {
+    authError.notify(error, { title: 'メールアドレスまたはパスワードが正しくありません' })
+    return
+  }
+  // 成功時の処理
+}
+</script>
+```
+
+### やらないこと
+
+- `(error as { statusCode: number }).statusCode` のように `as` で型キャスト → `useApiError` または `~/utils/fetchError` の type guard を使う
+- 1 つの composable で `$fetch` と Supabase auth の両方を扱う → 形状が違うので分けたほうが読みやすい
