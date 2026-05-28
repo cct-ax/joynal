@@ -86,9 +86,24 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
 <template>
   <div
     v-if="pending"
-    class="py-20 text-center text-gray-500 dark:text-gray-400"
+    role="status"
+    aria-label="読み込み中…"
+    class="space-y-6"
   >
-    読み込み中...
+    <UCard :ui="{ body: 'p-0 sm:p-0' }">
+      <div class="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+        <USkeleton class="h-8 w-full max-w-md" />
+      </div>
+      <div
+        v-for="i in 5"
+        :key="i"
+        class="flex items-center gap-4 px-4 py-3.5 border-b border-gray-200 dark:border-gray-800"
+      >
+        <USkeleton class="h-4 w-24 shrink-0" />
+        <USkeleton class="h-4 w-28 shrink-0" />
+        <USkeleton class="h-4 flex-1" />
+      </div>
+    </UCard>
   </div>
 
   <!-- 管理者は MS3 で TraineeSelector + 未選択時の EmptyState を実装予定 -->
