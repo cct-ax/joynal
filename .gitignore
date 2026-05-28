@@ -10,6 +10,9 @@ dist
 node_modules
 package-lock.json
 
+# Test outputs
+coverage/
+
 # Logs
 logs
 *.log
