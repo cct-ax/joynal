@@ -12,18 +12,23 @@
  */
 import { Icon } from '@iconify/vue'
 
-type MoodValue = 1 | 2 | 3 | 4 | 5 | null
+// 1〜5 のみ有効。DB 側の CHECK 制約と一致する。
+type MoodStar = 1 | 2 | 3 | 4 | 5
+// テンプレートから渡す際の型は緩めて number | null を許容する
+type MoodValueIn = number | null | undefined
+// emit する値は厳密に 1〜5 または null
+type MoodValueOut = MoodStar | null
 
 const props = withDefaults(
   defineProps<{
-    modelValue: MoodValue
+    modelValue: MoodValueIn
     readonly?: boolean
     size?: 'xs' | 'sm' | 'md'
   }>(),
   { readonly: false, size: 'md' }
 )
 
-const emit = defineEmits<{ 'update:modelValue': [value: MoodValue] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: MoodValueOut] }>()
 
 const STARS = [1, 2, 3, 4, 5] as const
 
@@ -42,7 +47,7 @@ const sizeClass = computed(() => {
   }
 })
 
-const onClick = (n: 1 | 2 | 3 | 4 | 5): void => {
+const onClick = (n: MoodStar): void => {
   if (props.readonly) return
   emit('update:modelValue', props.modelValue === n ? null : n)
 }
