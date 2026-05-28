@@ -8,11 +8,10 @@
 pnpm dev           # 開発サーバー起動（http://localhost:3000）
 pnpm build         # 本番ビルド（Nitro / Cloudflare Pages プリセット）
 pnpm lint          # ESLint チェック
-pnpm lint:fix      # ESLint 自動修正
-pnpm format        # Prettier フォーマット
+pnpm lint:fix      # ESLint 自動修正（フォーマッタ兼用 — @nuxt/eslint stylistic）
 pnpm test          # Vitest 実行（ユニット・統合テスト）
 pnpm test:watch    # Vitest ウォッチモード
-pnpm exec vue-tsc --noEmit  # 型チェック
+pnpm typecheck     # 型チェック（vue-tsc --noEmit）
 ```
 
 環境変数: `.env.example` を `.env` にコピーして Supabase の認証情報を設定する。

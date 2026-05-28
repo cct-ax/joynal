@@ -65,10 +65,12 @@ pnpm dev
 pnpm dev          # 開発サーバー起動
 pnpm build        # 本番ビルド
 pnpm lint         # ESLint 実行
-pnpm lint:fix     # ESLint 自動修正
-pnpm format       # Prettier フォーマット
-pnpm exec vue-tsc --noEmit  # 型チェック
+pnpm lint:fix     # ESLint 自動修正・整形（フォーマッタ兼用）
+pnpm typecheck    # 型チェック（vue-tsc --noEmit）
+pnpm test         # ユニット・統合テスト実行
 ```
+
+> フォーマッタは @nuxt/eslint の stylistic ルールが担当するため、Prettier は使いません。
 
 ## プロジェクト構成
 

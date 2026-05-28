@@ -175,12 +175,14 @@ toast.add({ title: 'エラーが発生しました', color: 'error' })
 ```bash
 pnpm dev              # 開発サーバー起動
 pnpm lint             # コードのチェック（エラーがないか確認）
-pnpm lint:fix         # コードの自動修正
-pnpm format           # フォーマット整形
+pnpm lint:fix         # コードの自動修正・整形（フォーマッタ兼用）
+pnpm typecheck        # 型チェック
+pnpm test             # ユニット・統合テスト実行
 pnpm supabase:types   # Supabase の型定義を再生成（DBスキーマを変更した後に実行）
 ```
 
-PR を出す前に `pnpm lint` を実行してエラーがないことを確認してください。
+PR を出す前に `pnpm lint` と `pnpm test` を実行して green になることを確認してください。
+ファイルの整形は `pnpm lint:fix` だけで完結します（Prettier は使いません — @nuxt/eslint の stylistic ルールが整形を担当します）。
 
 ---
 
