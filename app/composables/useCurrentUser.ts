@@ -12,35 +12,20 @@ const isUserRole = (v: string | null | undefined): v is UserRole =>
 
 export const useCurrentUser = () => {
   const user = useSupabaseUser()
+  const requestFetch = useRequestFetch()
 
-  const profile = ref<Profile | null>(null)
-  const pending = ref(true)
-  const profileMissing = ref(false)
-
-  watch(
-    user,
-    async (currentUser) => {
-      // useSupabaseUser() は getClaims() の JWT claims を返すため、ユーザー ID は `sub` に入る
-      // （`id` ではない）。ここを `id` にすると常に未認証扱いで早期 return し、/api/users/me を
-      // 取得できず header が「ユーザー」のままになる。
-      if (!currentUser?.sub) {
-        profile.value = null
-        profileMissing.value = false
-        pending.value = false
-        return
-      }
-      try {
-        profile.value = await $fetch<Profile>('/api/users/me')
-        profileMissing.value = false
-      } catch (error: unknown) {
-        profile.value = null
-        // 404 = auth ユーザーに profiles 行が無い（招待フロー未経由）。UI で明示する。
-        profileMissing.value = getFetchStatus(error) === 404
-      }
-      pending.value = false
-    },
-    { immediate: true }
+  // 共有キー 'current-user' の useAsyncData で重複排除する。複数コンポーネント
+  // （AppHeader / レイアウト / ページ）から呼んでも /api/users/me の取得は 1 回に集約される。
+  // SSR でも取得できるよう useRequestFetch でリクエストの Cookie を転送する。
+  // useSupabaseUser() は getClaims() の JWT claims（ユーザー ID は `sub`）。未ログイン時は取得しない。
+  const { data: profile, pending, error } = useAsyncData<Profile | null>(
+    'current-user',
+    async () => (user.value?.sub ? await requestFetch<Profile>('/api/users/me') : null),
+    { watch: [user] }
   )
+
+  // 404 = auth ユーザーに profiles 行が無い（招待フロー未経由）。UI で明示する。
+  const profileMissing = computed(() => getFetchStatus(error.value) === 404)
 
   const role = computed<UserRole | null>(() => {
     const raw = profile.value?.role
