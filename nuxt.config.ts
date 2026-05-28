@@ -23,6 +23,15 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@iconify/vue',
+        'zod'
+      ]
+    }
+  },
+
   typescript: {
     typeCheck: false
   },
