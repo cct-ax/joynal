@@ -14,11 +14,13 @@
  *     })
  *   }
  */
-import { getFetchMessage, getFetchStatus } from '~/utils/fetchError'
+import { getFetchCode, getFetchMessage, getFetchStatus } from '~/utils/fetchError'
 
 export type ApiErrorOptions = {
   /** 特定の statusCode → 固定メッセージ */
   statusMessages?: Partial<Record<number, string>>
+  /** サーバーが返す code（例: 'VALIDATION_ERROR'）→ 固定メッセージ */
+  codeMessages?: Partial<Record<string, string>>
   /** どれにもマッチしないときの最終メッセージ */
   fallback: string
   /** 400 のとき data.message を優先するか（既定: true） */
@@ -30,12 +32,20 @@ export const useApiError = () => {
 
   const resolveTitle = (error: unknown, options: ApiErrorOptions): string => {
     const status = getFetchStatus(error)
+    const code = getFetchCode(error)
     const preferServer = options.preferServerMessageOn400 ?? true
 
+    // code 優先（サーバーが意味づけしたエラー識別子）
+    if (code !== null) {
+      const codeMessage = options.codeMessages?.[code]
+      if (codeMessage) return codeMessage
+    }
+    // statusCode 別の固定メッセージ
     if (status !== null) {
       const fixed = options.statusMessages?.[status]
       if (fixed) return fixed
     }
+    // 400 のとき data.message を優先
     if (status === 400 && preferServer) {
       const serverMessage = getFetchMessage(error)
       if (serverMessage) return serverMessage

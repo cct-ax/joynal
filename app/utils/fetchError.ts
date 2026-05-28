@@ -8,7 +8,7 @@
 
 type FetchErrorShape = {
   statusCode: number
-  data?: { message?: string }
+  data?: { message?: string, code?: string }
 }
 
 /**
@@ -31,4 +31,11 @@ export const getFetchMessage = (error: unknown): string | null => {
   if (!isFetchError(error)) return null
   const message = error.data?.message
   return typeof message === 'string' ? message : null
+}
+
+/** FetchError の `data.code`（例: 'VALIDATION_ERROR'）を取り出す。string 以外は null */
+export const getFetchCode = (error: unknown): string | null => {
+  if (!isFetchError(error)) return null
+  const code = error.data?.code
+  return typeof code === 'string' ? code : null
 }
