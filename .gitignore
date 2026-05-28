@@ -34,3 +34,6 @@ wrangler.toml
 # Project-specific
 docs/PLAN.md
 docs/test-users.md
+
+# Serena
+.serena
