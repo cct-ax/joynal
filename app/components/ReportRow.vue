@@ -152,7 +152,7 @@ const onActionClick = (): void => {
           />
         </span>
       </div>
-      <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">
+      <p class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
         {{ report.content }}
       </p>
     </div>
@@ -228,7 +228,7 @@ const onActionClick = (): void => {
       v-if="isExpanded && report"
       class="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-950/20"
     >
-      <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">
+      <p class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
         {{ report.content }}
       </p>
     </div>

@@ -167,7 +167,7 @@ defineExpose({ submit, onDelete })
     v-model:open="openModel"
     :title="title"
     :ui="{
-      content: 'max-sm:!w-screen max-sm:!h-dvh max-sm:!max-w-none max-sm:!rounded-none sm:max-w-md'
+      content: 'max-sm:w-screen! max-sm:h-dvh! max-sm:max-w-none! max-sm:rounded-none! sm:max-w-md'
     }"
   >
     <template #body>
