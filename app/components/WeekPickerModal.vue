@@ -36,8 +36,6 @@ watch(
   }
 )
 
-const hoverWeek = ref<string | null>(null)
-
 const prevMonth = (): void => {
   if (viewMonth.value === 0) {
     viewYear.value -= 1
@@ -147,8 +145,6 @@ const onWeekClick = (week: (Date | null)[]): void => {
               'hover:bg-gray-100 dark:hover:bg-gray-800': getWeekMonStr(week) !== currentWeekStr
             }"
             :aria-label="`週 ${getWeekMonStr(week) ?? ''} を選択`"
-            @mouseenter="hoverWeek = getWeekMonStr(week)"
-            @mouseleave="hoverWeek = null"
             @click="onWeekClick(week)"
           >
             <span
