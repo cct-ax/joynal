@@ -20,7 +20,10 @@ export const useCurrentUser = () => {
   watch(
     user,
     async (currentUser) => {
-      if (!currentUser?.id) {
+      // useSupabaseUser() は getClaims() の JWT claims を返すため、ユーザー ID は `sub` に入る
+      // （`id` ではない）。ここを `id` にすると常に未認証扱いで早期 return し、/api/users/me を
+      // 取得できず header が「ユーザー」のままになる。
+      if (!currentUser?.sub) {
         profile.value = null
         profileMissing.value = false
         pending.value = false
