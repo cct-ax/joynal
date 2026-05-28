@@ -11,7 +11,7 @@
  * UIcon 経由よりも素直なため。
  */
 import { Icon } from '@iconify/vue'
-import type { MoodValue } from '#shared/types/api'
+import { MOOD_VALUES, type MoodValue } from '#shared/types/api'
 
 const props = withDefaults(
   defineProps<{
@@ -27,8 +27,6 @@ const emit = defineEmits<{
   /** 解除（再クリック）時は null、選択時は MoodValue を返す */
   'update:modelValue': [value: MoodValue | null]
 }>()
-
-const STARS = [1, 2, 3, 4, 5] as const
 
 const hoveredValue = ref<number | null>(null)
 
@@ -65,7 +63,7 @@ const onMouseLeave = (): void => {
     :aria-label="`気分 ${modelValue ?? 0} / 5`"
   >
     <button
-      v-for="n in STARS"
+      v-for="n in MOOD_VALUES"
       :key="n"
       type="button"
       :disabled="readonly"

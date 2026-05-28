@@ -2,12 +2,22 @@ import { z } from 'zod'
 import type { MoodValue } from '#shared/types/api'
 
 /**
- * 気分の値域 (1〜5)。shared/types/api.ts の MoodValue と一致。
- * satisfies で型ソースとの整合性を担保する。
+ * 気分（mood）の値域 1〜5 を表す Zod union。
+ * shared/types/api.ts の MoodValue / MOOD_VALUES と整合させる単一ソースとして定義し、
+ * 本ファイル内（reportSchema / reportUpdateBodySchema）で再利用する。
+ *
+ * NOTE: MOOD_VALUES からの動的派生は Zod の `z.union` がタプル長を型で要求するため
+ * `as` キャストが発生する。`satisfies z.ZodType<MoodValue>` で値域との同期は静的に検証する。
  */
-const moodSchema = z
-  .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
-  .optional() satisfies z.ZodType<MoodValue | undefined>
+const moodUnion = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5)
+]) satisfies z.ZodType<MoodValue>
+
+const moodSchema = moodUnion.optional() satisfies z.ZodType<MoodValue | undefined>
 
 /**
  * 日報フォーム用スキーマ。
@@ -122,10 +132,7 @@ export const reportUpdateBodySchema = z
     check_in: z.string().regex(timeRegex).optional(),
     check_out: z.string().regex(timeRegex).optional(),
     content: z.string().min(1).optional(),
-    mood: z
-      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
-      .nullable()
-      .optional()
+    mood: moodUnion.nullable().optional()
   })
   .refine(v => !v.check_in || !v.check_out || v.check_out > v.check_in, {
     path: ['check_out'],

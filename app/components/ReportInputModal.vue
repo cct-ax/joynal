@@ -11,7 +11,7 @@
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { DailyReport } from '#shared/types/models'
-import type { ReportCreateBody, ReportUpdateBody } from '#shared/types/api'
+import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
 const props = defineProps<{
@@ -43,11 +43,9 @@ const state = reactive<Partial<ReportSchema>>({
   mood: undefined
 })
 
-/** DB の mood (number | null) を MoodValue | undefined に絞り込む type guard 経由の変換 */
-const toMoodValue = (m: number | null | undefined): ReportSchema['mood'] => {
-  if (m === 1 || m === 2 || m === 3 || m === 4 || m === 5) return m
-  return undefined
-}
+/** DB の mood (number | null) を MoodValue | undefined に絞り込む */
+const toMoodValue = (m: unknown): MoodValue | undefined =>
+  isMoodValue(m) ? m : undefined
 
 const openModel = computed({
   get: () => props.open,

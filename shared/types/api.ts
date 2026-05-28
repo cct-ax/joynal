@@ -10,10 +10,16 @@ export const VALID_ROLES: readonly UserRole[] = ['trainee', 'mentor', 'ojt', 'ad
 
 /**
  * 日報の気分（mood）の値域。
- * DB の CHECK 制約（1〜5）と Zod スキーマ・MoodStars コンポーネント・API ボディ型を統一する。
- * null は「未入力に戻す」操作（PUT で明示的に解除）を表す。
+ * DB の CHECK 制約（1〜5）・Zod スキーマ・MoodStars コンポーネント・API ボディ型を統一する。
+ * 値域を変える場合はこのタプルだけ更新すればよい（型・schema・UI 全てがここから派生）。
+ * null は「未入力に戻す」操作（PUT で明示的に解除）を表す（型側で `MoodValue | null` として扱う）。
  */
-export type MoodValue = 1 | 2 | 3 | 4 | 5
+export const MOOD_VALUES = [1, 2, 3, 4, 5] as const
+export type MoodValue = typeof MOOD_VALUES[number]
+
+/** DB の数値（number | null）等を MoodValue に絞り込む type guard */
+export const isMoodValue = (v: unknown): v is MoodValue =>
+  (MOOD_VALUES as readonly unknown[]).includes(v)
 
 // ----------------------------------------------------------------
 // Reports
