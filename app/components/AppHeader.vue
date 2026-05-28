@@ -55,22 +55,18 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
     <template #right>
       <div
         v-if="user"
-        class="flex items-center gap-2"
+        class="flex items-center gap-1.5"
       >
         <slot name="nav" />
+        <UUser :name="profile?.name ?? 'ユーザー'" />
+        <UColorModeButton />
         <UDropdownMenu :items="userMenuItems">
           <UButton
+            icon="i-lucide-menu"
             variant="ghost"
             color="neutral"
-            trailing-icon="i-lucide-chevron-down"
             :aria-label="`${profile?.name ?? 'ユーザー'} メニュー`"
-          >
-            <span class="hidden sm:inline">{{ profile?.name ?? 'ユーザー' }}</span>
-            <UIcon
-              name="i-lucide-user"
-              class="sm:hidden"
-            />
-          </UButton>
+          />
         </UDropdownMenu>
       </div>
     </template>
