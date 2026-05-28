@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { resetPasswordSchema, type ResetPasswordSchema } from '~/types/schemas'
+import { resetPasswordSchema, type ResetPasswordSchema } from '#shared/types/schemas'
 
 definePageMeta({ layout: false })
 

@@ -12,7 +12,7 @@
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { DailyReport } from '#shared/types/models'
 import type { ReportCreateBody, ReportUpdateBody } from '#shared/types/api'
-import { reportSchema, type ReportSchema } from '~/types/schemas'
+import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
 const props = defineProps<{
   open: boolean

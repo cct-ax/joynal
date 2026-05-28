@@ -10,7 +10,7 @@
  * design プロト L418-444（PwChangeForm）を Vue 化したもの。
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { passwordChangeSchema, type PasswordChangeSchema } from '~/types/schemas'
+import { passwordChangeSchema, type PasswordChangeSchema } from '#shared/types/schemas'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
