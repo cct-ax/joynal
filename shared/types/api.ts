@@ -111,3 +111,9 @@ export type UserUpdateBody = {
   role?: UserRole
   is_active?: boolean
 }
+
+/**
+ * GET /api/users/me の戻り値。
+ * email は PII のため一般ユーザーには返さない（DB 側でもカラム権限で authenticated から除外）。
+ */
+export type CurrentUserProfile = Omit<Profile, 'email'>

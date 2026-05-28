@@ -1,13 +1,14 @@
 import { serverSupabaseClient } from '#supabase/server'
-import type { Profile } from '#shared/types/models'
+import type { CurrentUserProfile } from '#shared/types/api'
 
-export default defineEventHandler<Promise<Profile>>(async (event) => {
+export default defineEventHandler<Promise<CurrentUserProfile>>(async (event) => {
   const userId = await serverUserId(event)
   const client = await serverSupabaseClient(event)
 
+  // email は返さない（PII）。UI でも未使用。
   const { data, error } = await client
     .from('profiles')
-    .select('*')
+    .select('id, employee_id, name, role, is_active, created_at, updated_at')
     .eq('id', userId)
     .maybeSingle()
 

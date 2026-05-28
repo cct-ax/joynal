@@ -20,7 +20,10 @@
 | UPDATE | 自分のみ | 自分のみ | 自分のみ | 全員分○ |
 | DELETE | × | × | × | ○ |
 
-> SELECT を全員に許可するのは、名前・社員IDのドロップダウン表示に必要なため。
+> SELECT を全員に許可するのは、名前・社員ID・ロールのドロップダウン/表示に必要なため。
+> ただし **`email` カラムだけは PII 保護のため authenticated から除外**している（migration `20260529_01`、
+> カラム権限 `GRANT SELECT (...) ` で email を含めない）。email を要する管理者操作（一覧・作成・更新）は
+> サーバー側で service role 経由に切り替えている。`/api/users/me` も email を返さない。
 
 ### `daily_reports`テーブル
 
@@ -87,7 +90,8 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 ```sql
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- 認証済みユーザーは全プロフィールを読める（名前・社員ID表示のため）
+-- 認証済みユーザーは全プロフィールの行を読める（名前・社員ID・ロール表示のため）。
+-- email カラムは migration 20260529_01 のカラム権限で authenticated から除外している。
 CREATE POLICY "profiles_select"
   ON public.profiles FOR SELECT
   TO authenticated

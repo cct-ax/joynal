@@ -1,5 +1,4 @@
-import type { Profile } from '#shared/types/models'
-import { VALID_ROLES, type UserRole } from '#shared/types/api'
+import { VALID_ROLES, type CurrentUserProfile, type UserRole } from '#shared/types/api'
 import { getFetchStatus } from '~/utils/fetchError'
 
 /**
@@ -18,9 +17,9 @@ export const useCurrentUser = () => {
   // （AppHeader / レイアウト / ページ）から呼んでも /api/users/me の取得は 1 回に集約される。
   // SSR でも取得できるよう useRequestFetch でリクエストの Cookie を転送する。
   // useSupabaseUser() は getClaims() の JWT claims（ユーザー ID は `sub`）。未ログイン時は取得しない。
-  const { data: profile, pending, error } = useAsyncData<Profile | null>(
+  const { data: profile, pending, error } = useAsyncData<CurrentUserProfile | null>(
     'current-user',
-    async () => (user.value?.sub ? await requestFetch<Profile>('/api/users/me') : null),
+    async () => (user.value?.sub ? await requestFetch<CurrentUserProfile>('/api/users/me') : null),
     { watch: [user] }
   )
 

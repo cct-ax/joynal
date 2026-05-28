@@ -28,7 +28,10 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   if (role !== undefined) updates.role = role
   if (is_active !== undefined) updates.is_active = is_active
 
-  const { data, error } = await client
+  // email を含む行を返すため service role で更新する（email は authenticated に非公開）。
+  // 認可は上の管理者ガードで担保済み。
+  const serviceClient = serverSupabaseServiceRole(event)
+  const { data, error } = await serviceClient
     .from('profiles')
     .update(updates)
     .eq('id', id)
@@ -39,15 +42,11 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     if (error.code === 'PGRST116') {
       throw createError({ statusCode: 404, message: 'ユーザーが見つかりません' })
     }
-    if (error.code === '42501') {
-      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-    }
     console.error('[api/users/:id PUT] profile update', error)
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
   if (is_active !== undefined) {
-    const serviceClient = serverSupabaseServiceRole(event)
     const banDuration = is_active ? 'none' : BAN_DURATION_PERMANENT
     const { error: banError } = await serviceClient.auth.admin.updateUserById(id, { ban_duration: banDuration })
     if (banError) {

@@ -42,7 +42,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   const nextNum = lastUser ? parseInt(lastUser.employee_id.replace(/\D/g, ''), 10) + 1 : 1
   const employee_id = `E${String(nextNum).padStart(3, '0')}`
 
-  const { data, error } = await client
+  // email を含む行を返すため service role で挿入する（email は authenticated に非公開）
+  const { data, error } = await serviceClient
     .from('profiles')
     .insert({ id: authUser.user.id, name, email, role, employee_id })
     .select()
