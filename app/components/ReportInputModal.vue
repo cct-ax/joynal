@@ -10,6 +10,7 @@
  * design プロト L534-597（ReportModal）を Vue 化したもの。
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
+import type { Time } from '@internationalized/date'
 import type { DailyReport } from '#shared/types/models'
 import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
@@ -52,6 +53,21 @@ const openModel = computed({
   set: (v: boolean) => emit('update:open', v)
 })
 
+// UInputTime は @internationalized/date の Time を扱うため、文字列の state と
+// computed プロキシで橋渡しする（state・スキーマ・API ボディは "HH:MM" 文字列のまま）。
+const checkInTime = computed<Time | null>({
+  get: () => toTimeValue(state.check_in),
+  set: (t) => {
+    state.check_in = t ? fromTimeValue(t) : undefined
+  }
+})
+const checkOutTime = computed<Time | null>({
+  get: () => toTimeValue(state.check_out),
+  set: (t) => {
+    state.check_out = t ? fromTimeValue(t) : undefined
+  }
+})
+
 // モーダルが開くたびに state を初期化。編集時は report の値、新規時は date のみ。
 // immediate: true で初回マウント時にも反映させる。
 watch(
@@ -59,8 +75,9 @@ watch(
   (opened) => {
     if (!opened) return
     state.date = props.report?.date ?? props.date ?? undefined
-    state.check_in = props.report?.check_in ?? undefined
-    state.check_out = props.report?.check_out ?? undefined
+    // DB の time 由来 "HH:MM:SS" を正準 "HH:MM" に正規化してから格納する。
+    state.check_in = fromTimeValue(toTimeValue(props.report?.check_in)) || undefined
+    state.check_out = fromTimeValue(toTimeValue(props.report?.check_out)) || undefined
     state.content = props.report?.content ?? undefined
     state.mood = toMoodValue(props.report?.mood)
   },
@@ -173,9 +190,9 @@ defineExpose({ submit, onDelete })
             label="出勤時間"
             required
           >
-            <UInput
-              v-model="state.check_in"
-              type="time"
+            <UInputTime
+              v-model="checkInTime"
+              :hour-cycle="24"
               class="w-full"
             />
           </UFormField>
@@ -184,9 +201,9 @@ defineExpose({ submit, onDelete })
             label="退勤時間"
             required
           >
-            <UInput
-              v-model="state.check_out"
-              type="time"
+            <UInputTime
+              v-model="checkOutTime"
+              :hour-cycle="24"
               class="w-full"
             />
           </UFormField>
