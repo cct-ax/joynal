@@ -1,32 +1,22 @@
 <script setup lang="ts">
 import type { NuxtError } from '#app'
+import { ja } from '@nuxt/ui/locale'
 
 const props = defineProps<{ error: NuxtError }>()
 
-const title = computed(() => {
-  if (props.error.statusCode === 404) return 'ページが見つかりません'
-  return 'エラーが発生しました'
-})
-
-// clearError でエラー状態を解除し、トップへ遷移する
-const goHome = (): void => {
-  clearError({ redirect: '/' })
-}
+// 内部メッセージ（error.message）は漏洩防止のため UError に渡さず、
+// ステータスに応じた日本語タイトルのみを statusMessage として表示する。
+const title = computed(() =>
+  props.error.statusCode === 404 ? 'ページが見つかりません' : 'エラーが発生しました'
+)
 </script>
 
 <template>
-  <div class="min-h-dvh flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-950 px-4 text-center">
-    <p class="text-6xl font-bold text-gray-300 dark:text-gray-700 tabular-nums">
-      {{ error.statusCode }}
-    </p>
-    <h1 class="text-xl font-bold tracking-tight">
-      {{ title }}
-    </h1>
-    <UButton
-      icon="i-lucide-house"
-      @click="goHome"
-    >
-      トップへ戻る
-    </UButton>
-  </div>
+  <!-- error.vue は app.vue の <UApp> 外で描画されるため、ここで再度ラップする。 -->
+  <UApp :locale="ja">
+    <UError
+      :error="{ statusCode: error.statusCode, statusMessage: title }"
+      :clear="{ label: 'トップへ戻る', icon: 'i-lucide-house' }"
+    />
+  </UApp>
 </template>
