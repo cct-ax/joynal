@@ -180,6 +180,11 @@ export const userUpdateBodySchema = z.object({
   is_active: z.boolean().optional()
 })
 
+/** POST /api/auth/update-password ボディ。新パスワードのみ受け取る（current/confirm はフォーム UX 用） */
+export const updatePasswordBodySchema = z.object({
+  password: z.string().min(8, 'パスワードは8文字以上で入力してください')
+})
+
 // ----------------------------------------------------------------
 // 型の導出
 // ----------------------------------------------------------------

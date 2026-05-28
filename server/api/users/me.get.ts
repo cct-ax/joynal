@@ -13,11 +13,15 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error('[api/users/me GET]', error)
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+  }
+
+  if (!data) {
+    throw createError({ statusCode: 404, message: 'プロフィールが見つかりません' })
   }
 
   return data

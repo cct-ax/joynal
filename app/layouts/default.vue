@@ -3,7 +3,10 @@
  * 全ページ共通レイアウト。
  * ヘッダーは AppHeader、フッターは AppFooter に切り出してある。
  * UMain（残り高を埋める）で挟み、フッターを常に画面下端へ固定する（sticky footer）。
+ *
+ * profiles 行が無いログインユーザー（招待フロー未経由）には警告バナーを表示する。
  */
+const { profileMissing } = useCurrentUser()
 </script>
 
 <template>
@@ -22,6 +25,15 @@
       :ui="{ base: 'flex-1 min-h-0' }"
     >
       <div class="max-w-5xl mx-auto px-4 py-6">
+        <UAlert
+          v-if="profileMissing"
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-triangle-alert"
+          title="プロフィールが登録されていません"
+          description="アカウントにプロフィールが紐づいていません。管理者にお問い合わせください。"
+          class="mb-4"
+        />
         <slot />
       </div>
     </UMain>

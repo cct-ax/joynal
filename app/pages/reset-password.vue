@@ -4,8 +4,7 @@ import { resetPasswordSchema, type ResetPasswordSchema } from '#shared/types/sch
 
 definePageMeta({ layout: false })
 
-const supabase = useSupabaseClient()
-const authError = useSupabaseAuthError()
+const apiError = useApiError()
 
 const state = reactive<Partial<ResetPasswordSchema>>({ email: undefined })
 const loading = ref(false)
@@ -14,16 +13,13 @@ const sent = ref(false)
 const onSubmit = async (event: FormSubmitEvent<ResetPasswordSchema>): Promise<void> => {
   loading.value = true
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(event.data.email, {
-      redirectTo: `${window.location.origin}/confirm`
+    await $fetch('/api/auth/reset-password', {
+      method: 'POST',
+      body: { email: event.data.email }
     })
-    if (error) {
-      authError.notify(error, {
-        title: 'メールの送信に失敗しました'
-      })
-      return
-    }
     sent.value = true
+  } catch (error: unknown) {
+    apiError.notify(error, { fallback: 'メールの送信に失敗しました' })
   } finally {
     loading.value = false
   }

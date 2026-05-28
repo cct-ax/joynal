@@ -11,16 +11,19 @@
  */
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const supabase = useSupabaseClient()
 const user = useSupabaseUser()
-const router = useRouter()
 const { profile } = useCurrentUser()
 
 const pwModalOpen = ref(false)
 
 const signOut = async (): Promise<void> => {
-  await supabase.auth.signOut()
-  await router.push('/login')
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+  } finally {
+    // サーバーが cookie を破棄するため、フルリロード（external）でクライアント側の
+    // セッションも確実にクリアしてから /login へ遷移する。
+    await navigateTo('/login', { external: true })
+  }
 }
 
 // UDropdownMenu の items は2次元配列。各内側配列が区切り線で分離される

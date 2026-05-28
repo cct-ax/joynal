@@ -1,5 +1,6 @@
 import type { Profile } from '#shared/types/models'
 import { VALID_ROLES, type UserRole } from '#shared/types/api'
+import { getFetchStatus } from '~/utils/fetchError'
 
 /**
  * profile.role が UserRole の値域に収まっているかを判定する type guard。
@@ -14,19 +15,24 @@ export const useCurrentUser = () => {
 
   const profile = ref<Profile | null>(null)
   const pending = ref(true)
+  const profileMissing = ref(false)
 
   watch(
     user,
     async (currentUser) => {
       if (!currentUser?.id) {
         profile.value = null
+        profileMissing.value = false
         pending.value = false
         return
       }
       try {
         profile.value = await $fetch<Profile>('/api/users/me')
-      } catch {
+        profileMissing.value = false
+      } catch (error: unknown) {
         profile.value = null
+        // 404 = auth ユーザーに profiles 行が無い（招待フロー未経由）。UI で明示する。
+        profileMissing.value = getFetchStatus(error) === 404
       }
       pending.value = false
     },
@@ -42,5 +48,5 @@ export const useCurrentUser = () => {
   const isOjt = computed(() => role.value === 'ojt')
   const isTrainee = computed(() => role.value === 'trainee')
 
-  return { profile, pending, role, isAdmin, isMentor, isOjt, isTrainee }
+  return { profile, pending, profileMissing, role, isAdmin, isMentor, isOjt, isTrainee }
 }

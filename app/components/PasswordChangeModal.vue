@@ -15,9 +15,8 @@ import { passwordChangeSchema, type PasswordChangeSchema } from '#shared/types/s
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
 
-const supabase = useSupabaseClient()
 const toast = useToast()
-const authError = useSupabaseAuthError()
+const apiError = useApiError()
 
 const state = reactive<Partial<PasswordChangeSchema>>({
   current: undefined,
@@ -40,23 +39,27 @@ watch(openModel, (opened) => {
   }
 })
 
-const onSubmit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<void> => {
+// 送信処理本体。UForm @submit から呼ぶほか、テストでは defineExpose 経由で直接呼ぶ。
+// 現在のパスワードは UX 上のダブルチェック用で API には送らず、新パスワードのみ送信する。
+const submit = async (data: PasswordChangeSchema): Promise<void> => {
   loading.value = true
   try {
-    const { error } = await supabase.auth.updateUser({ password: event.data.next })
-    if (error) {
-      authError.notify(error, {
-        title: 'パスワードの変更に失敗しました',
-        showDescription: true
-      })
-      return
-    }
+    await $fetch('/api/auth/update-password', {
+      method: 'POST',
+      body: { password: data.next }
+    })
     toast.add({ title: 'パスワードを変更しました', color: 'success' })
     openModel.value = false
+  } catch (error: unknown) {
+    apiError.notify(error, { fallback: 'パスワードの変更に失敗しました' })
   } finally {
     loading.value = false
   }
 }
+
+const onSubmit = (event: FormSubmitEvent<PasswordChangeSchema>): Promise<void> => submit(event.data)
+
+defineExpose({ submit })
 </script>
 
 <template>
