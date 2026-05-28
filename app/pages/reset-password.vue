@@ -33,9 +33,9 @@ const onSubmit = async (event: FormSubmitEvent<ResetPasswordSchema>): Promise<vo
 <template>
   <AuthCard>
     <template #header>
-      <h2 class="text-xl font-bold tracking-tight">
+      <h1 class="text-xl font-bold tracking-tight">
         パスワードリセット
-      </h2>
+      </h1>
     </template>
 
     <EmptyState
@@ -63,6 +63,8 @@ const onSubmit = async (event: FormSubmitEvent<ResetPasswordSchema>): Promise<vo
           v-model="state.email"
           type="email"
           autocomplete="email"
+          spellcheck="false"
+          autocapitalize="none"
           placeholder="mail@example.com"
           class="w-full"
         />

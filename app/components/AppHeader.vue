@@ -66,6 +66,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
             variant="ghost"
             color="neutral"
             trailing-icon="i-lucide-chevron-down"
+            :aria-label="`${profile?.name ?? 'ユーザー'} メニュー`"
           >
             <span class="hidden sm:inline">{{ profile?.name ?? 'ユーザー' }}</span>
             <UIcon

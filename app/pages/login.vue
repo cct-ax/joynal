@@ -51,6 +51,8 @@ const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
           v-model="state.email"
           type="email"
           autocomplete="email"
+          spellcheck="false"
+          autocapitalize="none"
           placeholder="mail@example.com"
           class="w-full"
         />
