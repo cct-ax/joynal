@@ -2,9 +2,9 @@
 /**
  * 全ページ共通のヘッダー。
  *
- * - 左: 「Joynal」ロゴ（/report リンク）
- * - 中央: nav slot（layouts 側で追加リンクを差し込み可能、MS4 で admin タブ等を追加予定）
- * - 右: ユーザー名 + ⋯ → UDropdownMenu（パスワード変更 / ログアウト）
+ * - 左: 「Joynal」ロゴ（/report リンク。UHeader の title/to に委譲）
+ * - 右: nav slot（MS4 で admin タブ等を追加予定）+ ユーザードロップダウン（パスワード変更 / ログアウト）
+ * - sticky・border・高さ（--ui-header-height）・コンテナは UHeader 既定に委譲する。
  *
  * design プロト L357-410（Header）を Vue 化したもの。
  * スマホ時はユーザー名を隠してアイコンのみ表示する（Tailwind の `sm:` で切替）。
@@ -45,17 +45,14 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
 </script>
 
 <template>
-  <header
-    class="sticky top-0 z-10 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800"
+  <UHeader
+    title="Joynal"
+    to="/report"
+    :toggle="false"
+    :ui="{ container: 'max-w-5xl', title: 'text-lg tracking-tight select-none' }"
   >
-    <div class="max-w-5xl mx-auto flex items-center justify-between h-13 px-4 gap-4">
-      <NuxtLink
-        to="/report"
-        class="text-lg font-bold tracking-tight select-none"
-      >
-        Joynal
-      </NuxtLink>
-
+    <!-- MS4: ナビ項目が増えたら中央(#default)スロット + :toggle でモバイルメニュー化 -->
+    <template #right>
       <div
         v-if="user"
         class="flex items-center gap-2"
@@ -76,8 +73,8 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
           </UButton>
         </UDropdownMenu>
       </div>
-    </div>
-  </header>
+    </template>
+  </UHeader>
 
   <PasswordChangeModal v-model:open="pwModalOpen" />
 </template>
