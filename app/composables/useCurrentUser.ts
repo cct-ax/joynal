@@ -1,5 +1,13 @@
 import type { Profile } from '#shared/types/models'
-import type { UserRole } from '#shared/types/api'
+import { VALID_ROLES, type UserRole } from '#shared/types/api'
+
+/**
+ * profile.role が UserRole の値域に収まっているかを判定する type guard。
+ * DB の CHECK 制約上は trainee/mentor/ojt/admin の 4 値だが、
+ * TS 側の Profile.role は string のため、ここで明示的に絞り込む。
+ */
+const isUserRole = (v: string | null | undefined): v is UserRole =>
+  v !== null && v !== undefined && (VALID_ROLES as readonly string[]).includes(v)
 
 export const useCurrentUser = () => {
   const user = useSupabaseUser()
@@ -25,7 +33,10 @@ export const useCurrentUser = () => {
     { immediate: true }
   )
 
-  const role = computed(() => profile.value?.role as UserRole | null)
+  const role = computed<UserRole | null>(() => {
+    const raw = profile.value?.role
+    return isUserRole(raw) ? raw : null
+  })
   const isAdmin = computed(() => role.value === 'admin')
   const isMentor = computed(() => role.value === 'mentor')
   const isOjt = computed(() => role.value === 'ojt')

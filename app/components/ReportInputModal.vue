@@ -102,24 +102,24 @@ const submit = async (data: ReportSchema): Promise<void> => {
   loading.value = true
   try {
     if (isEdit.value && props.report) {
+      // MoodValue 統一の効果: data.mood は MoodValue | undefined なので
+      // null 合体だけで ReportUpdateBody.mood (MoodValue | null) と一致する
       const body: ReportUpdateBody = {
         check_in: data.check_in,
         check_out: data.check_out,
         content: data.content,
-        mood: (data.mood ?? null) as ReportUpdateBody['mood']
+        mood: data.mood ?? null
       }
       await $fetch(`/api/reports/${props.report.id}`, { method: 'PUT', body })
       toast.add({ title: '日報を更新しました', color: 'success' })
     } else {
-      const moodValue = data.mood
       const body: ReportCreateBody = {
         date: data.date,
         check_in: data.check_in,
         check_out: data.check_out,
         content: data.content,
-        ...(moodValue !== undefined && moodValue !== null
-          ? { mood: moodValue as ReportCreateBody['mood'] }
-          : {})
+        // mood が undefined の場合のみキーを省略（POST の任意項目）
+        ...(data.mood !== undefined ? { mood: data.mood } : {})
       }
       await $fetch('/api/reports', { method: 'POST', body })
       toast.add({ title: '日報を保存しました', color: 'success' })
@@ -151,10 +151,10 @@ const onDelete = async (): Promise<void> => {
   }
 }
 
-// MoodStars は null を emit するが、state.mood の型は number | undefined。
-// null → undefined に変換する setter を使う。
-const onMoodUpdate = (v: number | null): void => {
-  state.mood = (v ?? undefined) as ReportSchema['mood']
+// MoodStars は MoodValue | null を emit するが、state.mood の型は MoodValue | undefined。
+// null → undefined に変換する setter を使う（state は Partial<ReportSchema> 上で undefined を使う）。
+const onMoodUpdate = (v: ReportSchema['mood'] | null): void => {
+  state.mood = v ?? undefined
 }
 
 // テストで submit / onDelete を直接呼べるよう defineExpose する。
