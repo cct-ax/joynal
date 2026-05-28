@@ -8,8 +8,6 @@
  * - スマホでは全画面モーダル化（`:ui` で実現）。
  *
  * design プロト L534-597（ReportModal）を Vue 化したもの。
- *
- * FormExample.vue（写経用サンプル）のパターンを発展させた本実装。
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { DailyReport } from '#shared/types/models'
