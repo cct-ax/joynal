@@ -22,6 +22,10 @@ logs
 .fleet
 .idea
 
+#cloudflare
+.wrangler
+wrangler.toml
+
 # Local env files
 .env
 .env.*

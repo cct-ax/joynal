@@ -38,7 +38,8 @@
     "happy-dom": "^20.9.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5",
-    "vue-tsc": "^3.2.7"
+    "vue-tsc": "^3.2.7",
+    "wrangler": "^4.95.0"
   },
   "pnpm": {
     "overrides": {
@@ -48,7 +49,10 @@
     "onlyBuiltDependencies": [
       "@parcel/watcher",
       "esbuild",
-      "unrs-resolver"
+      "sharp",
+      "unrs-resolver",
+      "vue-demi",
+      "workerd"
     ]
   },
   "engines": {
