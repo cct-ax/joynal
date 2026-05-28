@@ -60,6 +60,28 @@ describe('reportSchema', () => {
     expect(result.success).toBe(false)
   })
 
+  it('mood = 0 はエラー（境界）', () => {
+    const result = reportSchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:00',
+      check_out: '18:00',
+      content: '内容',
+      mood: 0
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('mood = 1.5 の小数はエラー（z.literal union）', () => {
+    const result = reportSchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:00',
+      check_out: '18:00',
+      content: '内容',
+      mood: 1.5
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('退勤時間が出勤時間より前ならエラー', () => {
     const result = reportSchema.safeParse({
       date: '2026-05-19',

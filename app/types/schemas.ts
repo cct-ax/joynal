@@ -1,4 +1,13 @@
 import { z } from 'zod'
+import type { MoodValue } from '#shared/types/api'
+
+/**
+ * 気分の値域 (1〜5)。shared/types/api.ts の MoodValue と一致。
+ * satisfies で型ソースとの整合性を担保する。
+ */
+const moodSchema = z
+  .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
+  .optional() satisfies z.ZodType<MoodValue | undefined>
 
 /**
  * 日報フォーム用スキーマ。
@@ -11,7 +20,7 @@ export const reportSchema = z
     check_in: z.string().min(1, '出勤時間は必須です'),
     check_out: z.string().min(1, '退勤時間は必須です'),
     content: z.string().min(1, 'やったことは必須です'),
-    mood: z.number().int().min(1).max(5).optional()
+    mood: moodSchema
   })
   .refine(v => !v.check_in || !v.check_out || v.check_out > v.check_in, {
     path: ['check_out'],
