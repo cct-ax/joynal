@@ -1,12 +1,9 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import type { AssignmentForAdmin, AssignmentForMentor } from '#shared/types/api'
 import { assignmentsMeQuerySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMentor[]>>(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  const userId = await serverUserId(event)
 
   const { year: yearInput } = parseQuery(event, assignmentsMeQuerySchema)
   const year = yearInput ?? new Date().getFullYear()
@@ -15,7 +12,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
   const { data: profile, error: profileError } = await client
     .from('profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (profileError) {
@@ -57,7 +54,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
       year,
       trainee:profiles!mentor_assignments_trainee_id_fkey(name, employee_id)
     `)
-    .or(`mentor_id.eq.${user.id},ojt_id.eq.${user.id}`)
+    .or(`mentor_id.eq.${userId},ojt_id.eq.${userId}`)
     .eq('year', year)
     .returns<AssignmentForMentor[]>()
 

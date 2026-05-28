@@ -1,19 +1,16 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import type { DailyReport } from '#shared/types/models'
 import { reportCreateBodySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<DailyReport>>(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  const userId = await serverUserId(event)
 
   const { date, check_in, check_out, content, mood } = await parseBody(event, reportCreateBodySchema)
 
   const client = await serverSupabaseClient(event)
   const { data, error } = await client
     .from('daily_reports')
-    .insert({ user_id: user.id, date, check_in, check_out, content, mood })
+    .insert({ user_id: userId, date, check_in, check_out, content, mood })
     .select()
     .single()
 

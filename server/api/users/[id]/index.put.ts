@@ -1,4 +1,4 @@
-import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 import type { Profile, ProfileUpdate } from '#shared/types/models'
 import { userUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 
@@ -6,16 +6,13 @@ import { userUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 const BAN_DURATION_PERMANENT = '876000h'
 
 export default defineEventHandler<Promise<Profile>>(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  const userId = await serverUserId(event)
 
   const client = await serverSupabaseClient(event)
   const { data: callerProfile } = await client
     .from('profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (callerProfile?.role !== 'admin') {
