@@ -60,6 +60,7 @@ const onMouseLeave = (): void => {
 <template>
   <div
     class="inline-flex gap-0.5 items-center"
+    role="group"
     :aria-label="`気分 ${modelValue ?? 0} / 5`"
   >
     <button
@@ -67,9 +68,9 @@ const onMouseLeave = (): void => {
       :key="n"
       type="button"
       :disabled="readonly"
-      class="leading-none transition-transform"
+      class="leading-none transition-transform motion-reduce:transition-none"
       :class="{
-        'cursor-pointer hover:scale-110': !readonly,
+        'cursor-pointer hover:scale-110 motion-reduce:hover:scale-100': !readonly,
         'cursor-default': readonly
       }"
       :aria-label="`気分 ${n}`"

@@ -106,7 +106,7 @@ const onWeekClick = (week: (Date | null)[]): void => {
             aria-label="前の月"
             @click="prevMonth"
           />
-          <span class="font-semibold text-sm">
+          <span class="font-semibold text-sm tabular-nums">
             {{ viewYear }}年 {{ MONTHS[viewMonth] }}
           </span>
           <UButton
@@ -139,7 +139,7 @@ const onWeekClick = (week: (Date | null)[]): void => {
             v-for="(week, wi) in weeks"
             :key="wi"
             type="button"
-            class="grid grid-cols-7 gap-1 rounded-sm cursor-pointer transition-colors"
+            class="grid grid-cols-7 gap-1 rounded-sm cursor-pointer transition-colors motion-reduce:transition-none"
             :class="{
               'bg-indigo-50 dark:bg-indigo-950/40': getWeekMonStr(week) === currentWeekStr,
               'hover:bg-gray-100 dark:hover:bg-gray-800': getWeekMonStr(week) !== currentWeekStr
@@ -150,7 +150,7 @@ const onWeekClick = (week: (Date | null)[]): void => {
             <span
               v-for="(d, di) in week"
               :key="di"
-              class="text-center text-sm py-1.5 rounded-sm"
+              class="text-center text-sm py-1.5 rounded-sm tabular-nums"
               :class="{
                 'text-transparent select-none': !d,
                 'text-indigo-600 font-bold': d && formatYmd(d) === todayStr,

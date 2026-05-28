@@ -48,7 +48,7 @@ const emit = defineEmits<{
           </UButton>
         </div>
         <p
-          class="text-sm leading-relaxed whitespace-pre-wrap"
+          class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
           :class="mentorComment ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 italic'"
         >
           {{ mentorComment?.content ?? 'コメントはまだありません' }}
@@ -74,7 +74,7 @@ const emit = defineEmits<{
           </UButton>
         </div>
         <p
-          class="text-sm leading-relaxed whitespace-pre-wrap"
+          class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
           :class="ojtComment ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 italic'"
         >
           {{ ojtComment?.content ?? 'コメントはまだありません' }}

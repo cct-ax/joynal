@@ -54,7 +54,7 @@ const onPickWeek = (date: Date): void => {
 
     <button
       type="button"
-      class="flex-1 sm:flex-none text-center px-3 py-1.5 rounded-sm bg-gray-100 dark:bg-gray-800 text-sm font-medium border-b border-dashed border-indigo-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+      class="flex-1 sm:flex-none text-center px-3 py-1.5 rounded-sm bg-gray-100 dark:bg-gray-800 text-sm font-medium tabular-nums border-b border-dashed border-indigo-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors motion-reduce:transition-none cursor-pointer"
       :aria-label="`週を選択（現在: ${weekLabel}）`"
       @click="pickerOpen = true"
     >
