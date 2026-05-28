@@ -1,199 +1,164 @@
 <script setup lang="ts">
-import type { Profile, DailyReport } from '#shared/types/models'
-import type { UserRole } from '#shared/types/api'
+/**
+ * 日報画面（全ロール共通レイアウト）。
+ *
+ * - 週ナビ → 月〜金の ReportRow → CommentArea の縦並び。
+ * - MS2 では新人ロールの CRUD を対象とする。
+ * - MS3 で以下を接続予定:
+ *   - TraineeSelector（メンター/OJT/管理者向け）
+ *   - CommentArea の editComment emit → CommentInputModal
+ *   - useFetch('/api/comments') による週次コメントの実取得
+ */
+import type { DailyReport } from '#shared/types/models'
+import type { CommentWithCommenter } from '#shared/types/api'
 
-// --- ロール & 対象新人 ---
-// TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）
-// const { role: currentRole, isTrainee, isMentor, isOjt, isAdmin, pending } = useCurrentUser()
-const role = ref<UserRole | null>(null)
-const selectedTraineeId = ref<string | null>(null)
-const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
+const { role, isAdmin, pending } = useCurrentUser()
 
-// TODO: ロール取得後、$fetch を使って担当新人一覧を取得して trainees に格納する
-//   メンター・OJT: $fetch('/api/assignments/me', { query: { year } }) → trainee フィールドを展開
-//   管理者: $fetch('/api/users') → role === 'trainee' のみフィルタ
+// 週ナビ用の状態
+const currentWeekStart = ref(getMondayOf(new Date()))
 
-// --- 週ナビゲーション ---
-const getThisMonday = (): Date => {
-  const today = new Date()
-  const dayOfWeek = today.getDay()
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(today)
-  monday.setDate(today.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
+const weekDays = computed(() => getWeekDays(currentWeekStart.value))
+
+// 詳細展開（mentor/ojt/admin で使う、新人は使わない）
+const expandedDate = ref<string | null>(null)
+
+const onToggleDetail = (date: Date): void => {
+  const ymd = formatYmd(date)
+  expandedDate.value = expandedDate.value === ymd ? null : ymd
 }
 
-const currentWeekStart = ref(getThisMonday())
+// useFetch の query。currentWeekStart の変化で自動再フェッチされる。
+// MS3 で selectedTraineeId を追加する想定（trainee の場合は省略可）
+const reportsQuery = computed(() => ({
+  weekStart: formatYmd(currentWeekStart.value)
+}))
 
-const weekDays = computed(() =>
-  Array.from({ length: 5 }, (_, index) => {
-    const date = new Date(currentWeekStart.value)
-    date.setDate(date.getDate() + index)
-    return date
-  })
+const { data: reports, refresh: refreshReports } = await useFetch<DailyReport[]>(
+  '/api/reports',
+  { query: reportsQuery, default: () => [] }
 )
 
-const weekLabel = computed(() => {
-  const weekStart = currentWeekStart.value
-  const weekEnd = weekDays.value.at(-1)!
-  const formatMonthDay = (date: Date) => `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
-  return `${weekStart.getFullYear()}/${formatMonthDay(weekStart)}（月）〜 ${formatMonthDay(weekEnd)}（金）`
+// 日付索引で O(1) 参照
+const reportByDate = computed<Record<string, DailyReport>>(() =>
+  Object.fromEntries((reports.value ?? []).map(r => [r.date, r]))
+)
+
+// MS2 ではコメントは未取得。MS3 で useFetch('/api/comments') を追加する。
+const mentorComment = ref<CommentWithCommenter | null>(null)
+const ojtComment = ref<CommentWithCommenter | null>(null)
+
+// モーダル制御。selectedDate を立てれば開く、null に戻せば閉じる。
+const selectedReport = ref<DailyReport | null>(null)
+const selectedDate = ref<string | null>(null)
+const isModalOpen = computed({
+  get: () => selectedDate.value !== null,
+  set: (v: boolean) => {
+    if (!v) {
+      selectedReport.value = null
+      selectedDate.value = null
+    }
+  }
 })
 
-const prevWeek = () => {
-  const date = new Date(currentWeekStart.value)
-  date.setDate(date.getDate() - 7)
-  currentWeekStart.value = date
+const onInputReport = (date: Date): void => {
+  selectedReport.value = null
+  selectedDate.value = formatYmd(date)
+}
+const onEditReport = (report: DailyReport): void => {
+  selectedReport.value = report
+  selectedDate.value = report.date
 }
 
-const nextWeek = () => {
-  const date = new Date(currentWeekStart.value)
-  date.setDate(date.getDate() + 7)
-  currentWeekStart.value = date
+const onSaved = async (): Promise<void> => {
+  await refreshReports()
+}
+const onDeleted = async (): Promise<void> => {
+  await refreshReports()
 }
 
-const goToThisWeek = () => {
-  currentWeekStart.value = getThisMonday()
+// MS3 で CommentInputModal を接続する。今は noop。
+const onEditComment = (_target: 'mentor' | 'ojt'): void => {
+  // TODO MS3: CommentInputModal を開く
 }
 
-const DAY_LABELS = ['月', '火', '水', '木', '金'] as const
-
-const formatDate = (date: Date) =>
-  `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
-
-const toDateString = (date: Date) => date.toISOString().slice(0, 10)
-
-// --- 日報データ ---
-// key: 'YYYY-MM-DD', value: daily_report レコード
-const reports = ref<Record<string, DailyReport>>({})
-// TODO: currentWeekStart と対象ユーザーID をもとに日報を取得して reports に格納する
-//   $fetch('/api/reports', { query: { weekStart: toDateString(currentWeekStart.value), userId: selectedTraineeId.value ?? undefined } })
-//   取得した配列を Record<string, DailyReport> に変換: Object.fromEntries(data.map(r => [r.date, r]))
-
-// --- コメントデータ ---
-const mentorComment = ref<string | null>(null)
-const ojtComment = ref<string | null>(null)
-// TODO: currentWeekStart と selectedTraineeId をもとにコメントを取得する
-//   $fetch('/api/comments', { query: { weekStart: toDateString(currentWeekStart.value), traineeId: selectedTraineeId.value } })
-
-// --- モーダル ---
-// TODO: 日報入力・編集モーダルの open/close 制御と選択中の日付状態を実装する（新人用）
-// TODO: 日報詳細モーダルの open/close 制御と選択中のレコード状態を実装する（メンター・OJT用）
-
-const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
-const showEmptyAdminMessage = computed(() => role.value === 'admin' && !selectedTraineeId.value)
+// 管理者は未選択時に EmptyState を表示（MS3 で TraineeSelector 実装後に有効化）
+const showEmptyAdminMessage = computed(() => isAdmin.value)
 </script>
 
 <template>
-  <div>
-    <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
-    <div v-if="showTraineeSelector">
-      <label>対象:</label>
-      <select v-model="selectedTraineeId">
-        <option
-          value=""
-          disabled
-        >
-          新人を選択してください
-        </option>
-        <option
-          v-for="t in trainees"
-          :key="t.id"
-          :value="t.id"
-        >
-          {{ t.name }}
-        </option>
-      </select>
-    </div>
+  <div
+    v-if="pending"
+    class="py-20 text-center text-gray-500 dark:text-gray-400"
+  >
+    読み込み中...
+  </div>
 
-    <!-- 管理者で新人未選択の場合 -->
-    <div v-if="showEmptyAdminMessage">
-      <p>表示したい新人の日報を選んでください</p>
-    </div>
+  <!-- 管理者は MS3 で TraineeSelector + 未選択時の EmptyState を実装予定 -->
+  <EmptyState
+    v-else-if="showEmptyAdminMessage"
+    emoji="📋"
+    message="管理者用の新人セレクターは MS3 で実装予定です"
+  />
 
-    <template v-else>
-      <!-- 週ナビゲーション -->
-      <div>
-        <button @click="prevWeek">
-          ＜ 前の週
-        </button>
-        <span>{{ weekLabel }}</span>
-        <button @click="goToThisWeek">
-          今週
-        </button>
-        <button @click="nextWeek">
-          次の週 ＞
-        </button>
+  <div
+    v-else
+    class="space-y-6"
+  >
+    <UCard :ui="{ body: 'p-0 sm:p-0' }">
+      <!-- 週ナビ -->
+      <div class="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+        <WeekNavigator v-model="currentWeekStart" />
       </div>
 
-      <!-- 週間日報リスト（月〜金） -->
-      <table>
-        <tbody>
-          <tr
-            v-for="(day, index) in weekDays"
-            :key="index"
-          >
-            <!-- 日付・曜日 -->
-            <td>{{ formatDate(day) }}（{{ DAY_LABELS[index] }}）</td>
-
-            <!-- 出勤〜退勤・やったこと -->
-            <td>
-              <template v-if="reports[toDateString(day)]">
-                {{ reports[toDateString(day)]?.check_in }} 〜 {{ reports[toDateString(day)]?.check_out }}
-                <br>
-                {{ reports[toDateString(day)]?.content.slice(0, 80) }}
-              </template>
-              <template v-else>
-                --
-              </template>
-            </td>
-
-            <!-- ロール別操作ボタン -->
-            <td>
-              <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
-              <template v-if="role === 'trainee'">
-                <button v-if="!reports[toDateString(day)]">
-                  <!-- TODO: 入力モーダルを開く -->
-                  入力
-                </button>
-                <button v-else>
-                  <!-- TODO: 編集モーダルを開く -->
-                  編集
-                </button>
-              </template>
-
-              <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
-              <template v-else-if="reports[toDateString(day)]">
-                <button>
-                  <!-- TODO: 詳細モーダルを開く -->
-                  詳細
-                </button>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- 週次コメントエリア -->
-      <div>
-        <!-- メンターコメント -->
-        <div>
-          <h3>メンターコメント</h3>
-          <!-- TODO: role === 'mentor' の場合はテキストエリアで編集可能にする -->
-          <p>{{ mentorComment ?? 'コメントはまだありません' }}</p>
+      <!-- テーブルヘッダー（PC のみ） -->
+      <div
+        class="max-sm:hidden flex items-center bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+      >
+        <div class="w-32 shrink-0 px-4 py-2">
+          日付
         </div>
-
-        <!-- OJTコメント -->
-        <div>
-          <h3>OJTコメント</h3>
-          <!-- TODO: role === 'ojt' の場合はテキストエリアで編集可能にする -->
-          <p>{{ ojtComment ?? 'コメントはまだありません' }}</p>
+        <div class="w-36 shrink-0 px-2 py-2">
+          出退勤
         </div>
+        <div class="flex-1 px-2 py-2">
+          やったこと
+        </div>
+        <div class="w-20 shrink-0 px-2 py-2 text-center">
+          気分
+        </div>
+        <div class="w-24 shrink-0 px-3 py-2" />
       </div>
-    </template>
 
-    <!-- TODO: 日報入力・編集モーダルコンポーネントをここに配置する（新人用） -->
-    <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
+      <!-- 月〜金の行 -->
+      <ReportRow
+        v-for="day in weekDays"
+        :key="formatYmd(day)"
+        :date="day"
+        :report="reportByDate[formatYmd(day)] ?? null"
+        :role="role ?? 'trainee'"
+        :is-expanded="expandedDate === formatYmd(day)"
+        @input-report="onInputReport"
+        @edit-report="onEditReport"
+        @toggle-detail="onToggleDetail"
+      />
+
+      <!-- 週次コメント -->
+      <CommentArea
+        :week-start="currentWeekStart"
+        :mentor-comment="mentorComment"
+        :ojt-comment="ojtComment"
+        :role="role ?? 'trainee'"
+        @edit-comment="onEditComment"
+      />
+    </UCard>
+
+    <!-- 日報入力・編集モーダル（新人ロールのみが操作起点） -->
+    <ReportInputModal
+      v-model:open="isModalOpen"
+      :date="selectedDate"
+      :report="selectedReport"
+      @saved="onSaved"
+      @deleted="onDeleted"
+    />
   </div>
 </template>
