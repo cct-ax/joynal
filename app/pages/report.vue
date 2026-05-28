@@ -14,10 +14,8 @@ import type { CommentWithCommenter } from '#shared/types/api'
 
 const { role, isAdmin, pending } = useCurrentUser()
 
-// 週ナビ用の状態
-const currentWeekStart = ref(getMondayOf(new Date()))
-
-const weekDays = computed(() => getWeekDays(currentWeekStart.value))
+// 週ナビ用の状態を composable に委譲（「今週月曜」計算を 1 箇所に集約）
+const { currentWeekStart, weekDays, weekStartYmd } = useWeekNavigation()
 
 // 詳細展開（mentor/ojt/admin で使う、新人は使わない）
 const expandedDate = ref<string | null>(null)
@@ -27,10 +25,10 @@ const onToggleDetail = (date: Date): void => {
   expandedDate.value = expandedDate.value === ymd ? null : ymd
 }
 
-// useFetch の query。currentWeekStart の変化で自動再フェッチされる。
+// useFetch の query。weekStartYmd の変化で自動再フェッチされる。
 // MS3 で selectedTraineeId を追加する想定（trainee の場合は省略可）
 const reportsQuery = computed(() => ({
-  weekStart: formatYmd(currentWeekStart.value)
+  weekStart: weekStartYmd.value
 }))
 
 const { data: reports, refresh: refreshReports } = await useFetch<DailyReport[]>(
