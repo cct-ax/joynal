@@ -29,6 +29,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const apiError = useApiError()
 const loading = ref(false)
 const deleteLoading = ref(false)
 const confirmDeleteOpen = ref(false)
@@ -77,26 +78,6 @@ const close = (): void => {
   openModel.value = false
 }
 
-const handleError = (error: unknown, fallback: string): void => {
-  const status
-    = typeof error === 'object' && error && 'statusCode' in error
-      ? (error as { statusCode: number }).statusCode
-      : 0
-  const dataMessage
-    = typeof error === 'object' && error && 'data' in error
-      ? (error as { data: { message?: string } }).data?.message
-      : undefined
-  let message: string
-  if (status === 409) {
-    message = '同じ日付の日報がすでに存在します'
-  } else if (status === 400 && dataMessage) {
-    message = dataMessage
-  } else {
-    message = fallback
-  }
-  toast.add({ title: message, color: 'error' })
-}
-
 // 送信処理本体。UForm @submit から呼ぶほか、テストでは defineExpose 経由で直接呼ぶ。
 const submit = async (data: ReportSchema): Promise<void> => {
   loading.value = true
@@ -127,7 +108,10 @@ const submit = async (data: ReportSchema): Promise<void> => {
     emit('saved')
     close()
   } catch (error: unknown) {
-    handleError(error, '保存に失敗しました')
+    apiError.notify(error, {
+      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+      fallback: '保存に失敗しました'
+    })
   } finally {
     loading.value = false
   }
@@ -145,7 +129,7 @@ const onDelete = async (): Promise<void> => {
     emit('deleted')
     close()
   } catch (error: unknown) {
-    handleError(error, '削除に失敗しました')
+    apiError.notify(error, { fallback: '削除に失敗しました' })
   } finally {
     deleteLoading.value = false
   }

@@ -5,7 +5,7 @@ import { resetPasswordSchema, type ResetPasswordSchema } from '~/types/schemas'
 definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient()
-const toast = useToast()
+const authError = useSupabaseAuthError()
 
 const state = reactive<Partial<ResetPasswordSchema>>({ email: undefined })
 const loading = ref(false)
@@ -18,10 +18,8 @@ const onSubmit = async (event: FormSubmitEvent<ResetPasswordSchema>): Promise<vo
       redirectTo: `${window.location.origin}/confirm`
     })
     if (error) {
-      toast.add({
-        title: 'メールの送信に失敗しました',
-        description: 'メールアドレスを確認してください',
-        color: 'error'
+      authError.notify(error, {
+        title: 'メールの送信に失敗しました'
       })
       return
     }

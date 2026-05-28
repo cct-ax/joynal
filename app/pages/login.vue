@@ -6,7 +6,7 @@ definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient()
 const router = useRouter()
-const toast = useToast()
+const authError = useSupabaseAuthError()
 
 const state = reactive<Partial<LoginSchema>>({
   email: undefined,
@@ -19,9 +19,8 @@ const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
   try {
     const { error } = await supabase.auth.signInWithPassword(event.data)
     if (error) {
-      toast.add({
-        title: 'メールアドレスまたはパスワードが正しくありません',
-        color: 'error'
+      authError.notify(error, {
+        title: 'メールアドレスまたはパスワードが正しくありません'
       })
       return
     }

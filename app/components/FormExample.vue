@@ -35,9 +35,12 @@ const MOOD_OPTIONS = [
 ]
 
 const toast = useToast()
+// ④ エラーは useApiError composable に委譲する。as キャストを避け、
+//    409 など特定 statusCode の専用メッセージは statusMessages で指定する。
+const apiError = useApiError()
 const loading = ref(false)
 
-// ④ 送信時の処理（スキーマのバリデーションが通った後に呼ばれる）
+// ⑤ 送信時の処理（スキーマのバリデーションが通った後に呼ばれる）
 //    event.data はバリデーション済みの値。$fetch は必ず try/catch で囲む。
 const onSubmit = async (event: FormSubmitEvent<ReportSchema>): Promise<void> => {
   loading.value = true
@@ -45,16 +48,9 @@ const onSubmit = async (event: FormSubmitEvent<ReportSchema>): Promise<void> => 
   try {
     await $fetch('/api/reports', { method: 'POST', body: event.data })
   } catch (error: unknown) {
-    // サーバーは日本語のエラーメッセージを返す。必要なら status で分岐する。
-    // 例: 同じ日付の日報がすでにある場合（409）は専用メッセージを出す。
-    const isConflict
-      = typeof error === 'object'
-        && error !== null
-        && 'statusCode' in error
-        && (error as { statusCode: number }).statusCode === 409
-    toast.add({
-      title: isConflict ? '同じ日付の日報がすでに存在します' : 'エラーが発生しました',
-      color: 'error'
+    apiError.notify(error, {
+      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+      fallback: '保存に失敗しました'
     })
     loading.value = false
     return

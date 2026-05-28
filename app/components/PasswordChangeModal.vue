@@ -17,6 +17,7 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>()
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const authError = useSupabaseAuthError()
 
 const state = reactive<Partial<PasswordChangeSchema>>({
   current: undefined,
@@ -44,10 +45,9 @@ const onSubmit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<v
   try {
     const { error } = await supabase.auth.updateUser({ password: event.data.next })
     if (error) {
-      toast.add({
+      authError.notify(error, {
         title: 'パスワードの変更に失敗しました',
-        description: error.message,
-        color: 'error'
+        showDescription: true
       })
       return
     }
