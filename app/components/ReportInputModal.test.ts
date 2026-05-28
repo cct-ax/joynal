@@ -2,6 +2,7 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VueWrapper } from '@vue/test-utils'
 import type { DailyReport } from '#shared/types/models'
+import type { ReportInputModalExposed } from '~/types/components'
 import ReportInputModal from './ReportInputModal.vue'
 
 // useToast はテスト環境では UI に出ないので、呼び出しを spy する
@@ -20,16 +21,14 @@ const sampleReport: DailyReport = {
   updated_at: '2026-05-25T00:00:00Z'
 }
 
-interface ExposedVm {
-  submit: (data: {
-    date: string
-    check_in: string
-    check_out: string
-    content: string
-    mood?: number
-  }) => Promise<void>
-  onDelete: () => Promise<void>
-}
+/**
+ * `wrapper.vm` から defineExpose の API を取り出す helper。
+ * @vue/test-utils の VueWrapper.vm は ComponentPublicInstance のため、
+ * defineExpose の型を引き当てるには 1 箇所だけキャストが必要。
+ * テスト内の他の箇所では as を使わずに済むよう、ここに集約する。
+ */
+const exposedOf = (w: VueWrapper): ReportInputModalExposed =>
+  w.vm as unknown as ReportInputModalExposed
 
 describe('ReportInputModal', () => {
   let wrapper: VueWrapper | null = null
@@ -71,7 +70,7 @@ describe('ReportInputModal', () => {
     wrapper = await mountSuspended(ReportInputModal, {
       props: { open: true, date: '2026-05-25', report: null }
     })
-    const vm = wrapper.vm as unknown as ExposedVm
+    const vm = exposedOf(wrapper)
 
     await vm.submit({
       date: '2026-05-25',
@@ -100,7 +99,7 @@ describe('ReportInputModal', () => {
     wrapper = await mountSuspended(ReportInputModal, {
       props: { open: true, date: '2026-05-25', report: null }
     })
-    const vm = wrapper.vm as unknown as ExposedVm
+    const vm = exposedOf(wrapper)
 
     await vm.submit({
       date: '2026-05-25',
@@ -125,7 +124,7 @@ describe('ReportInputModal', () => {
     wrapper = await mountSuspended(ReportInputModal, {
       props: { open: true, date: null, report: sampleReport }
     })
-    const vm = wrapper.vm as unknown as ExposedVm
+    const vm = exposedOf(wrapper)
 
     await vm.submit({
       date: '2026-05-25',
@@ -152,7 +151,7 @@ describe('ReportInputModal', () => {
     wrapper = await mountSuspended(ReportInputModal, {
       props: { open: true, date: null, report: sampleReport }
     })
-    const vm = wrapper.vm as unknown as ExposedVm
+    const vm = exposedOf(wrapper)
 
     await vm.onDelete()
 
@@ -165,7 +164,7 @@ describe('ReportInputModal', () => {
     wrapper = await mountSuspended(ReportInputModal, {
       props: { open: true, date: '2026-05-25', report: null }
     })
-    const vm = wrapper.vm as unknown as ExposedVm
+    const vm = exposedOf(wrapper)
 
     await vm.submit({
       date: '2026-05-25',
@@ -188,7 +187,7 @@ describe('ReportInputModal', () => {
     wrapper = await mountSuspended(ReportInputModal, {
       props: { open: true, date: '2026-05-25', report: null }
     })
-    const vm = wrapper.vm as unknown as ExposedVm
+    const vm = exposedOf(wrapper)
 
     await vm.submit({
       date: '2026-05-25',
