@@ -1,35 +1,14 @@
 <script setup lang="ts">
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
-const router = useRouter()
-
-const { isAdmin } = useCurrentUser()
-
-const signOut = async () => {
-  await supabase.auth.signOut()
-  await router.push('/login')
-}
+/**
+ * 全ページ共通レイアウト。
+ * ヘッダーは AppHeader コンポーネントに切り出してある（ユーザーメニューも含む）。
+ */
 </script>
 
 <template>
   <div>
-    <header>
-      <span>Joynal</span>
-      <nav v-if="user">
-        <NuxtLink to="/report">日報</NuxtLink>
-        <NuxtLink
-          v-if="isAdmin"
-          to="/admin"
-        >
-          管理
-        </NuxtLink>
-        <button @click="signOut">
-          ログアウト
-        </button>
-      </nav>
-    </header>
-
-    <main>
+    <AppHeader />
+    <main class="max-w-5xl mx-auto px-4 py-6">
       <slot />
     </main>
   </div>
