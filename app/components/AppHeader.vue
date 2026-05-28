@@ -12,7 +12,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 
 const user = useSupabaseUser()
-const { profile } = useCurrentUser()
+const { profile, pending } = useCurrentUser()
 
 const pwModalOpen = ref(false)
 
@@ -61,7 +61,15 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
         class="flex items-center gap-1.5"
       >
         <slot name="nav" />
-        <UUser :name="profile?.name ?? 'ユーザー'" />
+        <!-- /api/users/me 取得中は名前が確定しないため、フォールバック文言を出さず Skeleton を表示する -->
+        <USkeleton
+          v-if="pending"
+          class="h-4 w-24"
+        />
+        <UUser
+          v-else
+          :name="profile?.name ?? 'ユーザー'"
+        />
         <UColorModeButton />
         <UDropdownMenu :items="userMenuItems">
           <UButton
