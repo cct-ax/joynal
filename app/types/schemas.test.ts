@@ -95,7 +95,8 @@ describe('userCreateSchema', () => {
 })
 
 describe('assignmentSchema', () => {
-  const validUuid = '00000000-0000-0000-0000-000000000001'
+  // Zod v4 の z.uuid() は RFC 4122 v1〜v8 に厳密。バージョン4・variant 8 の形式を使う
+  const validUuid = '00000000-0000-4000-8000-000000000001'
 
   it('有効な割り当てデータを受け入れる', () => {
     const result = assignmentSchema.safeParse({
