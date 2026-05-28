@@ -43,6 +43,12 @@ const state = reactive<Partial<ReportSchema>>({
   mood: undefined
 })
 
+/** DB の mood (number | null) を MoodValue | undefined に絞り込む type guard 経由の変換 */
+const toMoodValue = (m: number | null | undefined): ReportSchema['mood'] => {
+  if (m === 1 || m === 2 || m === 3 || m === 4 || m === 5) return m
+  return undefined
+}
+
 const openModel = computed({
   get: () => props.open,
   set: (v: boolean) => emit('update:open', v)
@@ -58,7 +64,7 @@ watch(
     state.check_in = props.report?.check_in ?? undefined
     state.check_out = props.report?.check_out ?? undefined
     state.content = props.report?.content ?? undefined
-    state.mood = props.report?.mood ?? undefined
+    state.mood = toMoodValue(props.report?.mood)
   },
   { immediate: true }
 )

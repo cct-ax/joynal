@@ -1,11 +1,10 @@
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AuthError } from '@supabase/supabase-js'
 
 const toastAddMock = vi.fn()
 mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 
-const fakeError = { message: 'Invalid login' } as AuthError
+const fakeError = { message: 'Invalid login' }
 
 describe('useSupabaseAuthError', () => {
   beforeEach(() => {

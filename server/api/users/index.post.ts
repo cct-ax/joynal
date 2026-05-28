@@ -1,32 +1,16 @@
 import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { Profile } from '#shared/types/models'
-import { VALID_ROLES } from '#shared/types/api'
-import type { UserCreateBody } from '#shared/types/api'
+import { userCreateBodySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<Profile>>(async (event) => {
-  const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
-
   if (!user) {
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
-  const { name, email, role } = await readBody<UserCreateBody>(event)
+  const { name, email, role } = await parseBody(event, userCreateBodySchema)
 
-  if (!name || !email || !role) {
-    throw createError({ statusCode: 400, message: '必須項目が不足しています' })
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw createError({ statusCode: 400, message: 'email の形式が正しくありません' })
-  }
-
-  if (!VALID_ROLES.includes(role)) {
-    throw createError({ statusCode: 400, message: 'role は trainee / mentor / ojt / admin のいずれかを指定してください' })
-  }
-
-  const serviceClient = serverSupabaseServiceRole(event)
-
+  const client = await serverSupabaseClient(event)
   const { data: callerProfile } = await client
     .from('profiles')
     .select('role')
@@ -37,6 +21,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
   }
 
+  const serviceClient = serverSupabaseServiceRole(event)
   const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
     email,
     email_confirm: true

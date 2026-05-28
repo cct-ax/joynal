@@ -1,31 +1,22 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import type { MentorAssignment } from '#shared/types/models'
-import type { AssignmentUpsertBody } from '#shared/types/api'
+import { assignmentUpsertBodySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
-  const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
-
   if (!user) {
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
-  const { traineeId, mentorId, ojtId, year } = await readBody<AssignmentUpsertBody>(event)
-
-  if (!traineeId) {
-    throw createError({ statusCode: 400, message: 'traineeId は必須です' })
-  }
-
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(traineeId)) {
-    throw createError({ statusCode: 400, message: 'traineeId は UUID 形式で指定してください' })
-  }
+  const { traineeId, mentorId, ojtId, year } = await parseBody(event, assignmentUpsertBodySchema)
 
   const targetYear: number = year ?? new Date().getFullYear()
 
+  const client = await serverSupabaseClient(event)
   const { data, error } = await client
     .from('mentor_assignments')
     .upsert(
-      { trainee_id: traineeId, mentor_id: mentorId ?? null, ojt_id: ojtId ?? null, year: targetYear },
+      { trainee_id: traineeId, mentor_id: mentorId, ojt_id: ojtId, year: targetYear },
       { onConflict: 'trainee_id,year' }
     )
     .select()

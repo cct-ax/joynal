@@ -45,7 +45,7 @@ export const parseBody = async <T extends z.ZodTypeAny>(
 ): Promise<z.output<T>> => {
   const body = await readBody(event)
   const result = schema.safeParse(body)
-  if (!result.success) throwValidationError(toDetails(result.error.issues))
+  if (!result.success) return throwValidationError(toDetails(result.error.issues))
   return result.data
 }
 
@@ -59,7 +59,7 @@ export const parseQuery = <T extends z.ZodTypeAny>(
 ): z.output<T> => {
   const query = getQuery(event)
   const result = schema.safeParse(query)
-  if (!result.success) throwValidationError(toDetails(result.error.issues))
+  if (!result.success) return throwValidationError(toDetails(result.error.issues))
   return result.data
 }
 
@@ -74,6 +74,6 @@ export const parseRouteParam = <T extends z.ZodTypeAny>(
 ): z.output<T> => {
   const value = getRouterParam(event, name)
   const result = schema.safeParse(value)
-  if (!result.success) throwValidationError(toDetails(result.error.issues))
+  if (!result.success) return throwValidationError(toDetails(result.error.issues))
   return result.data
 }

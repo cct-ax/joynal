@@ -1,21 +1,17 @@
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { AssignmentForAdmin, AssignmentForMentor, AssignmentsMeQuery } from '#shared/types/api'
+import type { AssignmentForAdmin, AssignmentForMentor } from '#shared/types/api'
+import { assignmentsMeQuerySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMentor[]>>(async (event) => {
-  const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
-
   if (!user) {
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
-  const { year: yearStr } = getQuery(event) as Partial<AssignmentsMeQuery>
-  const year = yearStr ? Number(yearStr) : new Date().getFullYear()
+  const { year: yearInput } = parseQuery(event, assignmentsMeQuerySchema)
+  const year = yearInput ?? new Date().getFullYear()
 
-  if (Number.isNaN(year)) {
-    throw createError({ statusCode: 400, message: 'year は数値で指定してください' })
-  }
-
+  const client = await serverSupabaseClient(event)
   const { data: profile, error: profileError } = await client
     .from('profiles')
     .select('role')
@@ -44,13 +40,14 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
         ojt:profiles!mentor_assignments_ojt_id_fkey(name)
       `)
       .eq('year', year)
+      .returns<AssignmentForAdmin[]>()
 
     if (error) {
       console.error('[api/assignments/me GET] admin query', error)
       throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
     }
 
-    return data as AssignmentForAdmin[]
+    return data
   }
 
   const { data, error } = await client
@@ -62,11 +59,12 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
     `)
     .or(`mentor_id.eq.${user.id},ojt_id.eq.${user.id}`)
     .eq('year', year)
+    .returns<AssignmentForMentor[]>()
 
   if (error) {
     console.error('[api/assignments/me GET] mentor query', error)
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
-  return data as AssignmentForMentor[]
+  return data
 })

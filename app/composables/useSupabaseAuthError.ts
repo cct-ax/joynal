@@ -12,7 +12,11 @@
  *     return
  *   }
  */
-import type { AuthError } from '@supabase/supabase-js'
+/**
+ * Supabase の AuthError から必要な部分（message）だけを構造的にナローイングする。
+ * `@supabase/supabase-js` 直接 import を避けるため inline で型定義する。
+ */
+export type SupabaseAuthErrorLike = { message: string }
 
 export type AuthErrorOptions = {
   /** Toast のタイトル（既定の固定文言） */
@@ -24,7 +28,7 @@ export type AuthErrorOptions = {
 export const useSupabaseAuthError = () => {
   const toast = useToast()
 
-  const notify = (error: AuthError, options: AuthErrorOptions): void => {
+  const notify = (error: SupabaseAuthErrorLike, options: AuthErrorOptions): void => {
     toast.add({
       title: options.title,
       ...(options.showDescription ? { description: error.message } : {}),

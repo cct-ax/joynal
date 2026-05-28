@@ -1,19 +1,17 @@
 import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { Profile, ProfileUpdate } from '#shared/types/models'
-import { VALID_ROLES } from '#shared/types/api'
-import type { UserUpdateBody } from '#shared/types/api'
+import { userUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 
 // 実質的な永久 ban（Supabase は 'none' で解除、それ以外は PostgreSQL interval 文字列）
 const BAN_DURATION_PERMANENT = '876000h'
 
 export default defineEventHandler<Promise<Profile>>(async (event) => {
-  const client = await serverSupabaseClient(event)
   const user = await serverSupabaseUser(event)
-
   if (!user) {
     throw createError({ statusCode: 401, message: '認証が必要です' })
   }
 
+  const client = await serverSupabaseClient(event)
   const { data: callerProfile } = await client
     .from('profiles')
     .select('role')
@@ -24,12 +22,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
   }
 
-  const id = getRouterParam(event, 'id')
-  const { name, email, role, is_active } = await readBody<UserUpdateBody>(event)
-
-  if (role !== undefined && !VALID_ROLES.includes(role)) {
-    throw createError({ statusCode: 400, message: 'role は trainee / mentor / ojt / admin のいずれかを指定してください' })
-  }
+  const id = parseRouteParam(event, 'id', uuidSchema)
+  const { name, email, role, is_active } = await parseBody(event, userUpdateBodySchema)
 
   const updates: ProfileUpdate = {}
   if (name !== undefined) updates.name = name
@@ -40,7 +34,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   const { data, error } = await client
     .from('profiles')
     .update(updates)
-    .eq('id', id!)
+    .eq('id', id)
     .select()
     .single()
 
@@ -58,7 +52,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   if (is_active !== undefined) {
     const serviceClient = serverSupabaseServiceRole(event)
     const banDuration = is_active ? 'none' : BAN_DURATION_PERMANENT
-    const { error: banError } = await serviceClient.auth.admin.updateUserById(id!, { ban_duration: banDuration })
+    const { error: banError } = await serviceClient.auth.admin.updateUserById(id, { ban_duration: banDuration })
     if (banError) {
       console.error('[api/users/:id PUT] auth.admin.updateUserById', banError)
       throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
