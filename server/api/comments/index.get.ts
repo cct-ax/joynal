@@ -1,12 +1,9 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import type { CommentWithCommenter } from '#shared/types/api'
 import { commentsQuerySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<CommentWithCommenter[]>>(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  await serverUserId(event)
 
   const { weekStart, traineeId } = parseQuery(event, commentsQuerySchema)
 

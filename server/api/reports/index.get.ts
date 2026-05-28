@@ -3,6 +3,9 @@ import type { DailyReport } from '#shared/types/models'
 import { reportsQuerySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
+  // 認証ゲート（未認証は 401）。行レベルの可視範囲は RLS に委譲する。
+  await serverUserId(event)
+
   const { weekStart, userId } = parseQuery(event, reportsQuerySchema)
 
   const client = await serverSupabaseClient(event)

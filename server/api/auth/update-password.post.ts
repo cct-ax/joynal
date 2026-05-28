@@ -1,4 +1,4 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import { updatePasswordBodySchema } from '#shared/types/schemas'
 
 /**
@@ -6,10 +6,7 @@ import { updatePasswordBodySchema } from '#shared/types/schemas'
  * ログイン中ユーザーのパスワードを更新する。
  */
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  await serverUserId(event)
 
   const { password } = await parseBody(event, updatePasswordBodySchema)
 

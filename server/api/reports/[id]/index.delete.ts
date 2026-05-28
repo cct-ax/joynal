@@ -1,11 +1,8 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import { uuidSchema } from '#shared/types/schemas'
 
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  await serverUserId(event)
 
   const id = parseRouteParam(event, 'id', uuidSchema)
 

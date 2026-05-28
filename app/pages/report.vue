@@ -12,7 +12,7 @@
 import type { DailyReport } from '#shared/types/models'
 import type { CommentWithCommenter } from '#shared/types/api'
 
-const { role, isAdmin, pending } = useCurrentUser()
+const { role, isAdmin, pending: profilePending } = useCurrentUser()
 
 // 週ナビ用の状態を composable に委譲（「今週月曜」計算を 1 箇所に集約）
 const { currentWeekStart, weekDays, weekStartYmd } = useWeekNavigation()
@@ -31,10 +31,14 @@ const reportsQuery = computed(() => ({
   weekStart: weekStartYmd.value
 }))
 
-const { data: reports, refresh: refreshReports } = await useFetch<DailyReport[]>(
+const { data: reports, refresh: refreshReports, status: reportsStatus } = await useFetch<DailyReport[]>(
   '/api/reports',
   { query: reportsQuery, default: () => [] }
 )
+
+// プロフィール取得中、または週切り替えで日報を再取得中はスケルトンを表示する
+// （role 未解決のまま表を描画しないことで `role ?? 'trainee'` の一時誤表示も防ぐ）
+const isLoading = computed(() => profilePending.value || reportsStatus.value === 'pending')
 
 // 日付索引で O(1) 参照
 const reportByDate = computed<Record<string, DailyReport>>(() =>
@@ -85,7 +89,7 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
 
 <template>
   <div
-    v-if="pending"
+    v-if="isLoading"
     role="status"
     aria-label="読み込み中…"
     class="space-y-6"

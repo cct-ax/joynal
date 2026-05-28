@@ -1,12 +1,9 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 import type { MentorAssignment } from '#shared/types/models'
 import { assignmentUpsertBodySchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
+  await serverUserId(event)
 
   const { traineeId, mentorId, ojtId, year } = await parseBody(event, assignmentUpsertBodySchema)
 
