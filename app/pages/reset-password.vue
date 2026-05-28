@@ -1,63 +1,90 @@
 <script setup lang="ts">
+import type { FormSubmitEvent } from '@nuxt/ui'
+import { resetPasswordSchema, type ResetPasswordSchema } from '~/types/schemas'
+
 definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient()
+const toast = useToast()
 
-const email = ref('')
-const successMessage = ref('')
-const errorMessage = ref('')
+const state = reactive<Partial<ResetPasswordSchema>>({ email: undefined })
 const loading = ref(false)
+const sent = ref(false)
 
-const sendResetEmail = async () => {
+const onSubmit = async (event: FormSubmitEvent<ResetPasswordSchema>): Promise<void> => {
   loading.value = true
-  successMessage.value = ''
-  errorMessage.value = ''
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-    redirectTo: `${window.location.origin}/confirm`
-  })
-
-  if (error) {
-    errorMessage.value = 'メールの送信に失敗しました。メールアドレスを確認してください'
-  } else {
-    successMessage.value = 'パスワードリセットメールを送信しました。メールをご確認ください'
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(event.data.email, {
+      redirectTo: `${window.location.origin}/confirm`
+    })
+    if (error) {
+      toast.add({
+        title: 'メールの送信に失敗しました',
+        description: 'メールアドレスを確認してください',
+        color: 'error'
+      })
+      return
+    }
+    sent.value = true
+  } finally {
+    loading.value = false
   }
-
-  loading.value = false
 }
 </script>
 
 <template>
-  <div>
-    <h1>パスワードリセット</h1>
+  <AuthCard>
+    <template #header>
+      <h2 class="text-xl font-bold tracking-tight">
+        パスワードリセット
+      </h2>
+    </template>
 
-    <form @submit.prevent="sendResetEmail">
-      <div>
-        <label for="email">メールアドレス</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-        >
-      </div>
+    <EmptyState
+      v-if="sent"
+      emoji="📧"
+      message="リセットメールを送信しました。メールをご確認ください。"
+    />
 
-      <p v-if="successMessage">
-        {{ successMessage }}
+    <UForm
+      v-else
+      :schema="resetPasswordSchema"
+      :state="state"
+      class="space-y-4"
+      @submit="onSubmit"
+    >
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        登録済みのメールアドレスを入力してください。
       </p>
-      <p v-if="errorMessage">
-        {{ errorMessage }}
-      </p>
-
-      <button
-        type="submit"
-        :disabled="loading"
+      <UFormField
+        name="email"
+        label="メールアドレス"
+        required
       >
-        {{ loading ? '送信中...' : 'リセットメールを送信' }}
-      </button>
-    </form>
+        <UInput
+          v-model="state.email"
+          type="email"
+          autocomplete="email"
+          placeholder="mail@example.com"
+          class="w-full"
+        />
+      </UFormField>
+      <UButton
+        type="submit"
+        :loading="loading"
+        block
+      >
+        リセットメールを送信
+      </UButton>
+    </UForm>
 
-    <NuxtLink to="/login">ログインに戻る</NuxtLink>
-  </div>
+    <template #footer>
+      <NuxtLink
+        to="/login"
+        class="block text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        ← ログイン画面に戻る
+      </NuxtLink>
+    </template>
+  </AuthCard>
 </template>

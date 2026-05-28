@@ -1,73 +1,90 @@
 <script setup lang="ts">
+import type { FormSubmitEvent } from '@nuxt/ui'
+import { loginSchema, type LoginSchema } from '~/types/schemas'
+
 definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient()
 const router = useRouter()
+const toast = useToast()
 
-const email = ref('')
-const password = ref('')
-const errorMessage = ref('')
+const state = reactive<Partial<LoginSchema>>({
+  email: undefined,
+  password: undefined
+})
 const loading = ref(false)
 
-const signIn = async () => {
+const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
   loading.value = true
-  errorMessage.value = ''
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email: email.value,
-    password: password.value
-  })
-
-  if (error) {
-    errorMessage.value = 'メールアドレスまたはパスワードが正しくありません'
-  } else {
+  try {
+    const { error } = await supabase.auth.signInWithPassword(event.data)
+    if (error) {
+      toast.add({
+        title: 'メールアドレスまたはパスワードが正しくありません',
+        color: 'error'
+      })
+      return
+    }
     await router.push('/report')
+  } finally {
+    loading.value = false
   }
-
-  loading.value = false
 }
 </script>
 
 <template>
-  <div>
-    <h1>Joynal</h1>
-    <p>今日の「楽しい」を、明日の成長へ</p>
-
-    <form @submit.prevent="signIn">
-      <div>
-        <label for="email">メールアドレス</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-        >
-      </div>
-
-      <div>
-        <label for="password">パスワード</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          autocomplete="current-password"
-        >
-      </div>
-
-      <p v-if="errorMessage">
-        {{ errorMessage }}
-      </p>
-
-      <button
-        type="submit"
-        :disabled="loading"
+  <AuthCard
+    title="Joynal"
+    subtitle="新人研修 日報管理システム"
+  >
+    <UForm
+      :schema="loginSchema"
+      :state="state"
+      class="space-y-4"
+      @submit="onSubmit"
+    >
+      <UFormField
+        name="email"
+        label="メールアドレス"
+        required
       >
-        {{ loading ? 'ログイン中...' : 'ログイン' }}
-      </button>
-    </form>
+        <UInput
+          v-model="state.email"
+          type="email"
+          autocomplete="email"
+          placeholder="mail@example.com"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField
+        name="password"
+        label="パスワード"
+        required
+      >
+        <UInput
+          v-model="state.password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          class="w-full"
+        />
+      </UFormField>
+      <UButton
+        type="submit"
+        :loading="loading"
+        block
+      >
+        ログイン
+      </UButton>
+    </UForm>
 
-    <NuxtLink to="/reset-password">パスワードをお忘れですか？</NuxtLink>
-  </div>
+    <template #footer>
+      <NuxtLink
+        to="/reset-password"
+        class="block text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        パスワードをお忘れの方はこちら
+      </NuxtLink>
+    </template>
+  </AuthCard>
 </template>
