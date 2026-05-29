@@ -12,7 +12,7 @@
  *
  * design プロト L625-708（WeekPickerModal）を Vue 化したもの。
  */
-import type { DateValue } from '@internationalized/date'
+import { CalendarDate, type DateValue } from '@internationalized/date'
 
 const props = defineProps<{
   open: boolean
@@ -47,9 +47,11 @@ const isInSelectedWeek = (day: DateValue): boolean =>
 
 // 日付クリック → その週の月曜を emit して閉じる。
 // model-value は null 固定（単一日選択のハイライトは出さず、#day で週単位に表示する）。
-const onSelect = (date: DateValue | null): void => {
-  if (!date) return
-  emit('select', getMondayOf(fromCalendarDate(date)))
+// UCalendar の update:model-value は range/複数選択も含む広い型を emit するため、
+// 単一日（CalendarDate）のみ受け取り、それ以外（null/undefined/配列/範囲）は無視する。
+const onSelect = (value: unknown): void => {
+  if (!(value instanceof CalendarDate)) return
+  emit('select', getMondayOf(fromCalendarDate(value)))
   openModel.value = false
 }
 </script>
