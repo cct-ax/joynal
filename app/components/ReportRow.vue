@@ -90,7 +90,7 @@ const onPencil = (): void => {
 
       <div class="w-36 shrink-0 px-2 py-2.5 text-sm text-gray-500 dark:text-gray-400 tabular-nums">
         <template v-if="report">
-          {{ report.check_in }} 〜 {{ report.check_out }}
+          {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
         </template>
         <template v-else>
           ——
@@ -150,10 +150,10 @@ const onPencil = (): void => {
       >
         <div class="flex flex-wrap gap-4 mb-3 text-sm">
           <span class="text-gray-500 dark:text-gray-400 tabular-nums">
-            出勤 <strong class="text-gray-900 dark:text-gray-100">{{ report.check_in }}</strong>
+            出勤 <strong class="text-gray-900 dark:text-gray-100">{{ toHm(report.check_in) }}</strong>
           </span>
           <span class="text-gray-500 dark:text-gray-400 tabular-nums">
-            退勤 <strong class="text-gray-900 dark:text-gray-100">{{ report.check_out }}</strong>
+            退勤 <strong class="text-gray-900 dark:text-gray-100">{{ toHm(report.check_out) }}</strong>
           </span>
           <span
             v-if="report.mood"
@@ -200,7 +200,7 @@ const onPencil = (): void => {
             v-if="report"
             class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap tabular-nums"
           >
-            {{ report.check_in }} 〜 {{ report.check_out }}
+            {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
           </span>
           <span
             v-else

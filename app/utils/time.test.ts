@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Time } from '@internationalized/date'
-import { fromTimeValue, toTimeValue } from './time'
+import { fromTimeValue, toHm, toTimeValue } from './time'
 
 describe('time', () => {
   it('toTimeValue は "HH:MM" を Time に変換する', () => {
@@ -40,5 +40,21 @@ describe('time', () => {
     for (const s of ['00:00', '09:30', '23:59']) {
       expect(fromTimeValue(toTimeValue(s))).toBe(s)
     }
+  })
+
+  it('toHm は "HH:MM:SS" から秒を落として "HH:MM" にする', () => {
+    expect(toHm('09:00:00')).toBe('09:00')
+    expect(toHm('18:30:45')).toBe('18:30')
+  })
+
+  it('toHm は "HH:MM" をそのまま返す', () => {
+    expect(toHm('09:05')).toBe('09:05')
+  })
+
+  it('toHm は空・null・不正値を空文字にする', () => {
+    expect(toHm('')).toBe('')
+    expect(toHm(null)).toBe('')
+    expect(toHm(undefined)).toBe('')
+    expect(toHm('bad')).toBe('')
   })
 })

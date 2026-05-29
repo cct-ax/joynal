@@ -28,3 +28,11 @@ export const fromTimeValue = (t: Time | null): string => {
   const pad = (n: number): string => String(n).padStart(2, '0')
   return `${pad(t.hour)}:${pad(t.minute)}`
 }
+
+/**
+ * 時刻文字列を表示用の "HH:MM"（秒なし・ゼロ埋め）に整形する。
+ * DB の time 型は PostgREST 経由で "HH:MM:SS" を返すため、一覧などの表示側で秒を落とす。
+ * 空・不正は空文字。
+ */
+export const toHm = (s: string | null | undefined): string =>
+  fromTimeValue(toTimeValue(s))
