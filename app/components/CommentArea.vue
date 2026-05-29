@@ -14,6 +14,9 @@
  */
 import type { UserRole, CommentWithCommenter } from '#shared/types/api'
 
+// 週次コメントを書けるのは mentor / OJT のみ（UserRole の部分集合）
+type CommentRole = Extract<UserRole, 'mentor' | 'ojt'>
+
 const props = defineProps<{
   weekStart: Date
   mentorComment: CommentWithCommenter | null
@@ -22,13 +25,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  editComment: [target: 'mentor' | 'ojt']
+  editComment: [target: CommentRole]
 }>()
 
 // メンター / OJT は構造が同一なので 1 つのループにまとめる
-const sections = computed(() => [
-  { role: 'mentor' as const, comment: props.mentorComment },
-  { role: 'ojt' as const, comment: props.ojtComment }
+const sections = computed((): { role: CommentRole, comment: CommentWithCommenter | null }[] => [
+  { role: 'mentor', comment: props.mentorComment },
+  { role: 'ojt', comment: props.ojtComment }
 ])
 </script>
 
