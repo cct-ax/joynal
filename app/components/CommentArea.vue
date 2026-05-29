@@ -3,7 +3,10 @@
  * 週次コメント表示エリア。
  *
  * - PC は 2 カラム（メンター / OJT 横並び）、SP は 1 カラム縦積み。
+ * - メンター / OJT は DOM が同一なので sections 配列を v-for で描画する。
  * - 自分のロールに一致するときだけ「入力/編集」ボタンを表示する。
+ * - 配色は @nuxt/ui の semantic トークン（text-muted / text-default / text-dimmed /
+ *   bg-elevated）に統一。区切りは USeparator、コメント箱は UCard を使う。
  * - MS2 では表示中心。`editComment` emit は親（report.vue）でハンドリングし、
  *   MS3 で CommentInputModal を接続する想定。
  *
@@ -11,7 +14,7 @@
  */
 import type { UserRole, CommentWithCommenter } from '#shared/types/api'
 
-defineProps<{
+const props = defineProps<{
   weekStart: Date
   mentorComment: CommentWithCommenter | null
   ojtComment: CommentWithCommenter | null
@@ -21,66 +24,54 @@ defineProps<{
 const emit = defineEmits<{
   editComment: [target: 'mentor' | 'ojt']
 }>()
+
+// メンター / OJT は構造が同一なので 1 つのループにまとめる
+const sections = computed(() => [
+  { role: 'mentor' as const, comment: props.mentorComment },
+  { role: 'ojt' as const, comment: props.ojtComment }
+])
 </script>
 
 <template>
-  <div class="border-t-2 border-gray-200 dark:border-gray-800 px-5 py-5">
-    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
-      週次コメント
-    </h4>
-    <div class="grid sm:grid-cols-2 grid-cols-1 gap-4">
-      <!-- メンターコメント -->
-      <div class="bg-gray-100 dark:bg-gray-800/50 rounded p-4">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <RoleBadge role="mentor" />
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              {{ mentorComment?.commenter.name ?? '担当未割当' }}
-            </span>
-          </div>
-          <UButton
-            v-if="role === 'mentor'"
-            variant="ghost"
-            size="xs"
-            @click="emit('editComment', 'mentor')"
-          >
-            {{ mentorComment ? '編集' : '入力' }}
-          </UButton>
-        </div>
-        <p
-          class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
-          :class="mentorComment ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 italic'"
+  <div>
+    <USeparator />
+    <div class="px-5 py-5">
+      <h4 class="text-xs font-semibold text-muted uppercase tracking-wider mb-4">
+        週次コメント
+      </h4>
+      <div class="grid sm:grid-cols-2 grid-cols-1 gap-4">
+        <UCard
+          v-for="section in sections"
+          :key="section.role"
+          variant="soft"
+          :ui="{ body: 'p-4' }"
+          class="rounded-md"
         >
-          {{ mentorComment?.content ?? 'コメントはまだありません' }}
-        </p>
-      </div>
-
-      <!-- OJT コメント -->
-      <div class="bg-gray-100 dark:bg-gray-800/50 rounded p-4">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <RoleBadge role="ojt" />
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-              {{ ojtComment?.commenter.name ?? '担当未割当' }}
-            </span>
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <RoleBadge :role="section.role" />
+              <span class="text-xs text-muted">
+                {{ section.comment?.commenter.name ?? '担当未割当' }}
+              </span>
+            </div>
+            <UButton
+              v-if="role === section.role"
+              variant="ghost"
+              size="xs"
+              @click="emit('editComment', section.role)"
+            >
+              {{ section.comment ? '編集' : '入力' }}
+            </UButton>
           </div>
-          <UButton
-            v-if="role === 'ojt'"
-            variant="ghost"
-            size="xs"
-            @click="emit('editComment', 'ojt')"
+          <p
+            class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
+            :class="section.comment ? 'text-default' : 'text-dimmed italic'"
           >
-            {{ ojtComment ? '編集' : '入力' }}
-          </UButton>
-        </div>
-        <p
-          class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word"
-          :class="ojtComment ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500 italic'"
-        >
-          {{ ojtComment?.content ?? 'コメントはまだありません' }}
-        </p>
+            {{ section.comment?.content ?? 'コメントはまだありません' }}
+          </p>
+        </UCard>
       </div>
+      <!-- TODO MS3: editComment emit を CommentInputModal と接続する -->
     </div>
-    <!-- TODO MS3: editComment emit を CommentInputModal と接続する -->
   </div>
 </template>
