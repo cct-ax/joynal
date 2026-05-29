@@ -49,8 +49,10 @@ const isInSelectedWeek = (day: DateValue): boolean =>
 // model-value は null 固定（単一日選択のハイライトは出さず、#day で週単位に表示する）。
 // UCalendar の update:model-value は range/複数選択も含む広い型を emit するため、
 // その型で受けて単一日（DateValue）のみに構造的に絞り込む。
-// （reka-ui の DateRange は app から直接 import 不可のため範囲は構造で表す）
-type CalendarValue = DateValue | DateValue[] | { start?: DateValue, end?: DateValue } | null | undefined
+// 範囲型は reka-ui の DateRange と同形（直接 import 不可）。start/end を必須キーに
+// することで 'start' in value が範囲を確実に除外する（optional だと否定側に残り ts2345）。
+type CalendarRange = { start: DateValue | undefined, end: DateValue | undefined }
+type CalendarValue = DateValue | DateValue[] | CalendarRange | null | undefined
 const onSelect = (value: CalendarValue): void => {
   if (!value || Array.isArray(value) || 'start' in value) return
   emit('select', getMondayOf(fromCalendarDate(value)))
