@@ -25,22 +25,19 @@ describe('MoodStars', () => {
     expect(emitted![0]).toEqual([null])
   })
 
-  it('readonly では button が disabled になる', async () => {
+  it('readonly では button を描画しない（非インタラクティブな span）', async () => {
     const wrapper = await mountSuspended(MoodStars, {
       props: { modelValue: 3, readonly: true }
     })
-    const buttons = wrapper.findAll('button')
-    buttons.forEach((btn) => {
-      expect(btn.attributes('disabled')).toBeDefined()
-    })
+    // 行のトグルボタン内に置けるよう、readonly はボタンを描画しない
+    expect(wrapper.findAll('button')).toHaveLength(0)
   })
 
-  it('readonly でクリックしても emit しない', async () => {
+  it('readonly では group の aria-label で現在値を伝える', async () => {
     const wrapper = await mountSuspended(MoodStars, {
       props: { modelValue: 3, readonly: true }
     })
-    const buttons = wrapper.findAll('button')
-    await buttons[0]!.trigger('click')
+    expect(wrapper.get('[role="group"]').attributes('aria-label')).toBe('気分 3 / 5')
     expect(wrapper.emitted('update:modelValue')).toBeUndefined()
   })
 })

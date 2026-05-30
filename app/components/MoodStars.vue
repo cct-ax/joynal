@@ -3,7 +3,9 @@
  * 気分（mood）の星評価コンポーネント。
  *
  * - 1〜5 の値を表示・編集。
- * - readonly=true なら表示専用（一覧で使う）。
+ * - readonly=true なら表示専用（一覧/詳細で使う）。各星は `<span>`（非インタラクティブ）で
+ *   描画し、値は group の aria-label で読み上げる。これにより clickable な行（トグルボタン）の
+ *   中に置いてもネストボタンにならない。
  * - 同じ星を再クリックすると null（未入力）に戻る。
  * - ホバー時は一時的にその位置までハイライト。
  *
@@ -43,17 +45,17 @@ const sizeClass = computed(() => {
   }
 })
 
+// 以下のハンドラは editable 時のみ v-on で束ねる（readonly は span でハンドラ無し）
 const onClick = (n: MoodValue): void => {
-  if (props.readonly) return
   emit('update:modelValue', props.modelValue === n ? null : n)
 }
 
 const onMouseEnter = (n: number): void => {
-  if (!props.readonly) hoveredValue.value = n
+  hoveredValue.value = n
 }
 
 const onMouseLeave = (): void => {
-  if (!props.readonly) hoveredValue.value = null
+  hoveredValue.value = null
 }
 </script>
 
@@ -63,28 +65,27 @@ const onMouseLeave = (): void => {
     role="group"
     :aria-label="`気分 ${modelValue ?? 0} / 5`"
   >
-    <button
+    <component
+      :is="readonly ? 'span' : 'button'"
       v-for="n in MOOD_VALUES"
       :key="n"
-      type="button"
-      :disabled="readonly"
+      :type="readonly ? undefined : 'button'"
       class="leading-none transition-transform motion-reduce:transition-none"
       :class="{
         'cursor-pointer hover:scale-110 motion-reduce:hover:scale-100': !readonly,
         'cursor-default': readonly
       }"
-      :aria-label="`気分 ${n}`"
-      @click="onClick(n)"
-      @mouseenter="onMouseEnter(n)"
-      @mouseleave="onMouseLeave"
+      :aria-label="readonly ? undefined : `気分 ${n}`"
+      v-on="readonly ? {} : { click: () => onClick(n), mouseenter: () => onMouseEnter(n), mouseleave: onMouseLeave }"
     >
       <Icon
         :icon="n <= displayValue ? 'mdi:star' : 'mdi:star-outline'"
+        aria-hidden="true"
         :class="[
           sizeClass,
           n <= displayValue ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'
         ]"
       />
-    </button>
+    </component>
   </div>
 </template>
