@@ -1,6 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { DailyReport } from '#shared/types/models'
 import { reportsQuerySchema } from '#shared/types/schemas'
+import { parseYmd, addDays, formatYmd } from '#shared/utils/date'
 
 export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
   // 認証ゲート（未認証は 401）。行レベルの可視範囲は RLS に委譲する。
@@ -10,9 +11,11 @@ export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
 
   const client = await serverSupabaseClient(event)
 
-  const weekEnd = new Date(weekStart)
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
-  const weekEndStr = weekEnd.toISOString().split('T')[0]!
+  const start = parseYmd(weekStart)
+  if (!start) {
+    throw createError({ statusCode: 400, message: 'weekStart の日付形式が不正です' })
+  }
+  const weekEndStr = formatYmd(addDays(start, 6))
 
   let queryBuilder = client
     .from('daily_reports')

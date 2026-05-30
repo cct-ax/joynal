@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import { serverUserId } from '../utils/auth'
 import { parseBody, parseQuery, parseRouteParam } from '../utils/validate'
+import { resolveYear } from '../utils/year'
 
 /**
  * server ハンドラのユニットテスト用グローバル提供。
@@ -22,3 +23,4 @@ vi.stubGlobal('serverUserId', serverUserId)
 vi.stubGlobal('parseBody', parseBody)
 vi.stubGlobal('parseQuery', parseQuery)
 vi.stubGlobal('parseRouteParam', parseRouteParam)
+vi.stubGlobal('resolveYear', resolveYear)

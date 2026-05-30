@@ -6,7 +6,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
   const userId = await serverUserId(event)
 
   const { year: yearInput } = parseQuery(event, assignmentsMeQuerySchema)
-  const year = yearInput ?? new Date().getFullYear()
+  const year = resolveYear(yearInput)
 
   const client = await serverSupabaseClient(event)
   const { data: profile, error: profileError } = await client

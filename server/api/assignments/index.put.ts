@@ -7,7 +7,7 @@ export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
 
   const { traineeId, mentorId, ojtId, year } = await parseBody(event, assignmentUpsertBodySchema)
 
-  const targetYear: number = year ?? new Date().getFullYear()
+  const targetYear: number = resolveYear(year)
 
   const client = await serverSupabaseClient(event)
   const { data, error } = await client
