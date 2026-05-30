@@ -13,7 +13,7 @@
  */
 import type { DailyReport } from '#shared/types/models'
 
-const { role, profile, isMentor, isOjt, pending: profilePending } = useCurrentUser()
+const { role, profile, isAdmin, isMentor, isOjt, pending: profilePending } = useCurrentUser()
 
 // 週ナビ用の状態（「今週月曜」計算を 1 箇所に集約）
 const { currentWeekStart, weekDays, weekStartYmd } = useWeekNavigation()
@@ -72,15 +72,21 @@ const isLoading = computed(
     || reportsStatus.value === 'pending'
 )
 
-// 担当新人が 1 件以上いるか。mentor/ojt が担当 0 件のときは
-// 自分で割り当てできないため、専用の空状態（管理者に連絡）を出す。
+// 担当新人が 1 件以上いるか。
 const hasTrainees = computed(() => traineeOptions.value.length > 0)
+
+// mentor/ojt が担当 0 件: 自分で割り当てを変更できないため管理者への連絡を促す。
 const mentorNoTrainees = computed(() => (isMentor.value || isOjt.value) && !hasTrainees.value)
 
-// 非 trainee はセレクタを表示。ただし mentor/ojt が担当 0 件のときは
+// admin が新人 0 件: 管理画面で新人を追加するよう CTA を出す。
+const adminNoTrainees = computed(() => isAdmin.value && !hasTrainees.value)
+
+// 非 trainee はセレクタを表示。ただし mentor/ojt が担当 0 件、または admin が新人 0 件のときは
 // 空のセレクタを出しても選べないので隠す。
 // 未選択（admin 初期）のときは空状態を出し、表は描画しない。
-const showSelector = computed(() => !isTrainee.value && !mentorNoTrainees.value)
+const showSelector = computed(
+  () => !isTrainee.value && !mentorNoTrainees.value && !adminNoTrainees.value
+)
 const showEmpty = computed(() => !isTrainee.value && selectedTraineeId.value === null)
 
 // 日報入力・編集モーダル（trainee のみが操作起点）。
@@ -176,7 +182,21 @@ const onCommentSaved = async (): Promise<void> => {
       message="担当の新人がまだ割り当てられていません。管理者にお問い合わせください。"
     />
 
-    <!-- TODO(MS4): admin は全新人(role=trainee)をセレクタに出し、新人0件のときは「管理画面で新人を追加」CTA(/admin)を表示する -->
+    <!-- admin は新人0件: 管理画面で新人を追加するよう CTA を表示する -->
+    <EmptyState
+      v-else-if="adminNoTrainees"
+      emoji="📋"
+      message="新人がまだ登録されていません"
+    >
+      <UButton
+        to="/admin"
+        color="primary"
+        variant="solid"
+      >
+        管理画面で新人を追加
+      </UButton>
+    </EmptyState>
+
     <!-- admin 初期など未選択のときは空状態 -->
     <EmptyState
       v-else-if="showEmpty"

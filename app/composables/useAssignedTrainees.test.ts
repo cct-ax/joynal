@@ -2,7 +2,8 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import type { VueWrapper } from '@vue/test-utils'
-import type { AssignmentForAdmin, AssignmentForMentor, UserRole } from '#shared/types/api'
+import type { AssignmentForMentor, UserRole } from '#shared/types/api'
+import type { Profile } from '#shared/types/models'
 import { useAssignedTrainees } from './useAssignedTrainees'
 
 // useCurrentUser はロールだけ使うので、role ref を差し替えられるよう mock する。
@@ -10,6 +11,7 @@ const roleRef = ref<UserRole | null>(null)
 mockNuxtImport('useCurrentUser', () => () => ({ role: roleRef }))
 
 // useRequestFetch が返す fetch を spy 化して呼び出し内容を検証する。
+// admin は /api/users を、mentor/ojt は /api/assignments/me を叩くため URL で分岐できるよう実装する。
 const requestFetchMock = vi.fn()
 mockNuxtImport('useRequestFetch', () => () => requestFetchMock)
 
@@ -18,15 +20,37 @@ const mentorAssignments: AssignmentForMentor[] = [
   { trainee_id: 't2', year: 2026, trainee: { name: '新人B', employee_id: 'E002' } }
 ]
 
-const adminAssignments: AssignmentForAdmin[] = [
+// admin テスト用: ロール混在のユーザー一覧（trainee 以外はフィルタされる）
+const mixedUsers: Profile[] = [
   {
-    trainee_id: 't9',
-    mentor_id: 'm1',
-    ojt_id: null,
-    year: 2026,
-    trainee: { name: '新人Z' },
-    mentor: { name: 'メンター1' },
-    ojt: null
+    id: 'u1',
+    name: '新人X',
+    role: 'trainee',
+    email: 'x@example.com',
+    employee_id: 'E010',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z'
+  },
+  {
+    id: 'u2',
+    name: 'メンターY',
+    role: 'mentor',
+    email: 'y@example.com',
+    employee_id: 'E011',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z'
+  },
+  {
+    id: 'u3',
+    name: '新人Z',
+    role: 'trainee',
+    email: 'z@example.com',
+    employee_id: 'E012',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z'
   }
 ]
 
@@ -107,14 +131,20 @@ describe('useAssignedTrainees', () => {
     expect(selectedTraineeId.value).toBe('t1')
   })
 
-  it('admin は AssignmentForAdmin を正規化するが選択は null のまま', async () => {
+  it('admin は /api/users を叩き trainee のみ正規化、選択は null のまま', async () => {
     roleRef.value = 'admin'
-    requestFetchMock.mockResolvedValue(adminAssignments)
+    requestFetchMock.mockResolvedValue(mixedUsers)
 
     const { traineeOptions, selectedTraineeId } = await mountTrainees()
 
-    expect(requestFetchMock).toHaveBeenCalledWith('/api/assignments/me')
-    expect(traineeOptions.value).toEqual([{ id: 't9', name: '新人Z' }])
+    // /api/users を叩く（/api/assignments/me ではない）
+    expect(requestFetchMock).toHaveBeenCalledWith('/api/users')
+    // mentor は除外され trainee だけが残る
+    expect(traineeOptions.value).toEqual([
+      { id: 'u1', name: '新人X' },
+      { id: 'u3', name: '新人Z' }
+    ])
+    // admin は明示選択を促すため初期選択しない
     expect(selectedTraineeId.value).toBeNull()
   })
 })

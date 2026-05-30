@@ -9,10 +9,17 @@
  * design プロト L357-410（Header）を Vue 化したもの。
  * スマホ時はユーザー名を隠してアイコンのみ表示する（Tailwind の `sm:` で切替）。
  */
-import type { DropdownMenuItem } from '@nuxt/ui'
+import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 
 const user = useSupabaseUser()
-const { profile, pending } = useCurrentUser()
+const { profile, pending, isAdmin } = useCurrentUser()
+const route = useRoute()
+
+// admin 専用ナビ。/report と /admin の 2 項目、現在のルートを active にする。
+const adminNavItems = computed<NavigationMenuItem[]>(() => [
+  { label: '日報', to: '/report', active: route.path === '/report' },
+  { label: '管理', to: '/admin', active: route.path.startsWith('/admin') }
+])
 
 const pwModalOpen = ref(false)
 
@@ -60,6 +67,15 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
         v-if="user"
         class="flex items-center gap-1.5"
       >
+        <!-- admin のみ: 日報 / 管理の水平ナビ -->
+        <UNavigationMenu
+          v-if="isAdmin"
+          :items="adminNavItems"
+          color="neutral"
+          variant="link"
+          :highlight="false"
+          aria-label="管理者ナビゲーション"
+        />
         <slot name="nav" />
         <!-- /api/users/me 取得中は名前が確定しないため、フォールバック文言を出さず Skeleton を表示する -->
         <USkeleton
