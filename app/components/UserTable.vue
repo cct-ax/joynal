@@ -76,6 +76,10 @@ const columns: TableColumn<Profile>[] = [
       :data="users"
       :columns="columns"
       :loading="loading"
+      :ui="{
+        th: 'bg-muted text-muted text-xs font-semibold uppercase tracking-wider',
+        tr: 'hover:bg-muted/40 transition-colors'
+      }"
     >
       <!-- 取得中はスケルトン行を出す。空メッセージ（ユーザーがいません）は
            ロード完了後に本当に 0 件のときだけ表示する（#empty は行 0 件時のみ描画され、
@@ -96,9 +100,45 @@ const columns: TableColumn<Profile>[] = [
         </template>
       </template>
 
+      <!-- 社員ID: 等幅フォントで識別子らしい technical accent。無効ユーザーは薄く -->
+      <template #employee_id-cell="{ row }">
+        <span
+          class="font-mono text-sm text-muted"
+          :class="{ 'opacity-50': !row.original.is_active }"
+        >{{ row.original.employee_id }}</span>
+      </template>
+
+      <!-- 名前: 強調表示＋無効ユーザーには「無効」バッジ -->
+      <template #name-cell="{ row }">
+        <div
+          class="flex items-center gap-2"
+          :class="{ 'opacity-50': !row.original.is_active }"
+        >
+          <span class="font-medium text-highlighted">{{ row.original.name }}</span>
+          <UBadge
+            v-if="!row.original.is_active"
+            label="無効"
+            color="neutral"
+            variant="soft"
+            size="sm"
+          />
+        </div>
+      </template>
+
+      <!-- メール: 無効ユーザーは薄く -->
+      <template #email-cell="{ row }">
+        <span
+          class="text-muted"
+          :class="{ 'opacity-50': !row.original.is_active }"
+        >{{ row.original.email }}</span>
+      </template>
+
       <!-- 役割セル: RoleBadge で色付きバッジ表示 -->
       <template #role-cell="{ row }">
-        <RoleBadge :role="(row.original.role as UserRole)" />
+        <RoleBadge
+          :role="(row.original.role as UserRole)"
+          :class="{ 'opacity-50': !row.original.is_active }"
+        />
       </template>
 
       <!-- 操作セル: 編集ボタン＋有効/無効化ボタン -->

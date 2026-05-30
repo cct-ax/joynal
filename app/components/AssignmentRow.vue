@@ -71,10 +71,10 @@ const selectedOjt = computed<string>({
   <!-- 列構成は admin.vue のヘッダー（新人 flex-1 / メンター w-44 / OJT w-44・px-4 gap-3）と揃える。
        モバイルは縦積みにし、ヘッダーが隠れる分インラインラベルを出す。 -->
   <div
-    class="flex items-center gap-3 px-4 py-3 border-b border-default max-sm:flex-col max-sm:items-stretch max-sm:gap-2"
+    class="flex items-center gap-3 px-4 py-3 border-b border-default transition-colors hover:bg-muted/40 max-sm:flex-col max-sm:items-stretch max-sm:gap-2"
   >
     <!-- 新人名 -->
-    <div class="flex-1 min-w-0 text-sm font-medium truncate max-sm:font-semibold">
+    <div class="flex-1 min-w-0 text-sm font-medium text-highlighted truncate max-sm:font-semibold">
       {{ traineeName }}
     </div>
 

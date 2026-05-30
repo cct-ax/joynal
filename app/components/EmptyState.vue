@@ -27,9 +27,9 @@ defineProps<{
     <Icon
       v-else-if="icon"
       :icon="icon"
-      class="w-12 h-12 opacity-40 text-gray-400"
+      class="w-12 h-12 opacity-40 text-dimmed"
     />
-    <p class="text-sm text-gray-500 dark:text-gray-400">
+    <p class="text-sm text-muted">
       {{ message }}
     </p>
     <slot />
