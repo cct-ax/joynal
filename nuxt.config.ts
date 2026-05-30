@@ -1,6 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxt/fonts', '@nuxtjs/supabase', '@nuxt/eslint', '@vueuse/nuxt'],
+
+  // ドメイン別サブフォルダ(report/admin/common)で整理しつつ、名前は据え置く
+  // （pathPrefix:false ＝ <UserTable> 等のまま・使用箇所は無変更）。
+  components: [{ path: '~/components', pathPrefix: false }],
   devtools: { enabled: true },
 
   app: {
