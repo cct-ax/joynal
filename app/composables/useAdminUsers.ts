@@ -25,8 +25,10 @@ export const useAdminUsers = (): {
     'admin-users',
     () => requestFetch<Profile[]>('/api/users'),
     // getCachedData でナビ間はキャッシュ再利用（/admin に戻る度に /api/users を叩かない）。
+    // dedupe:'defer' — 同 key 'admin-users' を useMentorAssignments と2箇所で同時 mount するため、
+    // in-flight があれば共有して二重フェッチを防ぐ（両者で options を一致させること）。
     // 各ミューテーションは refresh() で明示再取得するため最新性は保たれる。
-    { default: () => [], server: false, getCachedData: reuseAsyncData }
+    { default: () => [], server: false, getCachedData: reuseAsyncData, dedupe: 'defer' }
   )
 
   /**

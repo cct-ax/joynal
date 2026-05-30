@@ -1,5 +1,6 @@
 import type { AssignmentForAdmin, AssignmentRowVM, PersonOption } from '#shared/types/api'
 import type { Profile, MentorAssignment } from '#shared/types/models'
+import { reuseAsyncData } from '~/utils/asyncDataCache'
 
 /**
  * 管理者向け担当割り当て composable。
@@ -49,7 +50,9 @@ export const useMentorAssignments = (): {
   } = useAsyncData<Profile[]>(
     'admin-users',
     () => requestFetch<Profile[]>('/api/users'),
-    { default: () => [], server: false }
+    // useAdminUsers と同じ key・同じ options（getCachedData/dedupe）に揃える。
+    // dedupe:'defer' で2箇所同時 mount 時の in-flight を共有し /api/users の二重フェッチを防ぐ。
+    { default: () => [], server: false, getCachedData: reuseAsyncData, dedupe: 'defer' }
   )
 
   const {
@@ -59,7 +62,8 @@ export const useMentorAssignments = (): {
   } = useAsyncData<AssignmentForAdmin[]>(
     'admin-assignments',
     () => requestFetch<AssignmentForAdmin[]>('/api/assignments/me'),
-    { default: () => [], server: false }
+    // ナビ間はキャッシュ再利用。save() の refresh() は 'refresh:manual' で最新化される。
+    { default: () => [], server: false, getCachedData: reuseAsyncData }
   )
 
   // ----------------------------------------------------------------
