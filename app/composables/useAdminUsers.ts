@@ -1,5 +1,6 @@
 import type { Profile } from '#shared/types/models'
 import type { UserCreateBody, UserUpdateBody } from '#shared/types/api'
+import { reuseAsyncData } from '~/utils/asyncDataCache'
 
 /**
  * 管理者用ユーザー一覧と CRUD 操作を提供する composable。
@@ -23,7 +24,9 @@ export const useAdminUsers = (): {
   const { data, pending, refresh } = useAsyncData<Profile[]>(
     'admin-users',
     () => requestFetch<Profile[]>('/api/users'),
-    { default: () => [], server: false }
+    // getCachedData でナビ間はキャッシュ再利用（/admin に戻る度に /api/users を叩かない）。
+    // 各ミューテーションは refresh() で明示再取得するため最新性は保たれる。
+    { default: () => [], server: false, getCachedData: reuseAsyncData }
   )
 
   /**

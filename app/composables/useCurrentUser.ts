@@ -1,5 +1,6 @@
 import { VALID_ROLES, type CurrentUserProfile, type UserRole } from '#shared/types/api'
 import { getFetchStatus } from '~/utils/fetchError'
+import { reuseAsyncData } from '~/utils/asyncDataCache'
 
 /**
  * profile.role が UserRole の値域に収まっているかを判定する type guard。
@@ -20,7 +21,11 @@ export const useCurrentUser = () => {
   const { data: profile, pending, error } = useAsyncData<CurrentUserProfile | null>(
     'current-user',
     async () => (user.value?.sub ? await requestFetch<CurrentUserProfile>('/api/users/me') : null),
-    { watch: [user] }
+    // watch は user オブジェクトでなく安定した sub(ユーザーID)。@nuxtjs/supabase は page:start ごとに
+    // getClaims() で user を“新しいオブジェクト”として再セットするため、[user] を watch するとタブ切替の
+    // 度に /api/users/me を再取得してしまう。sub を watch すれば実際のログイン/ログアウト時のみ再取得する。
+    // getCachedData は再マウント('initial')でキャッシュ再利用＋purge 無効化（admin-users 等と同方針）。
+    { watch: [() => user.value?.sub], getCachedData: reuseAsyncData }
   )
 
   // 404 = auth ユーザーに profiles 行が無い（招待フロー未経由）。UI で明示する。

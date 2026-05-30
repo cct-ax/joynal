@@ -1,5 +1,6 @@
 import type { AssignmentForMentor } from '#shared/types/api'
 import type { Profile } from '#shared/types/models'
+import { reuseAsyncData } from '~/utils/asyncDataCache'
 
 /**
  * メンター/OJT/管理者が担当する新人の一覧（セレクター用）を取得する composable。
@@ -54,7 +55,8 @@ export const useAssignedTrainees = (): {
       // trainee / 未解決はデータ不要
       return []
     },
-    { watch: [role], default: () => [], server: false }
+    // getCachedData でナビ間はキャッシュ再利用（role は遷移で不変なので安全）。role 変化時のみ watch で再取得。
+    { watch: [role], default: () => [], server: false, getCachedData: reuseAsyncData }
   )
 
   const traineeOptions = computed<TraineeOption[]>(() => data.value ?? [])
