@@ -24,7 +24,7 @@ cp .env.example .env
 # .env を開いて以下の値を入力する（PLに確認）
 # - NUXT_PUBLIC_SUPABASE_URL: Supabase プロジェクトの URL
 # - NUXT_PUBLIC_SUPABASE_KEY: Supabase の anon key
-# - NUXT_SUPABASE_SERVICE_ROLE_KEY: Supabase の service role key（ユーザー招待・無効化機能に必要）
+# - NUXT_SUPABASE_SECRET_KEY: Supabase の service_role（secret）key（ユーザー管理・招待・無効化機能に必要。@nuxtjs/supabase v2 はこの名前で読む）
 
 # 開発サーバーを起動
 pnpm dev
