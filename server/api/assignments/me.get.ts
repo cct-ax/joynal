@@ -37,7 +37,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
         ojt:profiles!mentor_assignments_ojt_id_fkey(name)
       `)
       .eq('year', year)
-      .returns<AssignmentForAdmin[]>()
+      .overrideTypes<AssignmentForAdmin[], { merge: false }>()
 
     if (error) {
       console.error('[api/assignments/me GET] admin query', error)
@@ -56,7 +56,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
     `)
     .or(`mentor_id.eq.${userId},ojt_id.eq.${userId}`)
     .eq('year', year)
-    .returns<AssignmentForMentor[]>()
+    .overrideTypes<AssignmentForMentor[], { merge: false }>()
 
   if (error) {
     console.error('[api/assignments/me GET] mentor query', error)

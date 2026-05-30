@@ -21,7 +21,7 @@ export const createSupabaseClientMock = (result: QueryResult) => {
   const chainMethods = [
     'select', 'insert', 'update', 'upsert', 'delete',
     'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'or', 'in', 'is',
-    'order', 'limit', 'range', 'returns'
+    'order', 'limit', 'range', 'returns', 'overrideTypes'
   ]
   for (const m of chainMethods) query[m] = vi.fn(() => query)
   query.single = vi.fn(() => Promise.resolve(result))

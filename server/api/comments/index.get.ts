@@ -23,7 +23,7 @@ export default defineEventHandler<Promise<CommentWithCommenter[]>>(async (event)
     .eq('week_start', weekStart)
     .eq('trainee_id', traineeId)
     .order('created_at', { ascending: true })
-    .returns<CommentWithCommenter[]>()
+    .overrideTypes<CommentWithCommenter[], { merge: false }>()
 
   if (error) {
     console.error('[api/comments GET]', error)

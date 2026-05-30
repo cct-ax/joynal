@@ -11,13 +11,13 @@ const userId = '00000000-0000-4000-8000-0000000000aa'
 
 /**
  * ハンドラは同一 client で profiles（ロール確認 → .single()）と
- * mentor_assignments（一覧 → .returns() で thenable await）を順に叩くため、
+ * mentor_assignments（一覧 → .overrideTypes() で thenable await）を順に叩くため、
  * テーブルごとに別のクエリビルダ（別 result）を返すマルチテーブルモックを用意する。
  */
 const chainMethods = [
   'select', 'insert', 'update', 'upsert', 'delete',
   'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'or', 'in', 'is',
-  'order', 'limit', 'range', 'returns'
+  'order', 'limit', 'range', 'returns', 'overrideTypes'
 ] as const
 
 type QueryMock = Record<typeof chainMethods[number] | 'single' | 'maybeSingle', ReturnType<typeof vi.fn>> & {
