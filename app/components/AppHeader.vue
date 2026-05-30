@@ -22,6 +22,11 @@ const adminNavItems = computed<NavigationMenuItem[]>(() => [
 ])
 
 const pwModalOpen = ref(false)
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const pwModalMounted = ref(false)
+watch(pwModalOpen, (v) => {
+  if (v) pwModalMounted.value = true
+})
 
 const signOut = async (): Promise<void> => {
   try {
@@ -114,5 +119,8 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
     </template>
   </UHeader>
 
-  <PasswordChangeModal v-model:open="pwModalOpen" />
+  <LazyPasswordChangeModal
+    v-if="pwModalMounted"
+    v-model:open="pwModalOpen"
+  />
 </template>

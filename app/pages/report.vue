@@ -102,6 +102,11 @@ const isModalOpen = computed({
     }
   }
 })
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const reportModalMounted = ref(false)
+watch(isModalOpen, (v) => {
+  if (v) reportModalMounted.value = true
+})
 
 const onInputReport = (date: Date): void => {
   selectedReport.value = null
@@ -126,6 +131,11 @@ const isCommentModalOpen = computed({
   set: (v: boolean) => {
     if (!v) editingCommentRole.value = null
   }
+})
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const commentModalMounted = ref(false)
+watch(isCommentModalOpen, (v) => {
+  if (v) commentModalMounted.value = true
 })
 const editingComment = computed(() => {
   if (editingCommentRole.value === 'mentor') return mentorComment.value
@@ -256,7 +266,8 @@ const onCommentSaved = async (): Promise<void> => {
     </UCard>
 
     <!-- 日報入力・編集モーダル（新人ロールのみが操作起点） -->
-    <ReportInputModal
+    <LazyReportInputModal
+      v-if="reportModalMounted"
       v-model:open="isModalOpen"
       :date="selectedDate"
       :report="selectedReport"
@@ -265,8 +276,8 @@ const onCommentSaved = async (): Promise<void> => {
     />
 
     <!-- 週次コメント入力モーダル（mentor/ojt） -->
-    <CommentInputModal
-      v-if="commentTraineeId"
+    <LazyCommentInputModal
+      v-if="commentTraineeId && commentModalMounted"
       v-model:open="isCommentModalOpen"
       :week-start="currentWeekStart"
       :trainee-id="commentTraineeId"

@@ -14,6 +14,12 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  routeRules: {
+    '/login': { ssr: false },
+    '/reset-password': { ssr: false },
+    '/confirm': { ssr: false }
+  },
+
   compatibilityDate: '2025-07-15',
 
   nitro: {

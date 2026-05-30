@@ -30,6 +30,16 @@ const addOpen = ref(false)
 const editOpen = ref(false)
 const editingUser = ref<Profile | null>(null)
 
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const addModalMounted = ref(false)
+const editModalMounted = ref(false)
+watch(addOpen, (v) => {
+  if (v) addModalMounted.value = true
+})
+watch(editOpen, (v) => {
+  if (v) editModalMounted.value = true
+})
+
 const onEditUser = (user: Profile): void => {
   editingUser.value = user
   editOpen.value = true
@@ -229,11 +239,13 @@ const statItems = computed(() => {
       </template>
     </UTabs>
 
-    <UserFormModal
+    <LazyUserFormModal
+      v-if="addModalMounted"
       v-model:open="addOpen"
       @saved="refreshUsers"
     />
-    <UserFormModal
+    <LazyUserFormModal
+      v-if="editModalMounted"
       v-model:open="editOpen"
       :user="editingUser"
       :current-user-id="currentUser?.id"
