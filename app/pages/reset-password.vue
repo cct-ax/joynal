@@ -6,7 +6,7 @@ definePageMeta({ layout: false })
 
 const apiError = useApiError()
 
-const state = reactive<Partial<ResetPasswordSchema>>({ email: undefined })
+const state = reactive<Partial<ResetPasswordSchema>>({ email: '' })
 const loading = ref(false)
 const sent = ref(false)
 

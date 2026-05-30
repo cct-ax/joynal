@@ -19,9 +19,9 @@ const toast = useToast()
 const apiError = useApiError()
 
 const state = reactive<Partial<PasswordChangeSchema>>({
-  current: undefined,
-  next: undefined,
-  confirm: undefined
+  current: '',
+  next: '',
+  confirm: ''
 })
 const loading = ref(false)
 
@@ -33,9 +33,9 @@ const openModel = computed({
 // モーダルが閉じたら状態をリセットする（次回開いた時に空から始める）
 watch(openModel, (opened) => {
   if (!opened) {
-    state.current = undefined
-    state.next = undefined
-    state.confirm = undefined
+    state.current = ''
+    state.next = ''
+    state.confirm = ''
   }
 })
 

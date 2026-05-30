@@ -37,10 +37,10 @@ const isEdit = computed(() => props.report !== null)
 const title = computed(() => (isEdit.value ? '日報を編集' : '日報を入力'))
 
 const state = reactive<Partial<ReportSchema>>({
-  date: undefined,
-  check_in: undefined,
-  check_out: undefined,
-  content: undefined,
+  date: '',
+  check_in: '',
+  check_out: '',
+  content: '',
   mood: undefined
 })
 
@@ -58,13 +58,13 @@ const openModel = computed({
 const checkInTime = computed<Time | null>({
   get: () => toTimeValue(state.check_in),
   set: (t) => {
-    state.check_in = t ? fromTimeValue(t) : undefined
+    state.check_in = t ? fromTimeValue(t) : ''
   }
 })
 const checkOutTime = computed<Time | null>({
   get: () => toTimeValue(state.check_out),
   set: (t) => {
-    state.check_out = t ? fromTimeValue(t) : undefined
+    state.check_out = t ? fromTimeValue(t) : ''
   }
 })
 
@@ -74,11 +74,11 @@ watch(
   () => props.open,
   (opened) => {
     if (!opened) return
-    state.date = props.report?.date ?? props.date ?? undefined
+    state.date = props.report?.date ?? props.date ?? ''
     // DB の time 由来 "HH:MM:SS" を正準 "HH:MM" に正規化してから格納する。
-    state.check_in = fromTimeValue(toTimeValue(props.report?.check_in)) || undefined
-    state.check_out = fromTimeValue(toTimeValue(props.report?.check_out)) || undefined
-    state.content = props.report?.content ?? undefined
+    state.check_in = fromTimeValue(toTimeValue(props.report?.check_in))
+    state.check_out = fromTimeValue(toTimeValue(props.report?.check_out))
+    state.content = props.report?.content ?? ''
     state.mood = toMoodValue(props.report?.mood)
   },
   { immediate: true }

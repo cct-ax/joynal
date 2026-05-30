@@ -46,8 +46,8 @@ const roleOptions = (VALID_ROLES as readonly UserRole[]).map(r => ({
 }))
 
 const state = reactive<Partial<UserCreateSchema>>({
-  name: undefined,
-  email: undefined,
+  name: '',
+  email: '',
   role: undefined
 })
 
@@ -61,8 +61,8 @@ watch(
       state.email = props.user.email
       state.role = props.user.role as UserRole
     } else {
-      state.name = undefined
-      state.email = undefined
+      state.name = ''
+      state.email = ''
       state.role = undefined
     }
   },

@@ -33,7 +33,7 @@ const isEdit = computed(() => props.existing !== null)
 const title = computed(() => (isEdit.value ? '週次コメントを編集' : '週次コメントを入力'))
 const weekLabel = computed(() => formatWeekLabel(props.weekStart))
 
-const state = reactive<Partial<CommentSchema>>({ content: undefined })
+const state = reactive<Partial<CommentSchema>>({ content: '' })
 
 // モーダルの開閉に追従して state を初期化する。
 // 開く時は既存コメント本文を反映し、閉じる時は空に戻す（次回は空から始める）。
@@ -41,7 +41,7 @@ const state = reactive<Partial<CommentSchema>>({ content: undefined })
 watch(
   open,
   (opened) => {
-    state.content = opened ? (props.existing?.content ?? undefined) : undefined
+    state.content = opened ? (props.existing?.content ?? '') : ''
   },
   { immediate: true }
 )
