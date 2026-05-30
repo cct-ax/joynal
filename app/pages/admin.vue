@@ -63,6 +63,7 @@ onMounted(() => {
 
     <UTabs
       v-model="activeTab"
+      variant="link"
       :items="tabs"
       :unmount-on-hide="false"
       class="w-full"
