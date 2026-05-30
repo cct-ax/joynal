@@ -75,7 +75,7 @@ const onPencil = (): void => {
       :aria-label="isExpandable ? (isExpanded ? '詳細を閉じる' : '詳細を開く') : undefined"
       v-on="isExpandable ? { click: onRowActivate } : {}"
     >
-      <div class="w-32 shrink-0 px-4 py-2.5 flex items-center gap-2">
+      <div class="w-36 shrink-0 px-4 py-2.5 flex items-center gap-2">
         <span
           class="text-sm"
           :class="{ 'text-primary font-semibold': isToday }"
@@ -89,7 +89,7 @@ const onPencil = (): void => {
         />
       </div>
 
-      <div class="w-36 shrink-0 px-2 py-2.5 text-sm text-muted tabular-nums">
+      <div class="w-32 shrink-0 px-2 py-2.5 text-sm text-muted tabular-nums">
         <template v-if="report">
           {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
         </template>
@@ -110,7 +110,7 @@ const onPencil = (): void => {
         </template>
       </div>
 
-      <div class="w-20 shrink-0 px-2 py-2.5 flex justify-center">
+      <div class="w-28 shrink-0 px-2 py-2.5 flex justify-center">
         <MoodStars
           v-if="report?.mood"
           :model-value="report.mood"
@@ -119,7 +119,7 @@ const onPencil = (): void => {
         />
       </div>
 
-      <div class="w-24 shrink-0 px-3 py-2.5 flex justify-end">
+      <div class="w-20 shrink-0 px-3 py-2.5 flex justify-end">
         <UButton
           v-if="isTrainee"
           variant="ghost"

@@ -131,19 +131,19 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
       <div
         class="max-sm:hidden flex items-center bg-muted border-b border-default text-xs font-semibold text-muted uppercase tracking-wider"
       >
-        <div class="w-32 shrink-0 px-4 py-2">
+        <div class="w-36 shrink-0 px-4 py-2">
           日付
         </div>
-        <div class="w-36 shrink-0 px-2 py-2">
+        <div class="w-32 shrink-0 px-2 py-2">
           出退勤
         </div>
         <div class="flex-1 px-2 py-2">
           やったこと
         </div>
-        <div class="w-20 shrink-0 px-2 py-2 text-center">
+        <div class="w-28 shrink-0 px-2 py-2 text-center">
           気分
         </div>
-        <div class="w-24 shrink-0 px-3 py-2" />
+        <div class="w-20 shrink-0 px-3 py-2" />
       </div>
 
       <!-- 月〜金の行 -->
