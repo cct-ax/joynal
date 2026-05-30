@@ -24,9 +24,11 @@ const ojtId = defineModel<string | null>('ojtId')
 
 /**
  * "未割り当て" を表すセンチネル値。
- * USelectMenu は null を value-key で扱えないため、空文字列にマップする。
+ * USelectMenu（内部は Reka Combobox）は value='' を「プレースホルダ/クリア」用に予約しており、
+ * 空文字の項目を許さない（A <ComboboxItem /> must have a non-empty value）。
+ * そのため非空の番兵を使い、外向き model の null と相互変換する。
  */
-const NONE = '' as const
+const NONE = '__unassigned__'
 
 type SelectItem = { label: string, value: string }
 
@@ -66,28 +68,40 @@ const selectedOjt = computed<string>({
 </script>
 
 <template>
-  <div class="grid grid-cols-[1fr_1fr_1fr] items-center gap-x-4 gap-y-2 py-2 min-w-0 sm:flex sm:flex-wrap sm:gap-2">
+  <!-- 列構成は admin.vue のヘッダー（新人 flex-1 / メンター w-44 / OJT w-44・px-4 gap-3）と揃える。
+       モバイルは縦積みにし、ヘッダーが隠れる分インラインラベルを出す。 -->
+  <div
+    class="flex items-center gap-3 px-4 py-3 border-b border-default max-sm:flex-col max-sm:items-stretch max-sm:gap-2"
+  >
     <!-- 新人名 -->
-    <span class="text-sm font-medium truncate">{{ traineeName }}</span>
+    <div class="flex-1 min-w-0 text-sm font-medium truncate max-sm:font-semibold">
+      {{ traineeName }}
+    </div>
 
     <!-- メンター選択 -->
-    <USelectMenu
-      v-model="selectedMentor"
-      :items="mentorItems"
-      value-key="value"
-      :search-input="false"
-      :aria-label="`${traineeName} のメンター`"
-      class="w-auto min-w-32"
-    />
+    <div class="w-44 shrink-0 max-sm:w-full">
+      <span class="sm:hidden mb-1 block text-xs text-muted">メンター</span>
+      <USelectMenu
+        v-model="selectedMentor"
+        :items="mentorItems"
+        value-key="value"
+        :search-input="false"
+        :aria-label="`${traineeName} のメンター`"
+        class="w-full"
+      />
+    </div>
 
     <!-- OJT 選択 -->
-    <USelectMenu
-      v-model="selectedOjt"
-      :items="ojtItems"
-      value-key="value"
-      :search-input="false"
-      :aria-label="`${traineeName} の OJT`"
-      class="w-auto min-w-32"
-    />
+    <div class="w-44 shrink-0 max-sm:w-full">
+      <span class="sm:hidden mb-1 block text-xs text-muted">OJT</span>
+      <USelectMenu
+        v-model="selectedOjt"
+        :items="ojtItems"
+        value-key="value"
+        :search-input="false"
+        :aria-label="`${traineeName} の OJT`"
+        class="w-full"
+      />
+    </div>
   </div>
 </template>

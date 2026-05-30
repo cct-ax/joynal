@@ -15,7 +15,7 @@ import type { Profile } from '#shared/types/models'
 
 const tabs: TabsItem[] = [
   { label: 'ユーザー管理', value: 'users', slot: 'users' },
-  { label: 'メンター割り当て', value: 'assign', slot: 'assign' }
+  { label: '新人担当設定', value: 'assign', slot: 'assign' }
 ]
 const activeTab = ref('users')
 
@@ -88,9 +88,9 @@ onMounted(() => {
       <!-- メンター割り当てタブ -->
       <template #assign>
         <div class="my-4 space-y-2">
-          <!-- 列ヘッダー（PC のみ） -->
+          <!-- 列ヘッダー（PC のみ）。AssignmentRow と同じ列幅(flex-1 / w-44 / w-44)・px-4 gap-3 -->
           <div
-            class="max-sm:hidden flex items-center gap-3 px-4 text-xs font-semibold text-muted uppercase tracking-wider"
+            class="max-sm:hidden flex items-center gap-3 px-4 pb-2 border-b border-default text-xs font-semibold text-muted uppercase tracking-wider"
           >
             <div class="flex-1">
               新人

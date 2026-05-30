@@ -90,7 +90,8 @@ describe('AssignmentRow', () => {
     expect(mentorSelect?.props('modelValue')).toBe('mentor-1')
   })
 
-  it('mentorId が null のとき USelectMenu の model はセンチネル（空文字）になる', async () => {
+  it('mentorId が null のとき USelectMenu の model は非空センチネルになる', async () => {
+    // Reka Combobox は value='' を許さないため、未割り当ては非空の番兵にマップする
     const wrapper = await mountSuspended(AssignmentRow, {
       props: defaultProps,
       attrs: {
@@ -101,8 +102,11 @@ describe('AssignmentRow', () => {
 
     const selects = wrapper.findAllComponents({ name: 'USelectMenu' })
     const mentorSelect = selects[0]
-    // null → NONE（空文字列）に変換される
-    expect(mentorSelect?.props('modelValue')).toBe('')
+    // null → NONE（'__unassigned__'）に変換される
+    expect(mentorSelect?.props('modelValue')).toBe('__unassigned__')
+    // 「未割り当て」option も同じ非空 value を持つ（空文字だと ComboboxItem がエラー）
+    const items = mentorSelect?.props('items') as Array<{ label: string, value: string }>
+    expect(items.find(i => i.label === '未割り当て')?.value).toBe('__unassigned__')
   })
 
   it('各 USelectMenu に aria-label が設定される', async () => {
