@@ -82,10 +82,6 @@ export const userCreateSchema = z.object({
   })
 })
 
-export const userUpdateSchema = userCreateSchema.partial().extend({
-  is_active: z.boolean().optional()
-})
-
 export const assignmentSchema = z.object({
   traineeId: z.guid('有効なユーザーIDを指定してください'),
   mentorId: z.guid().nullable(),
@@ -199,5 +195,4 @@ export type LoginSchema = z.output<typeof loginSchema>
 export type ResetPasswordSchema = z.output<typeof resetPasswordSchema>
 export type PasswordChangeSchema = z.output<typeof passwordChangeSchema>
 export type UserCreateSchema = z.output<typeof userCreateSchema>
-export type UserUpdateSchema = z.output<typeof userUpdateSchema>
 export type AssignmentSchema = z.output<typeof assignmentSchema>

@@ -147,11 +147,11 @@ onMounted(() => {
       </template>
     </UTabs>
 
-    <UserAddModal
+    <UserFormModal
       v-model:open="addOpen"
       @saved="refreshUsers"
     />
-    <UserEditModal
+    <UserFormModal
       v-model:open="editOpen"
       :user="editingUser"
       @saved="refreshUsers"

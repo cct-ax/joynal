@@ -9,8 +9,7 @@ import type {
   CommentSchema,
   PasswordChangeSchema,
   ReportSchema,
-  UserCreateSchema,
-  UserUpdateSchema
+  UserCreateSchema
 } from '#shared/types/schemas'
 
 /**
@@ -39,17 +38,9 @@ export type CommentInputModalExposed = {
 }
 
 /**
- * UserAddModal が defineExpose で公開する API。
+ * UserFormModal が defineExpose で公開する API（招待 POST・編集 PUT 兼用）。
  * テストから submit を直接呼ぶ際に使用する。
  */
-export type UserAddModalExposed = {
+export type UserFormModalExposed = {
   submit: (data: UserCreateSchema) => Promise<void>
-}
-
-/**
- * UserEditModal が defineExpose で公開する API。
- * テストから submit を直接呼ぶ際に使用する。
- */
-export type UserEditModalExposed = {
-  submit: (data: UserUpdateSchema) => Promise<void>
 }
