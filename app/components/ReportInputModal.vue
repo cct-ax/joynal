@@ -88,9 +88,7 @@ const dateLabel = computed(() => {
   if (!state.date) return ''
   const d = parseYmd(state.date)
   if (!d) return state.date
-  const labels = ['日', '月', '火', '水', '木', '金', '土']
-  const dayLabel = labels[d.getDay()]
-  return `${d.getFullYear()}/${formatMonthDay(d)}（${dayLabel}）`
+  return formatDateWithWeekday(d)
 })
 
 const close = (): void => {

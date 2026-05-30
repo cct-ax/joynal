@@ -6,8 +6,6 @@
  * - 月曜起点の週ベース（月〜金の5日）で日報を扱うため、関連関数を集約する。
  */
 
-export const DAY_LABELS = ['月', '火', '水', '木', '金'] as const
-
 /**
  * 指定日を含む週の月曜日（時刻 00:00:00）を返す。
  * 日曜の場合は前週の月曜になる。
@@ -47,6 +45,22 @@ export const formatYmd = (date: Date): string => {
  */
 export const formatMonthDay = (date: Date): string =>
   `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
+
+/**
+ * 曜日ラベル（日曜起点）。getDay() の戻り値をそのままインデックスにできる。
+ */
+export const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'] as const
+
+/**
+ * Date の曜日ラベル（日〜土）を返す。
+ */
+export const weekdayLabel = (date: Date): string => WEEKDAY_LABELS[date.getDay()] ?? ''
+
+/**
+ * Date を `YYYY/M/DD（曜）` 形式に整形する（例: 2026/5/29（金））。
+ */
+export const formatDateWithWeekday = (date: Date): string =>
+  `${date.getFullYear()}/${formatMonthDay(date)}（${weekdayLabel(date)}）`
 
 /**
  * 週ラベルを `YYYY/M/DD（月）〜 M/DD（金）` 形式で返す。

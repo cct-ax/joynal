@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatYmd, getMondayOf } from '~/utils/date'
+import { formatYmd, getMondayOf } from '#shared/utils/date'
 
 describe('useWeekNavigation', () => {
   it('initial を渡さなければ今週月曜から始まる', () => {

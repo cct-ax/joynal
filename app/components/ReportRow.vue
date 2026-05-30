@@ -42,11 +42,8 @@ const isToday = computed(() => formatYmd(props.date) === formatYmd(new Date()))
 // 詳細パネルと aria-controls を結ぶ ID（PC/SP で重複しないよう接尾辞を付ける）
 const baseId = useId()
 
-// DAY_LABELS は月〜金。月曜=0 なので getDay() を月曜起点にシフト
-const dayLabel = computed(() => {
-  const idx = (props.date.getDay() + 6) % 7
-  return DAY_LABELS[idx] ?? ''
-})
+// 曜日ラベルは shared/utils/date の weekdayLabel に集約
+const dayLabel = computed(() => weekdayLabel(props.date))
 
 // コンテンツトグル。展開可能なときにのみ click を束ねる（下の v-on を参照）
 const onRowActivate = (): void => {

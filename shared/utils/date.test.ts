@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DAY_LABELS,
   addDays,
+  formatDateWithWeekday,
   formatMonthDay,
   formatWeekLabel,
   formatYmd,
   getMondayOf,
   getWeekDays,
-  parseYmd
+  parseYmd,
+  weekdayLabel
 } from './date'
 
 describe('getMondayOf', () => {
@@ -143,8 +144,31 @@ describe('parseYmd', () => {
   })
 })
 
-describe('DAY_LABELS', () => {
-  it('月〜金の5要素を持つ', () => {
-    expect(DAY_LABELS).toEqual(['月', '火', '水', '木', '金'])
+describe('weekdayLabel', () => {
+  it('日曜は「日」を返す', () => {
+    // 2026-05-31 は日曜
+    expect(weekdayLabel(new Date(2026, 4, 31))).toBe('日')
+  })
+
+  it('金曜は「金」を返す', () => {
+    // 2026-05-29 は金曜
+    expect(weekdayLabel(new Date(2026, 4, 29))).toBe('金')
+  })
+
+  it('月曜は「月」を返す', () => {
+    // 2026-05-25 は月曜
+    expect(weekdayLabel(new Date(2026, 4, 25))).toBe('月')
+  })
+})
+
+describe('formatDateWithWeekday', () => {
+  it('YYYY/M/DD（曜）形式に整形する', () => {
+    // 2026-05-29 は金曜
+    expect(formatDateWithWeekday(new Date(2026, 4, 29))).toBe('2026/5/29（金）')
+  })
+
+  it('1桁の日を 0 詰めする', () => {
+    // 2026-05-03 は日曜
+    expect(formatDateWithWeekday(new Date(2026, 4, 3))).toBe('2026/5/03（日）')
   })
 })
