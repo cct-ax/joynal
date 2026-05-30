@@ -21,6 +21,9 @@ const tabs: TabsItem[] = [
 const activeTab = ref('users')
 
 // --- ユーザー管理 ---
+// 自分自身の行の無効化・権限変更を UI で抑止するため、ログイン中ユーザーの id を渡す
+// （keyed 'current-user' なので AppHeader 等と取得を共有する）。
+const { profile: currentUser } = useCurrentUser()
 const { users, pending: usersPending, refresh: refreshUsers, setActive } = useAdminUsers()
 
 const addOpen = ref(false)
@@ -138,6 +141,7 @@ const statItems = computed(() => {
           <UserTable
             :users="users"
             :loading="!mounted || usersPending"
+            :current-user-id="currentUser?.id"
             @edit="onEditUser"
             @set-active="onSetActive"
           />
@@ -232,6 +236,7 @@ const statItems = computed(() => {
     <UserFormModal
       v-model:open="editOpen"
       :user="editingUser"
+      :current-user-id="currentUser?.id"
       @saved="refreshUsers"
     />
   </div>

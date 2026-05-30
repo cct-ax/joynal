@@ -16,9 +16,12 @@ withDefaults(
   defineProps<{
     users: Profile[]
     loading?: boolean
+    /** ログイン中ユーザーの id。自分の行は無効化を抑止し「あなた」バッジを出す。 */
+    currentUserId?: string
   }>(),
   {
-    loading: false
+    loading: false,
+    currentUserId: undefined
   }
 )
 
@@ -116,6 +119,13 @@ const columns: TableColumn<Profile>[] = [
         >
           <span class="font-medium text-highlighted">{{ row.original.name }}</span>
           <UBadge
+            v-if="row.original.id === currentUserId"
+            label="あなた"
+            color="primary"
+            variant="soft"
+            size="sm"
+          />
+          <UBadge
             v-if="!row.original.is_active"
             label="無効"
             color="neutral"
@@ -156,12 +166,14 @@ const columns: TableColumn<Profile>[] = [
             編集
           </UButton>
 
-          <!-- 有効ユーザー → 無効化ボタン（確認あり） -->
+          <!-- 有効ユーザー → 無効化ボタン（確認あり）。自分自身は無効化不可（自己ロックアウト防止） -->
           <UButton
             v-if="row.original.is_active"
             size="xs"
             variant="outline"
             color="error"
+            :disabled="row.original.id === currentUserId"
+            :title="row.original.id === currentUserId ? '自分自身は無効化できません' : undefined"
             @click="onDeactivateClick(row.original.id)"
           >
             無効化

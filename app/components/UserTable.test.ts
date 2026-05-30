@@ -69,6 +69,26 @@ describe('UserTable', () => {
     expect(wrapper.text()).not.toContain('ユーザーがいません')
   })
 
+  it('自分の行（currentUserId 一致）は「無効化」が disabled で「あなた」バッジが出る', async () => {
+    // 自己ロックアウト防止: 自分自身は無効化させない（サーバーガードに加えた UI 抑止）。
+    wrapper = await mountSuspended(UserTable, {
+      props: { users: [activeUser], currentUserId: activeUser.id }
+    })
+    expect(wrapper.text()).toContain('あなた')
+    const deactivate = wrapper.findAll('button').find(b => b.text() === '無効化')
+    expect(deactivate).toBeDefined()
+    expect((deactivate?.element as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('他人の行の「無効化」は活性のまま', async () => {
+    wrapper = await mountSuspended(UserTable, {
+      props: { users: [activeUser], currentUserId: 'someone-else' }
+    })
+    expect(wrapper.text()).not.toContain('あなた')
+    const deactivate = wrapper.findAll('button').find(b => b.text() === '無効化')
+    expect((deactivate?.element as HTMLButtonElement).disabled).toBe(false)
+  })
+
   it('編集ボタンクリックで edit イベントをユーザーオブジェクト付きで emit する', async () => {
     wrapper = await mountSuspended(UserTable, {
       props: { users: [activeUser] }

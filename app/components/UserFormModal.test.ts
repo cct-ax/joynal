@@ -165,5 +165,22 @@ describe('UserFormModal', () => {
       )
       expect(wrapper.emitted('saved')).toBeUndefined()
     })
+
+    it('自分自身を編集中は役割セレクトが disabled になる', async () => {
+      // 自己降格（最後の admin 喪失）を UI でも防ぐ。
+      wrapper = await mountSuspended(UserFormModal, {
+        props: { open: true, user: sampleUser, currentUserId: sampleUser.id }
+      })
+      const roleSelect = wrapper.findAllComponents({ name: 'USelectMenu' })[0]
+      expect(roleSelect?.props('disabled')).toBe(true)
+    })
+
+    it('別ユーザー編集時は役割セレクトが活性のまま', async () => {
+      wrapper = await mountSuspended(UserFormModal, {
+        props: { open: true, user: sampleUser, currentUserId: 'other-id' }
+      })
+      const roleSelect = wrapper.findAllComponents({ name: 'USelectMenu' })[0]
+      expect(roleSelect?.props('disabled')).toBe(false)
+    })
   })
 })

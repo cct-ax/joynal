@@ -18,6 +18,8 @@ const open = defineModel<boolean>('open')
 
 const props = defineProps<{
   user?: Profile | null
+  /** ログイン中ユーザーの id。自分自身の編集時は役割変更を抑止する。 */
+  currentUserId?: string
 }>()
 
 const emit = defineEmits<{ saved: [] }>()
@@ -30,6 +32,11 @@ const loading = ref(false)
 const isEdit = computed(() => props.user != null)
 const title = computed(() => (isEdit.value ? 'ユーザーを編集' : 'ユーザーを招待'))
 const submitLabel = computed(() => (isEdit.value ? '更新' : '招待する'))
+
+// 自分自身を編集しているか。自己降格（最後の admin 喪失）を防ぐため役割セレクトを非活性にする。
+const isSelf = computed(
+  () => isEdit.value && props.user?.id != null && props.user.id === props.currentUserId
+)
 
 // 役割セレクトの選択肢（VALID_ROLES + ROLE_LABELS で生成）。
 // value-key="value" により USelectMenu の v-model は UserRole 文字列になるので state.role に直結する。
@@ -142,11 +149,13 @@ defineExpose({ submit })
           name="role"
           label="役割"
           required
+          :help="isSelf ? '自分自身の権限は変更できません' : undefined"
         >
           <USelectMenu
             v-model="state.role"
             :items="roleOptions"
             value-key="value"
+            :disabled="isSelf"
             placeholder="役割を選択"
             aria-label="役割"
             class="w-full"
