@@ -117,3 +117,28 @@ export type UserUpdateBody = {
  * email は PII のため一般ユーザーには返さない（DB 側でもカラム権限で authenticated から除外）。
  */
 export type CurrentUserProfile = Omit<Profile, 'email'>
+
+// ----------------------------------------------------------------
+// Assignment admin view-models
+// ----------------------------------------------------------------
+
+/**
+ * メンター/OJT 選択セレクト用の人物オプション。
+ * useMentorAssignments で生成し AssignmentRow へ渡す。
+ */
+export type PersonOption = {
+  id: string
+  name: string
+}
+
+/**
+ * 担当割り当て管理画面の編集行ビューモデル。
+ * 全新人（is_active=true かつ role=trainee）を網羅し、
+ * 未割り当ての新人は mentorId/ojtId が null になる。
+ */
+export type AssignmentRowVM = {
+  traineeId: string
+  traineeName: string
+  mentorId: string | null
+  ojtId: string | null
+}
