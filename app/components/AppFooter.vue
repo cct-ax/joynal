@@ -8,7 +8,7 @@
  *
  * design プロトにフッターは無いが、レイアウト下端の情報表示として最小構成で新設。
  */
-const year = new Date().getFullYear()
+const year = useState<number>('copyright-year', () => new Date().getFullYear())
 </script>
 
 <template>
