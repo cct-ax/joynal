@@ -4,11 +4,10 @@
  *
  * - PC は 2 カラム（メンター / OJT 横並び）、SP は 1 カラム縦積み。
  * - メンター / OJT は DOM が同一なので sections 配列を v-for で描画する。
- * - 自分のロールに一致するときだけ「入力/編集」ボタンを表示する。
+ * - 自分のロールに一致するときだけ「入力/編集」ボタンを表示し、`editComment` を emit する
+ *   （親 report.vue が受けて CommentInputModal を開く）。
  * - 配色は @nuxt/ui の semantic トークン（text-muted / text-default / text-dimmed /
  *   bg-elevated）に統一。区切りは USeparator、コメント箱は UCard を使う。
- * - MS2 では表示中心。`editComment` emit は親（report.vue）でハンドリングし、
- *   MS3 で CommentInputModal を接続する想定。
  *
  * design プロト L840-882（CommentArea）を Vue 化したもの。
  */
@@ -74,7 +73,6 @@ const sections = computed((): { role: CommentRole, comment: CommentWithCommenter
           </p>
         </UCard>
       </div>
-      <!-- TODO MS3: editComment emit を CommentInputModal と接続する -->
     </div>
   </div>
 </template>

@@ -2,17 +2,12 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VueWrapper } from '@vue/test-utils'
 import type { CommentWithCommenter } from '#shared/types/api'
-import type { CommentSchema } from '#shared/types/schemas'
+import type { CommentInputModalExposed } from '#shared/types/components'
 import CommentInputModal from './CommentInputModal.vue'
 
 // useToast はテスト環境では UI に出ないので、呼び出しを spy する
 const toastAddMock = vi.fn()
 mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
-
-/** CommentInputModal が defineExpose で公開する API（テストから submit を直接呼ぶ用） */
-type CommentInputModalExposed = {
-  submit: (data: CommentSchema) => Promise<void>
-}
 
 /** wrapper.vm から defineExpose の API を取り出す helper（キャストはここに集約） */
 const exposedOf = (w: VueWrapper): CommentInputModalExposed =>

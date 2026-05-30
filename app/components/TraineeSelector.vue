@@ -42,6 +42,7 @@ const selected = computed<string | undefined>({
       value-key="value"
       :placeholder="placeholder ? '選択してください' : undefined"
       :search-input="false"
+      aria-label="対象の新人"
       class="w-auto min-w-36"
     />
   </div>
