@@ -76,8 +76,26 @@ const columns: TableColumn<Profile>[] = [
       :data="users"
       :columns="columns"
       :loading="loading"
-      empty="ユーザーがいません"
     >
+      <!-- 取得中はスケルトン行を出す。空メッセージ（ユーザーがいません）は
+           ロード完了後に本当に 0 件のときだけ表示する（#empty は行 0 件時のみ描画され、
+           リフレッシュ時＝既存行ありには出ないため、進捗バー overlay の UX を保てる）。 -->
+      <template #empty>
+        <div
+          v-if="loading"
+          class="flex flex-col gap-2 py-2"
+        >
+          <USkeleton
+            v-for="i in 5"
+            :key="i"
+            class="h-8 w-full"
+          />
+        </div>
+        <template v-else>
+          ユーザーがいません
+        </template>
+      </template>
+
       <!-- 役割セル: RoleBadge で色付きバッジ表示 -->
       <template #role-cell="{ row }">
         <RoleBadge :role="(row.original.role as UserRole)" />

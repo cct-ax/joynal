@@ -60,6 +60,15 @@ describe('UserTable', () => {
     expect(wrapper.text()).toContain('ユーザーがいません')
   })
 
+  it('loading 中（users 空）は「ユーザーがいません」を表示しない（スケルトン表示）', async () => {
+    // 初回ロード時に空メッセージが一瞬出る違和感を防ぐ。
+    // 取得が終わるまではスケルトンを出し、空メッセージはロード完了後だけにする。
+    wrapper = await mountSuspended(UserTable, {
+      props: { users: [], loading: true }
+    })
+    expect(wrapper.text()).not.toContain('ユーザーがいません')
+  })
+
   it('編集ボタンクリックで edit イベントをユーザーオブジェクト付きで emit する', async () => {
     wrapper = await mountSuspended(UserTable, {
       props: { users: [activeUser] }
