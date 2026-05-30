@@ -21,7 +21,7 @@ const { profileMissing } = useCurrentUser()
     <UMain
       id="main"
       tabindex="-1"
-      class="scroll-mt-16 focus:outline-none"
+      class="scroll-mt-16 focus:outline-none bg-slate-50 dark:bg-slate-950"
       :ui="{ base: 'flex-1 min-h-0' }"
     >
       <div class="max-w-5xl mx-auto px-4 py-6">

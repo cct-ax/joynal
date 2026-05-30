@@ -59,37 +59,42 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
     title="Joynal"
     to="/report"
     :toggle="false"
-    :ui="{ container: 'max-w-5xl', title: 'text-lg tracking-tight select-none' }"
+    :ui="{ container: 'max-w-5xl', title: 'text-lg font-bold tracking-tight select-none' }"
   >
     <!-- MS4: ナビ項目が増えたら中央(#default)スロット + :toggle でモバイルメニュー化 -->
     <template #right>
       <div
         v-if="user"
-        class="flex items-center gap-1.5"
+        class="flex items-center gap-1"
       >
-        <!-- admin のみ: 日報 / 管理の水平ナビ -->
+        <!-- admin のみ: 日報 / 管理の水平ナビ。highlight で active を primary 下線表示 -->
         <UNavigationMenu
           v-if="isAdmin"
           :items="adminNavItems"
-          color="neutral"
           variant="link"
-          :highlight="false"
+          highlight
+          class="mr-1"
           aria-label="管理者ナビゲーション"
         />
         <slot name="nav" />
         <!-- /api/users/me 取得中は名前が確定しないため、フォールバック文言を出さず Skeleton を表示する -->
         <USkeleton
           v-if="pending"
-          class="h-4 w-24"
+          class="h-7 w-28 rounded-full"
         />
+        <!-- 氏名のみ（アバターなし） -->
         <UUser
           v-else
           :name="profile?.name ?? 'ユーザー'"
+          :ui="{ name: 'text-sm font-medium' }"
         />
         <UColorModeButton />
-        <UDropdownMenu :items="userMenuItems">
+        <UDropdownMenu
+          :items="userMenuItems"
+          :ui="{ content: 'min-w-44' }"
+        >
           <UButton
-            icon="i-lucide-menu"
+            icon="i-lucide-ellipsis"
             variant="ghost"
             color="neutral"
             :aria-label="`${profile?.name ?? 'ユーザー'} メニュー`"
