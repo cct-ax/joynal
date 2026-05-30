@@ -56,37 +56,47 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
 
 <template>
   <UHeader
-    title="Joynal"
-    to="/report"
     :toggle="false"
-    :ui="{ container: 'max-w-5xl', title: 'text-lg font-bold tracking-tight select-none' }"
+    :ui="{ container: 'max-w-5xl' }"
   >
-    <!-- MS4: ナビ項目が増えたら中央(#default)スロット + :toggle でモバイルメニュー化 -->
+    <!-- 左: ロゴ＋（admin のみ）日報 / 管理ナビをロゴの右隣に並べる -->
+    <template #left>
+      <div class="flex items-center gap-2 sm:gap-4">
+        <NuxtLink
+          to="/report"
+          class="text-lg font-bold tracking-tight select-none"
+        >
+          Joynal
+        </NuxtLink>
+        <!-- admin のみ: 日報 / 管理の水平ナビ。highlight で active を primary 下線表示 -->
+        <UNavigationMenu
+          v-if="user && isAdmin"
+          :items="adminNavItems"
+          variant="link"
+          highlight
+          aria-label="管理者ナビゲーション"
+        />
+      </div>
+    </template>
+
     <template #right>
       <div
         v-if="user"
         class="flex items-center gap-1"
       >
-        <!-- admin のみ: 日報 / 管理の水平ナビ。highlight で active を primary 下線表示 -->
-        <UNavigationMenu
-          v-if="isAdmin"
-          :items="adminNavItems"
-          variant="link"
-          highlight
-          class="mr-1"
-          aria-label="管理者ナビゲーション"
-        />
         <slot name="nav" />
-        <!-- /api/users/me 取得中は名前が確定しないため、フォールバック文言を出さず Skeleton を表示する -->
+        <!-- /api/users/me 取得中は名前が確定しないため、フォールバック文言を出さず Skeleton を表示する。
+             スマホでは氏名を隠してアイコンのみにする（左ナビのスペース確保）。 -->
         <USkeleton
           v-if="pending"
-          class="h-7 w-28 rounded-full"
+          class="h-7 w-28 rounded-full max-sm:hidden"
         />
         <!-- 氏名のみ（アバターなし） -->
         <UUser
           v-else
           :name="profile?.name ?? 'ユーザー'"
           :ui="{ name: 'text-sm font-medium' }"
+          class="max-sm:hidden"
         />
         <UColorModeButton />
         <UDropdownMenu
