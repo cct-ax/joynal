@@ -64,33 +64,33 @@ const handleError = (error: unknown): string => {
 
 ### 型定義の置き場所
 
-Nuxt 4 の公式ディレクトリ構成に従い、型定義はスコープによって分ける。
+型定義は **すべて `shared/types/`** に集約し、`#shared/types/*` でインポートする（app・server 両方から参照できる唯一の場所）。
 
 ```
-app/types/
-├── database.types.ts   # Supabase 自動生成（編集禁止）
-└── schemas.ts          # Zod スキーマ（フロント専用）
-
 shared/types/
 ├── models.ts           # DB テーブル型のエイリアス
-└── api.ts              # API リクエスト・レスポンスの型・共有定数
+├── api.ts              # API リクエスト・レスポンスの型・共有定数
+├── schemas.ts          # Zod スキーマ（フォーム＋サーバー境界の query/body）
+├── database.types.ts   # Supabase 自動生成（編集禁止）
+└── components.ts        # コンポーネントの defineExpose 型
 ```
 
-| ファイル | 場所 | 理由 |
-|---------|------|------|
-| `database.types.ts` | `app/types/` | `@nuxtjs/supabase` が `~/` エイリアスで参照するため |
-| `models.ts` | `shared/types/` | app・server 両方で参照される |
-| `api.ts` | `shared/types/` | app・server 両方で参照される |
-| `schemas.ts` | `app/types/` | フロントのフォームバリデーション専用 |
+| ファイル | 役割 |
+|---------|------|
+| `models.ts` | DB テーブル型のエイリアス |
+| `api.ts` | API リクエスト・レスポンス型・共有定数 |
+| `schemas.ts` | Zod スキーマ（フォーム＋サーバー API の query/body 検証） |
+| `database.types.ts` | Supabase 自動生成（編集禁止）。`nuxt.config` の `supabase.types` も `#shared/types/database.types.ts` を指す |
+| `components.ts` | コンポーネントの defineExpose 型 |
 
 ### `database.types.ts` は編集しない
 
-自動生成ファイルのため直接書き換えない。`pnpm supabase:types` で再生成する。
+自動生成ファイルのため直接書き換えない。Supabase CLI の `gen types`（出力先 `shared/types/database.types.ts`）で再生成する。
 DB の型を使いたい場合は `models.ts` でエイリアスを定義してそこからインポートする。
 
 ```typescript
-// shared/types/models.ts
-import type { Tables, TablesInsert, TablesUpdate } from '~/types/database.types'
+// shared/types/models.ts（同じフォルダなので相対 import）
+import type { Tables, TablesInsert, TablesUpdate } from './database.types'
 
 export type DailyReport = Tables<'daily_reports'>
 export type DailyReportInsert = TablesInsert<'daily_reports'>
@@ -131,7 +131,7 @@ export type CommentUpsertBody = {
 フォームのバリデーションルールは `schemas.ts` に集約する。型は `z.infer` / `z.output` で導出し、手動で定義しない。
 
 ```typescript
-// app/types/schemas.ts
+// shared/types/schemas.ts
 import { z } from 'zod'
 
 export const reportSchema = z.object({
@@ -153,7 +153,7 @@ export type CommentSchema = z.output<typeof commentSchema>
 
 ```typescript
 // コンポーネント側
-import { reportSchema, type ReportSchema } from '~/types/schemas'
+import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 ```
 
 ### `type` と `interface` の使い分け
@@ -259,7 +259,7 @@ const hasReportToday = computed(() =>
 | 種別 | 形式 | 例 |
 |------|------|-----|
 | ページ | kebab-case | `report.vue`, `reset-password.vue` |
-| コンポーネント | PascalCase | `ReportInputModal.vue`, `ReportCard.vue` |
+| コンポーネント | PascalCase | `ReportInputModal.vue`, `ReportRow.vue` |
 | composable | camelCase（use プレフィックス） | `useCurrentUser.ts` |
 | Server API | kebab-case | `index.get.ts`, `[id]/index.put.ts` |
 | 型定義 | camelCase | `database.types.ts` |
@@ -280,7 +280,7 @@ const hasReportToday = computed(() =>
 
 ```
 ReportInputModal   // 日報 + 入力 + モーダル
-ReportCard         // 日報 + カード
+ReportRow          // 日報 + 行
 CommentInputModal  // コメント + 入力 + モーダル
 UserAddModal       // ユーザー + 追加 + モーダル
 ```
@@ -330,7 +330,7 @@ try {
   // 成功処理
 } catch (error) {
   // トースト等でユーザーに通知
-  toast.add({ title: '日報の取得に失敗しました', color: 'red' })
+  toast.add({ title: '日報の取得に失敗しました', color: 'error' })
 }
 ```
 
@@ -519,9 +519,9 @@ const onDelete = async (): Promise<void> => {
 
 ## エラー処理パターン
 
-`$fetch` と Supabase auth でエラー形状が異なるため、専用 composable をそれぞれ使う。
+データ取得も認証も `$fetch('/api/...')` 経由なので、エラー通知は `useApiError` に統一する。コンポーネントから `supabase.auth.*` を直接呼ばない（認証も `server/api/auth/*` 経由）。
 
-### `$fetch` 系: `useApiError`
+### `useApiError`（$fetch 全般）
 
 ```vue
 <script setup lang="ts">
@@ -544,20 +544,24 @@ const submit = async (): Promise<void> => {
 - 400 の場合は自動的にサーバーの `data.message` を優先表示
 - 上記にマッチしなければ `fallback`
 
-### Supabase auth 系: `useSupabaseAuthError`
+### 認証も同じ（`server/api/auth/*` + `useApiError`）
+
+ログイン等も `$fetch('/api/auth/login')` を `useApiError` でラップする（`login.vue` 実装どおり）。成功後はセッション Cookie を反映させるため `navigateTo('/report', { external: true })` でフルリロードする。
 
 ```vue
 <script setup lang="ts">
-const supabase = useSupabaseClient()
-const authError = useSupabaseAuthError()
+const apiError = useApiError()
 
-const onSubmit = async (): Promise<void> => {
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) {
-    authError.notify(error, { title: 'メールアドレスまたはパスワードが正しくありません' })
-    return
+const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
+  try {
+    await $fetch('/api/auth/login', { method: 'POST', body: event.data })
+    await navigateTo('/report', { external: true })
+  } catch (error: unknown) {
+    apiError.notify(error, {
+      statusMessages: { 401: 'メールアドレスまたはパスワードが正しくありません' },
+      fallback: 'ログインに失敗しました'
+    })
   }
-  // 成功時の処理
 }
 </script>
 ```
@@ -565,4 +569,4 @@ const onSubmit = async (): Promise<void> => {
 ### やらないこと
 
 - `(error as { statusCode: number }).statusCode` のように `as` で型キャスト → `useApiError` または `~/utils/fetchError` の type guard を使う
-- 1 つの composable で `$fetch` と Supabase auth の両方を扱う → 形状が違うので分けたほうが読みやすい
+- コンポーネントから `useSupabaseClient()` / `supabase.auth.*` を直接呼ぶ → 認証も含め `server/api/` 経由にする

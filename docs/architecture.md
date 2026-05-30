@@ -35,7 +35,7 @@
 | レイヤー | 技術 | バージョン | 備考 |
 |---------|------|-----------|------|
 | フロントエンド | Nuxt 4 + Vue 3 | 4.x | `app/` ディレクトリ構成 |
-| UI コンポーネント | Nuxt UI | 3.x | Tailwind CSS ベース |
+| UI コンポーネント | Nuxt UI | 4.x | Tailwind CSS ベース・semantic カラートークン |
 | ユーティリティ | VueUse | latest | `useLocalStorage` 等 |
 | サーバーランタイム | Nitro (Cloudflare Pages) | Nuxt 内蔵 | `server/api/` を実行 |
 | 認証 | Supabase Auth + `@nuxtjs/supabase` | latest | JWT ベース |
@@ -52,14 +52,24 @@ joynal/
 ├── app/                          # フロントエンド（Nuxt app ディレクトリ）
 │   ├── app.vue                   # ルートコンポーネント
 │   ├── assets/css/main.css       # グローバルスタイル
-│   ├── components/               # 再利用コンポーネント
-│   │   ├── ReportInputModal.vue  # 日報入力・編集モーダル（MS2）
-│   │   ├── ReportCard.vue        # 日報カード（インライン展開）（MS3）
-│   │   ├── CommentInputModal.vue # 週次コメント入力モーダル（MS3）
-│   │   ├── UserAddModal.vue      # ユーザー追加モーダル（MS4）
-│   │   └── UserEditModal.vue     # ユーザー編集モーダル（MS4）
+│   ├── components/               # 再利用コンポーネント（MS2/MS3 実装済み）
+│   │   ├── AppHeader.vue / AppFooter.vue / AuthCard.vue / PasswordChangeModal.vue
+│   │   ├── TraineeSelector.vue   # 担当新人セレクタ（mentor/ojt/admin）
+│   │   ├── WeekNavigator.vue / WeekPickerModal.vue  # 週ナビ・週ジャンプ
+│   │   ├── ReportRow.vue         # 日報1日分の行（インライン展開）
+│   │   ├── ReportInputModal.vue  # 日報入力・編集モーダル（新人）
+│   │   ├── CommentArea.vue       # 週次コメント表示
+│   │   ├── CommentInputModal.vue # 週次コメント入力（mentor/ojt）
+│   │   ├── MoodStars.vue / EmptyState.vue / ConfirmDialog.vue / RoleBadge.vue
+│   │   └── （MS4 予定）UserAddModal.vue / UserEditModal.vue
 │   ├── composables/
-│   │   └── useCurrentUser.ts     # ログインユーザーの profile・role を返す
+│   │   ├── useCurrentUser.ts     # profile・role を返す
+│   │   ├── useAssignedTrainees.ts # 担当新人一覧＋選択状態
+│   │   ├── useWeeklyReports.ts   # 週次日報の取得
+│   │   ├── useWeeklyComments.ts  # 週次コメントの取得・振り分け
+│   │   ├── useWeekNavigation.ts  # 週の状態管理
+│   │   └── useApiError.ts        # $fetch エラーのトースト化
+│   ├── utils/                    # date / time / calendarDate / role / fetchError
 │   ├── layouts/
 │   │   └── default.vue           # 全ページ共通ヘッダー・ナビ
 │   ├── middleware/
@@ -71,9 +81,14 @@ joynal/
 │   │   ├── confirm.vue           # 認証コールバック
 │   │   ├── report.vue            # 日報画面（全ロール共通）
 │   │   └── admin.vue             # 管理画面（管理者のみ）
-│   ├── error.vue                 # 404 / 500 エラー画面
-│   └── types/
-│       └── database.types.ts     # Supabase から自動生成した型定義
+│   └── error.vue                 # 404 / 500 エラー画面
+│
+├── shared/types/                 # app・server 共用の型（全型をここに集約）
+│   ├── models.ts                 # DB テーブル型エイリアス
+│   ├── api.ts                    # API リクエスト/レスポンス型・共有定数
+│   ├── schemas.ts                # Zod スキーマ（フォーム＋境界バリデーション）
+│   ├── database.types.ts         # Supabase 自動生成（編集禁止）
+│   └── components.ts             # コンポーネント defineExpose 型
 │
 ├── server/                       # Nuxt Server API（サーバーサイドのみ実行）
 │   └── api/
@@ -122,15 +137,16 @@ joynal/
 ```typescript
 // server/api/reports/index.get.ts
 export default defineEventHandler(async (event) => {
-  const client = serverSupabaseClient(event)   // ユーザーの JWT を引き継ぐ
-  const query = getQuery(event)                // クエリパラメータ取得
+  await serverUserId(event)                          // 認証ゲート（未認証は 401）
+  const { weekStart, userId } = parseQuery(event, reportsQuerySchema)  // Zod で検証
 
+  const client = await serverSupabaseClient(event)   // ユーザーの JWT を引き継ぐ（await 必須）
   const { data, error } = await client
     .from('daily_reports')
     .select('*')
-    .eq('user_id', /* ユーザーID */)
+    .gte('date', weekStart)
 
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   return data
 })
 ```
