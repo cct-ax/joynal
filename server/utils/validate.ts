@@ -39,7 +39,7 @@ const throwValidationError = (errors: ValidationErrorDetail[]): never => {
  * リクエストボディを Zod スキーマで検証する。
  * 失敗時は 400 を throw。
  */
-export const parseBody = async <T extends z.ZodTypeAny>(
+export const parseBody = async <T extends z.ZodType>(
   event: H3Event,
   schema: T
 ): Promise<z.output<T>> => {
@@ -53,7 +53,7 @@ export const parseBody = async <T extends z.ZodTypeAny>(
  * クエリパラメータを Zod スキーマで検証する。
  * 失敗時は 400 を throw。
  */
-export const parseQuery = <T extends z.ZodTypeAny>(
+export const parseQuery = <T extends z.ZodType>(
   event: H3Event,
   schema: T
 ): z.output<T> => {
@@ -67,7 +67,7 @@ export const parseQuery = <T extends z.ZodTypeAny>(
  * ルートパラメータを Zod スキーマで検証する。
  * 失敗時は 400 を throw。
  */
-export const parseRouteParam = <T extends z.ZodTypeAny>(
+export const parseRouteParam = <T extends z.ZodType>(
   event: H3Event,
   name: string,
   schema: T
