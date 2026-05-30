@@ -79,4 +79,20 @@ describe('TraineeSelector', () => {
 
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([null])
   })
+
+  it('担当が1人だけ（選択確定）のときは名前テキストを表示し USelectMenu を出さない', async () => {
+    wrapper = await mountSuspended(TraineeSelector, {
+      props: { options: [{ id: 'trainee-1', name: '山田 太郎' }], modelValue: 'trainee-1' }
+    })
+    expect(wrapper.text()).toContain('対象:')
+    expect(wrapper.text()).toContain('山田 太郎')
+    expect(wrapper.findComponent({ name: 'USelectMenu' }).exists()).toBe(false)
+  })
+
+  it('担当が1人でも placeholder=true（admin 未選択）なら USelectMenu を維持する', async () => {
+    wrapper = await mountSuspended(TraineeSelector, {
+      props: { options: [{ id: 'trainee-1', name: '山田 太郎' }], modelValue: null, placeholder: true }
+    })
+    expect(wrapper.findComponent({ name: 'USelectMenu' }).exists()).toBe(true)
+  })
 })

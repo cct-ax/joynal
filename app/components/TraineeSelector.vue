@@ -31,12 +31,24 @@ const selected = computed<string | undefined>({
     model.value = v ?? null
   }
 })
+
+// 担当新人が1人だけ（かつ選択確定 = placeholder でない）のときは、選択肢が1つしかなく
+// プルダウンが冗長なので、その新人の名前を静的テキストで表示する（mentor/ojt は先頭を自動選択済み）。
+const singleTrainee = computed(
+  () => (props.options.length === 1 && !props.placeholder ? props.options[0] : null)
+)
 </script>
 
 <template>
   <div class="flex items-center gap-2 flex-wrap">
     <span class="text-sm text-muted whitespace-nowrap">対象:</span>
+    <!-- 担当が1人だけのときはプルダウンを出さず名前を表示する -->
+    <span
+      v-if="singleTrainee"
+      class="text-sm font-medium text-highlighted"
+    >{{ singleTrainee.name }}</span>
     <USelectMenu
+      v-else
       v-model="selected"
       :items="items"
       value-key="value"
