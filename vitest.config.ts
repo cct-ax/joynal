@@ -14,7 +14,7 @@ export default defineVitestConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      exclude: ['node_modules', '.nuxt', 'dist', '**/*.config.*', 'shared/types/**', 'app/types/**', 'server/test/**']
+      exclude: ['node_modules', '.nuxt', 'dist', '**/*.config.*', 'shared/types/**', 'server/test/**']
     }
   },
   // server ハンドラ/ユーティリティのテスト用に #supabase/server をスタブへ解決する。

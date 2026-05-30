@@ -1,4 +1,4 @@
-import type { Tables, TablesInsert, TablesUpdate } from '~/types/database.types'
+import type { Tables, TablesInsert, TablesUpdate } from './database.types'
 
 export type DailyReport = Tables<'daily_reports'>
 export type DailyReportInsert = TablesInsert<'daily_reports'>

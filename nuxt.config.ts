@@ -27,6 +27,7 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: [
         '@iconify/vue',
+        '@internationalized/date',
         'zod'
       ]
     }
@@ -52,6 +53,6 @@ export default defineNuxtConfig({
       callback: '/confirm',
       exclude: ['/login', '/reset-password']
     },
-    types: '~/types/database.types.ts'
+    types: '#shared/types/database.types.ts'
   }
 })

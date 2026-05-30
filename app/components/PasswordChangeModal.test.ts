@@ -1,7 +1,7 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VueWrapper } from '@vue/test-utils'
-import type { PasswordChangeModalExposed } from '~/types/components'
+import type { PasswordChangeModalExposed } from '#shared/types/components'
 import PasswordChangeModal from './PasswordChangeModal.vue'
 
 // useToast はテスト環境では UI に出ないので、呼び出しを spy する
