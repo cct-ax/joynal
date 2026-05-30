@@ -3,53 +3,88 @@
  * 日報画面（全ロール共通レイアウト）。
  *
  * - 週ナビ → 月〜金の ReportRow → CommentArea の縦並び。
- * - MS2 では新人ロールの CRUD を対象とする。
- * - MS3 で以下を接続予定:
- *   - TraineeSelector（メンター/OJT/管理者向け）
- *   - CommentArea の editComment emit → CommentInputModal
- *   - useFetch('/api/comments') による週次コメントの実取得
+ * - trainee: 自分の日報を CRUD し、その週の mentor/ojt コメントを閲覧する。
+ * - mentor/ojt/admin: 担当新人セレクタで対象を選び、日報を週単位で閲覧する。
+ *   mentor/ojt は CommentInputModal で週次コメントを入力・編集できる。
+ * - 取得・選択ロジックは composable に委譲し、本ページは配線に徹する:
+ *   - useAssignedTrainees（セレクタの状態）
+ *   - useWeeklyReports（週次日報）
+ *   - useWeeklyComments（週次コメント＝mentor/ojt 振り分け）
  */
 import type { DailyReport } from '#shared/types/models'
-import type { CommentWithCommenter } from '#shared/types/api'
 
-const { role, isAdmin, pending: profilePending } = useCurrentUser()
+const { role, profile, isMentor, isOjt, pending: profilePending } = useCurrentUser()
 
-// 週ナビ用の状態を composable に委譲（「今週月曜」計算を 1 箇所に集約）
+// 週ナビ用の状態（「今週月曜」計算を 1 箇所に集約）
 const { currentWeekStart, weekDays, weekStartYmd } = useWeekNavigation()
+
+// 担当新人セレクタ（非 trainee のみ取得・表示）
+const { traineeOptions, selectedTraineeId, pending: assigneesPending } = useAssignedTrainees()
+
+const isTrainee = computed(() => role.value === 'trainee')
+
+// 対象 ID の派生:
+// - 日報の userId: trainee は送らず RLS に委譲、それ以外は選択中の新人
+// - コメントの traineeId: trainee は自分自身、それ以外は選択中の新人
+const reportUserId = computed<string | undefined>(() =>
+  isTrainee.value ? undefined : (selectedTraineeId.value ?? undefined)
+)
+const commentTraineeId = computed<string | null>(() =>
+  isTrainee.value ? (profile.value?.id ?? null) : selectedTraineeId.value
+)
+// trainee は常に取得、それ以外は新人が選択されているときだけ取得する
+const reportsEnabled = computed(() => isTrainee.value || selectedTraineeId.value !== null)
+
+const { reportByDate, refresh: refreshReports, status: reportsStatus } = useWeeklyReports(
+  weekStartYmd,
+  reportUserId,
+  reportsEnabled
+)
+const { mentorComment, ojtComment, refresh: refreshComments } = useWeeklyComments(
+  weekStartYmd,
+  commentTraineeId
+)
 
 // 詳細展開（mentor/ojt/admin で使う、新人は使わない）
 const expandedDate = ref<string | null>(null)
-
 const onToggleDetail = (date: Date): void => {
   const ymd = formatYmd(date)
   expandedDate.value = expandedDate.value === ymd ? null : ymd
 }
+// 対象新人が変わったら展開状態をリセットする（プロト準拠）
+watch(selectedTraineeId, () => {
+  expandedDate.value = null
+})
 
-// useFetch の query。weekStartYmd の変化で自動再フェッチされる。
-// MS3 で selectedTraineeId を追加する想定（trainee の場合は省略可）
-const reportsQuery = computed(() => ({
-  weekStart: weekStartYmd.value
-}))
-
-const { data: reports, refresh: refreshReports, status: reportsStatus } = await useFetch<DailyReport[]>(
-  '/api/reports',
-  { query: reportsQuery, default: () => [] }
+// reports/comments は server:false でクライアント取得するため、SSR と hydration 初期は
+// 必ずスケルトンを描画してボード全体のハイドレーションずれを構造的に避ける（mounted ゲート）。
+// マウント後は profile/assignments の取得状況と reports の取得状況（idle/pending）で判定する。
+const mounted = ref(false)
+onMounted(() => {
+  mounted.value = true
+})
+const isLoading = computed(
+  () =>
+    !mounted.value
+    || profilePending.value
+    || assigneesPending.value
+    || reportsStatus.value === 'idle'
+    || reportsStatus.value === 'pending'
 )
 
-// プロフィール取得中、または週切り替えで日報を再取得中はスケルトンを表示する
-// （role 未解決のまま表を描画しないことで `role ?? 'trainee'` の一時誤表示も防ぐ）
-const isLoading = computed(() => profilePending.value || reportsStatus.value === 'pending')
+// 担当新人が 1 件以上いるか。mentor/ojt が担当 0 件のときは
+// 自分で割り当てできないため、専用の空状態（管理者に連絡）を出す。
+const hasTrainees = computed(() => traineeOptions.value.length > 0)
+const mentorNoTrainees = computed(() => (isMentor.value || isOjt.value) && !hasTrainees.value)
 
-// 日付索引で O(1) 参照
-const reportByDate = computed<Record<string, DailyReport>>(() =>
-  Object.fromEntries((reports.value ?? []).map(r => [r.date, r]))
-)
+// 非 trainee はセレクタを表示。ただし mentor/ojt が担当 0 件のときは
+// 空のセレクタを出しても選べないので隠す。
+// 未選択（admin 初期）のときは空状態を出し、表は描画しない。
+const showSelector = computed(() => !isTrainee.value && !mentorNoTrainees.value)
+const showEmpty = computed(() => !isTrainee.value && selectedTraineeId.value === null)
 
-// MS2 ではコメントは未取得。MS3 で useFetch('/api/comments') を追加する。
-const mentorComment = ref<CommentWithCommenter | null>(null)
-const ojtComment = ref<CommentWithCommenter | null>(null)
-
-// モーダル制御。selectedDate を立てれば開く、null に戻せば閉じる。
+// 日報入力・編集モーダル（trainee のみが操作起点）。
+// selectedDate を立てれば開く、null に戻せば閉じる。
 const selectedReport = ref<DailyReport | null>(null)
 const selectedDate = ref<string | null>(null)
 const isModalOpen = computed({
@@ -70,7 +105,6 @@ const onEditReport = (report: DailyReport): void => {
   selectedReport.value = report
   selectedDate.value = report.date
 }
-
 const onSaved = async (): Promise<void> => {
   await refreshReports()
 }
@@ -78,13 +112,26 @@ const onDeleted = async (): Promise<void> => {
   await refreshReports()
 }
 
-// MS3 で CommentInputModal を接続する。今は noop。
-const onEditComment = (_target: 'mentor' | 'ojt'): void => {
-  // TODO MS3: CommentInputModal を開く
+// 週次コメント入力モーダル（mentor/ojt のみ）。
+// CommentArea が emit する target（＝自分のロール）で開く。
+const editingCommentRole = ref<'mentor' | 'ojt' | null>(null)
+const isCommentModalOpen = computed({
+  get: () => editingCommentRole.value !== null,
+  set: (v: boolean) => {
+    if (!v) editingCommentRole.value = null
+  }
+})
+const editingComment = computed(() => {
+  if (editingCommentRole.value === 'mentor') return mentorComment.value
+  if (editingCommentRole.value === 'ojt') return ojtComment.value
+  return null
+})
+const onEditComment = (target: 'mentor' | 'ojt'): void => {
+  editingCommentRole.value = target
 }
-
-// 管理者は未選択時に EmptyState を表示（MS3 で TraineeSelector 実装後に有効化）
-const showEmptyAdminMessage = computed(() => isAdmin.value)
+const onCommentSaved = async (): Promise<void> => {
+  await refreshComments()
+}
 </script>
 
 <template>
@@ -110,18 +157,37 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
     </UCard>
   </div>
 
-  <!-- 管理者は MS3 で TraineeSelector + 未選択時の EmptyState を実装予定 -->
-  <EmptyState
-    v-else-if="showEmptyAdminMessage"
-    emoji="📋"
-    message="管理者用の新人セレクターは MS3 で実装予定です"
-  />
-
   <div
     v-else
     class="space-y-6"
   >
-    <UCard :ui="{ body: 'p-0 sm:p-0' }">
+    <!-- 担当新人セレクタ（mentor/ojt/admin） -->
+    <TraineeSelector
+      v-if="showSelector"
+      v-model="selectedTraineeId"
+      :options="traineeOptions"
+      :placeholder="selectedTraineeId === null"
+    />
+
+    <!-- mentor/ojt は担当0件: 自分で割り当てできないので管理者に連絡を促す -->
+    <EmptyState
+      v-if="mentorNoTrainees"
+      emoji="📋"
+      message="担当の新人がまだ割り当てられていません。管理者にお問い合わせください。"
+    />
+
+    <!-- TODO(MS4): admin は全新人(role=trainee)をセレクタに出し、新人0件のときは「管理画面で新人を追加」CTA(/admin)を表示する -->
+    <!-- admin 初期など未選択のときは空状態 -->
+    <EmptyState
+      v-else-if="showEmpty"
+      emoji="📋"
+      message="閲覧する新人を選択してください"
+    />
+
+    <UCard
+      v-else
+      :ui="{ body: 'p-0 sm:p-0' }"
+    >
       <!-- 週ナビ -->
       <div class="border-b border-default px-4 py-3">
         <WeekNavigator v-model="currentWeekStart" />
@@ -176,6 +242,17 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
       :report="selectedReport"
       @saved="onSaved"
       @deleted="onDeleted"
+    />
+
+    <!-- 週次コメント入力モーダル（mentor/ojt） -->
+    <CommentInputModal
+      v-if="commentTraineeId"
+      v-model:open="isCommentModalOpen"
+      :week-start="currentWeekStart"
+      :trainee-id="commentTraineeId"
+      :target-role="editingCommentRole ?? 'mentor'"
+      :existing="editingComment"
+      @saved="onCommentSaved"
     />
   </div>
 </template>
