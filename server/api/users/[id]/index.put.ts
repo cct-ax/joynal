@@ -22,6 +22,17 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   const id = parseRouteParam(event, 'id', uuidSchema)
   const { name, email, role, is_active } = await parseBody(event, userUpdateBodySchema)
 
+  // 自己ロックアウト防止: 管理者は自分自身の管理者権限を降格したり、自分を無効化したりできない。
+  // （最後の管理者が締め出され、誰も管理操作できなくなる事態を防ぐ。他の admin が対象なら可。）
+  if (id === userId) {
+    if (role !== undefined && role !== 'admin') {
+      throw createError({ statusCode: 400, message: '自分自身の管理者権限は変更できません' })
+    }
+    if (is_active === false) {
+      throw createError({ statusCode: 400, message: '自分自身を無効化することはできません' })
+    }
+  }
+
   const updates: ProfileUpdate = {}
   if (name !== undefined) updates.name = name
   if (email !== undefined) updates.email = email
