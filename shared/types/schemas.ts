@@ -87,9 +87,9 @@ export const userUpdateSchema = userCreateSchema.partial().extend({
 })
 
 export const assignmentSchema = z.object({
-  traineeId: z.uuid('有効なユーザーIDを指定してください'),
-  mentorId: z.uuid().nullable(),
-  ojtId: z.uuid().nullable(),
+  traineeId: z.guid('有効なユーザーIDを指定してください'),
+  mentorId: z.guid().nullable(),
+  ojtId: z.guid().nullable(),
   year: z.number().int().optional()
 })
 
@@ -98,8 +98,12 @@ export const assignmentSchema = z.object({
 // フロントの reportSchema 等とは別に、ネットワーク境界で使う「unknown を絞り込む」ためのスキーマ
 // ----------------------------------------------------------------
 
-/** ルートパラメータの id 検証（UUID） */
-export const uuidSchema = z.uuid('有効な ID を指定してください')
+/**
+ * ID 検証は z.uuid()（RFC 4122 のバージョン/variant まで厳密）ではなく z.guid()（UUID 形状のみ）を使う。
+ * 認証ユーザー由来の不透明な ID を「形だけ」検証する目的で、バージョン nibble は問わない。
+ * （z.uuid() は version=0 のテスト用 ID 等を弾いて 400 になる。最終的に Postgres + RLS でも検証される）
+ */
+export const uuidSchema = z.guid('有効な ID を指定してください')
 
 const ymdRegex = /^\d{4}-\d{2}-\d{2}$/
 const timeRegex = /^\d{2}:\d{2}$/
@@ -109,7 +113,7 @@ export const reportsQuerySchema = z.object({
   weekStart: z
     .string()
     .regex(ymdRegex, 'weekStart は YYYY-MM-DD 形式で指定してください'),
-  userId: z.uuid().optional()
+  userId: z.guid().optional()
 })
 
 /** POST /api/reports ボディ。フロントの reportSchema と同じルール + サーバーでも mood 範囲を強制 */
@@ -142,13 +146,13 @@ export const reportUpdateBodySchema = z
 /** GET /api/comments クエリ */
 export const commentsQuerySchema = z.object({
   weekStart: z.string().regex(ymdRegex),
-  traineeId: z.uuid()
+  traineeId: z.guid()
 })
 
 /** PUT /api/comments ボディ */
 export const commentUpsertBodySchema = z.object({
   weekStart: z.string().regex(ymdRegex),
-  traineeId: z.uuid(),
+  traineeId: z.guid(),
   content: z.string().min(1, 'content は必須です')
 })
 
@@ -159,9 +163,9 @@ export const assignmentsMeQuerySchema = z.object({
 
 /** PUT /api/assignments ボディ */
 export const assignmentUpsertBodySchema = z.object({
-  traineeId: z.uuid(),
-  mentorId: z.uuid().nullable(),
-  ojtId: z.uuid().nullable(),
+  traineeId: z.guid(),
+  mentorId: z.guid().nullable(),
+  ojtId: z.guid().nullable(),
   year: z.number().int().optional()
 })
 

@@ -220,7 +220,6 @@ describe('userCreateSchema', () => {
 })
 
 describe('assignmentSchema', () => {
-  // Zod v4 の z.uuid() は RFC 4122 v1〜v8 に厳密。バージョン4・variant 8 の形式を使う
   const validUuid = '00000000-0000-4000-8000-000000000001'
 
   it('有効な割り当てデータを受け入れる', () => {
@@ -229,6 +228,17 @@ describe('assignmentSchema', () => {
       mentorId: validUuid,
       ojtId: null,
       year: 2026
+    })
+    expect(result.success).toBe(true)
+  })
+
+  // ID 検証は z.guid()（形状のみ）なので、テスト/シードで使う version=0 の UUID も受け入れる。
+  // z.uuid() だと RFC のバージョン nibble を弾いて 400 になっていた（reports/comments で発生）。
+  it('version nibble が 0 のシード用 UUID も受け入れる', () => {
+    const result = assignmentSchema.safeParse({
+      traineeId: 'a0000000-0000-0000-0000-000000000004',
+      mentorId: 'a0000000-0000-0000-0000-000000000002',
+      ojtId: null
     })
     expect(result.success).toBe(true)
   })
