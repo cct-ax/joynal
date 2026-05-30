@@ -95,13 +95,13 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
     class="space-y-6"
   >
     <UCard :ui="{ body: 'p-0 sm:p-0' }">
-      <div class="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+      <div class="border-b border-default px-4 py-3">
         <USkeleton class="h-8 w-full max-w-md" />
       </div>
       <div
         v-for="i in 5"
         :key="i"
-        class="flex items-center gap-4 px-4 py-3.5 border-b border-gray-200 dark:border-gray-800"
+        class="flex items-center gap-4 px-4 py-3.5 border-b border-default"
       >
         <USkeleton class="h-4 w-24 shrink-0" />
         <USkeleton class="h-4 w-28 shrink-0" />
@@ -123,13 +123,13 @@ const showEmptyAdminMessage = computed(() => isAdmin.value)
   >
     <UCard :ui="{ body: 'p-0 sm:p-0' }">
       <!-- 週ナビ -->
-      <div class="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+      <div class="border-b border-default px-4 py-3">
         <WeekNavigator v-model="currentWeekStart" />
       </div>
 
       <!-- テーブルヘッダー（PC のみ） -->
       <div
-        class="max-sm:hidden flex items-center bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+        class="max-sm:hidden flex items-center bg-muted border-b border-default text-xs font-semibold text-muted uppercase tracking-wider"
       >
         <div class="w-32 shrink-0 px-4 py-2">
           日付

@@ -8,9 +8,10 @@
  * - PC/SP は CSS-only で切替（`max-sm:`/`sm:`）。JS の isMobile 判定は使わない。
  *
  * a11y: 展開可能な行は `<button aria-expanded aria-controls>` として描画し（`<component :is>`）、
- * 展開不可の行は非インタラクティブな `<div>` にする。これにより `<div @click>` の
- * キーボード非対応アンチパターンを避ける。詳細パネルの開閉は `<Transition>` で
- * transform/opacity のみアニメーションし、`prefers-reduced-motion` を尊重する。
+ * 展開不可の行は非インタラクティブな `<div>`（click ハンドラを束ねない）にする。これにより
+ * `<div @click>` のキーボード非対応アンチパターンを避ける。装飾的な chevron は `aria-hidden`。
+ * 詳細パネルの開閉は `<Transition>` で transform/opacity のみアニメーションし、
+ * `prefers-reduced-motion` を尊重する。配色は @nuxt/ui の semantic トークン（today は primary）。
  *
  * design プロト L754-836（DayRow）を Vue 化したもの。土日は親側で渡さない設計のため
  * このコンポーネントで weekend filter はしない。
@@ -46,9 +47,9 @@ const dayLabel = computed(() => {
   return DAY_LABELS[idx] ?? ''
 })
 
-// 行全体のトグル（展開可能なときのみ作用）
+// 行全体のトグル。展開可能な行にのみ click を束ねる（下の v-on を参照）
 const onRowActivate = (): void => {
-  if (isExpandable.value) emit('toggleDetail', props.date)
+  emit('toggleDetail', props.date)
 }
 
 // 新人のペン操作: 入力済みなら編集、未入力なら新規入力
@@ -60,35 +61,35 @@ const onPencil = (): void => {
 
 <template>
   <!-- PC レイアウト -->
-  <div class="max-sm:hidden border-b border-gray-200 dark:border-gray-800">
+  <div class="max-sm:hidden border-b border-default">
     <component
       :is="isExpandable ? 'button' : 'div'"
       :type="isExpandable ? 'button' : undefined"
       class="flex items-center min-h-12 w-full text-left transition-colors motion-reduce:transition-none"
       :class="{
-        'bg-gray-50 dark:bg-gray-900/50': isToday,
-        'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900': isExpandable
+        'bg-elevated': isToday,
+        'cursor-pointer hover:bg-elevated': isExpandable
       }"
       :aria-expanded="isExpandable ? isExpanded : undefined"
       :aria-controls="isExpandable ? `${baseId}-pc` : undefined"
       :aria-label="isExpandable ? (isExpanded ? '詳細を閉じる' : '詳細を開く') : undefined"
-      @click="onRowActivate"
+      v-on="isExpandable ? { click: onRowActivate } : {}"
     >
       <div class="w-32 shrink-0 px-4 py-2.5 flex items-center gap-2">
         <span
           class="text-sm"
-          :class="{ 'text-indigo-600 font-semibold': isToday }"
+          :class="{ 'text-primary font-semibold': isToday }"
         >
           {{ formatMonthDay(date) }}（{{ dayLabel }}）
         </span>
         <span
           v-if="isToday"
-          class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-600"
+          class="inline-block w-1.5 h-1.5 rounded-full bg-primary"
           aria-hidden="true"
         />
       </div>
 
-      <div class="w-36 shrink-0 px-2 py-2.5 text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+      <div class="w-36 shrink-0 px-2 py-2.5 text-sm text-muted tabular-nums">
         <template v-if="report">
           {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
         </template>
@@ -99,7 +100,7 @@ const onPencil = (): void => {
 
       <div
         class="flex-1 min-w-0 px-2 py-2.5 text-sm overflow-hidden whitespace-nowrap text-ellipsis"
-        :class="hasReport ? '' : 'text-gray-400'"
+        :class="hasReport ? '' : 'text-dimmed'"
       >
         <template v-if="report">
           {{ report.content.slice(0, 80) }}{{ report.content.length > 80 ? '…' : '' }}
@@ -130,7 +131,8 @@ const onPencil = (): void => {
         <UIcon
           v-else-if="isExpandable"
           name="i-lucide-chevron-down"
-          class="size-5 text-gray-400 transition-transform motion-reduce:transition-none"
+          class="size-5 text-dimmed transition-transform motion-reduce:transition-none"
+          aria-hidden="true"
           :class="{ 'rotate-180': isExpanded }"
         />
       </div>
@@ -146,18 +148,18 @@ const onPencil = (): void => {
       <div
         v-if="isExpanded && report"
         :id="`${baseId}-pc`"
-        class="px-5 py-4 bg-indigo-50/30 dark:bg-indigo-950/20 border-t border-gray-200 dark:border-gray-800"
+        class="px-5 py-4 bg-primary/5 border-t border-default"
       >
         <div class="flex flex-wrap gap-4 mb-3 text-sm">
-          <span class="text-gray-500 dark:text-gray-400 tabular-nums">
-            出勤 <strong class="text-gray-900 dark:text-gray-100">{{ toHm(report.check_in) }}</strong>
+          <span class="text-muted tabular-nums">
+            出勤 <strong class="text-highlighted">{{ toHm(report.check_in) }}</strong>
           </span>
-          <span class="text-gray-500 dark:text-gray-400 tabular-nums">
-            退勤 <strong class="text-gray-900 dark:text-gray-100">{{ toHm(report.check_out) }}</strong>
+          <span class="text-muted tabular-nums">
+            退勤 <strong class="text-highlighted">{{ toHm(report.check_out) }}</strong>
           </span>
           <span
             v-if="report.mood"
-            class="flex items-center gap-1 text-gray-500 dark:text-gray-400"
+            class="flex items-center gap-1 text-muted"
           >
             気分 <MoodStars
               :model-value="report.mood"
@@ -174,37 +176,37 @@ const onPencil = (): void => {
   </div>
 
   <!-- SP レイアウト -->
-  <div class="sm:hidden border-b border-gray-200 dark:border-gray-800">
+  <div class="sm:hidden border-b border-default">
     <component
       :is="isExpandable ? 'button' : 'div'"
       :type="isExpandable ? 'button' : undefined"
       class="w-full text-left px-4 py-3 transition-colors motion-reduce:transition-none"
       :class="{
-        'bg-gray-50 dark:bg-gray-900/50': isToday,
+        'bg-elevated': isToday,
         'cursor-pointer': isExpandable
       }"
       :aria-expanded="isExpandable ? isExpanded : undefined"
       :aria-controls="isExpandable ? `${baseId}-sp` : undefined"
       :aria-label="isExpandable ? (isExpanded ? '詳細を閉じる' : '詳細を開く') : undefined"
-      @click="onRowActivate"
+      v-on="isExpandable ? { click: onRowActivate } : {}"
     >
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 flex-1 min-w-0">
           <span
             class="text-sm font-semibold whitespace-nowrap"
-            :class="{ 'text-indigo-600': isToday }"
+            :class="{ 'text-primary': isToday }"
           >
             {{ formatMonthDay(date) }}（{{ dayLabel }}）
           </span>
           <span
             v-if="report"
-            class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap tabular-nums"
+            class="text-xs text-muted whitespace-nowrap tabular-nums"
           >
             {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
           </span>
           <span
             v-else
-            class="text-xs text-gray-400"
+            class="text-xs text-dimmed"
           >
             未入力
           </span>
@@ -221,7 +223,8 @@ const onPencil = (): void => {
           <UIcon
             v-else-if="isExpandable"
             name="i-lucide-chevron-down"
-            class="size-4 text-gray-400 transition-transform motion-reduce:transition-none"
+            class="size-4 text-dimmed transition-transform motion-reduce:transition-none"
+            aria-hidden="true"
             :class="{ 'rotate-180': isExpanded }"
           />
         </div>
@@ -230,7 +233,7 @@ const onPencil = (): void => {
         v-if="report && !isExpanded"
         class="flex items-center gap-2 mt-1"
       >
-        <p class="text-sm text-gray-500 dark:text-gray-400 overflow-hidden whitespace-nowrap text-ellipsis flex-1">
+        <p class="text-sm text-muted overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0">
           {{ report.content.slice(0, 60) }}{{ report.content.length > 60 ? '…' : '' }}
         </p>
         <MoodStars
@@ -251,7 +254,7 @@ const onPencil = (): void => {
       <div
         v-if="isExpanded && report"
         :id="`${baseId}-sp`"
-        class="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-950/20"
+        class="px-4 py-3 bg-primary/5"
       >
         <p class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
           {{ report.content }}
