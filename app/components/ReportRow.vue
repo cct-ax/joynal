@@ -64,14 +64,14 @@ const onPencil = (): void => {
   <!-- PC レイアウト -->
   <div class="max-sm:hidden border-b border-default">
     <div
-      class="flex items-center transition-colors motion-reduce:transition-none"
+      class="grid grid-cols-[1fr_auto] items-center transition-colors motion-reduce:transition-none"
       :class="{ 'bg-elevated': isToday, 'hover:bg-elevated': isExpandable }"
     >
       <!-- コンテンツ領域がトグル（ペンは外側） -->
       <component
         :is="isExpandable ? 'button' : 'div'"
         :type="isExpandable ? 'button' : undefined"
-        class="flex flex-1 items-center min-h-12 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+        class="flex items-center min-h-12 min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         :class="{ 'cursor-pointer': isExpandable }"
         :aria-expanded="isExpandable ? isExpanded : undefined"
         :aria-controls="isExpandable ? `${baseId}-pc` : undefined"
@@ -124,7 +124,7 @@ const onPencil = (): void => {
       </component>
 
       <!-- 操作（ペン）はトグル button の外側 -->
-      <div class="w-20 shrink-0 px-3 flex justify-end items-center">
+      <div class="w-20 px-3 flex justify-end items-center">
         <UButton
           v-if="isTrainee"
           variant="ghost"
@@ -186,12 +186,12 @@ const onPencil = (): void => {
       class="px-4 py-3 transition-colors motion-reduce:transition-none"
       :class="{ 'bg-elevated': isToday }"
     >
-      <div class="flex items-start justify-between gap-2">
+      <div class="grid grid-cols-[1fr_auto] items-start gap-2">
         <!-- コンテンツ領域がトグル（ペンは外側） -->
         <component
           :is="isExpandable ? 'button' : 'div'"
           :type="isExpandable ? 'button' : undefined"
-          class="flex-1 min-w-0 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          class="min-w-0 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
           :class="{ 'cursor-pointer': isExpandable }"
           :aria-expanded="isExpandable ? isExpanded : undefined"
           :aria-controls="isExpandable ? `${baseId}-sp` : undefined"
