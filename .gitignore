@@ -37,3 +37,8 @@ docs/test-users.md
 
 # Serena
 .serena
+
+# playwright
+playwright-report
+test-results
+.playwright-cli
