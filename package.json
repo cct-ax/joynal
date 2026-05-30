@@ -42,20 +42,6 @@
     "vue-tsc": "^3.2.7",
     "wrangler": "^4.95.0"
   },
-  "pnpm": {
-    "overrides": {
-      "cac@^6.7.14": "6.7.14",
-      "commander@^13.1.0": "13.1.0"
-    },
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "esbuild",
-      "sharp",
-      "unrs-resolver",
-      "vue-demi",
-      "workerd"
-    ]
-  },
   "engines": {
     "node": ">=22.0.0"
   }

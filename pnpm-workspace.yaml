@@ -5,3 +5,6 @@ allowBuilds:
   unrs-resolver: true
   vue-demi: true
   workerd: true
+overrides:
+  cac: "^6.7.14"
+  commander: "^13.1.0"
