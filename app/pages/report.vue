@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date'
 import type { Profile, DailyReport } from '#shared/types/models'
 import type { UserRole } from '#shared/types/api'
 import type { ReportWeekday, WeekDayItem } from '~/types/report'
@@ -21,17 +22,19 @@ const traineeSelectItems = computed(() =>
 //   管理者: $fetch('/api/users') → role === 'trainee' のみフィルタ
 
 // --- 週ナビゲーション ---
-const getThisMonday = (): Date => {
-  const today = new Date()
-  const dayOfWeek = today.getDay()
+const getMonday = (sourceDate: Date): Date => {
+  const dayOfWeek = sourceDate.getDay()
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(today)
-  monday.setDate(today.getDate() + diff)
+  const monday = new Date(sourceDate)
+  monday.setDate(sourceDate.getDate() + diff)
   monday.setHours(0, 0, 0, 0)
   return monday
 }
 
+const getThisMonday = (): Date => getMonday(new Date())
+
 const currentWeekStart = ref(getThisMonday())
+const weekCalendarOpen = ref(false)
 const DAY_LABELS: readonly ReportWeekday[] = ['月', '火', '水', '木', '金']
 const DEFAULT_DAY_LABEL: ReportWeekday = '月'
 const MAX_MOOD = 5
@@ -80,6 +83,62 @@ const toDateString = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+const getFriday = (weekStart: Date): Date => {
+  const friday = new Date(weekStart)
+  friday.setDate(friday.getDate() + 4)
+  return friday
+}
+
+const getThisWeekFriday = (): Date => getFriday(getThisMonday())
+
+const calendarValue = computed<DateValue | undefined>({
+  get: () => parseDate(toDateString(currentWeekStart.value)),
+  set: (value) => {
+    if (!value) {
+      return
+    }
+
+    const selectedWeekStart = getMonday(value.toDate(getLocalTimeZone()))
+    const thisMonday = getThisMonday()
+    const selectedWeekKey = toDateString(selectedWeekStart)
+    const thisWeekKey = toDateString(thisMonday)
+    currentWeekStart.value = selectedWeekKey > thisWeekKey ? thisMonday : selectedWeekStart
+    weekCalendarOpen.value = false
+  }
+})
+
+const maxCalendarValue = computed(() => parseDate(toDateString(getThisWeekFriday())))
+
+const isCalendarDateInSelectedWorkWeek = (date: DateValue): boolean => {
+  const dateKey = toDateString(date.toDate(getLocalTimeZone()))
+  const weekStartKey = toDateString(currentWeekStart.value)
+  const weekEndKey = toDateString(getFriday(currentWeekStart.value))
+  return dateKey >= weekStartKey && dateKey <= weekEndKey
+}
+
+const isCalendarDateSelectedWeekStart = (date: DateValue): boolean =>
+  toDateString(date.toDate(getLocalTimeZone())) === toDateString(currentWeekStart.value)
+
+const getCalendarDayClass = (date: DateValue): string => {
+  if (isCalendarDateSelectedWeekStart(date)) {
+    return 'flex size-7 items-center justify-center rounded-full bg-[#4f46e5] font-semibold text-white'
+  }
+  if (isCalendarDateInSelectedWorkWeek(date)) {
+    return 'flex size-7 items-center justify-center rounded-full bg-[#eef2ff] font-medium text-[#4f46e5]'
+  }
+  return 'flex size-7 items-center justify-center rounded-full'
+}
+
+const getCalendarWeekDayClass = (day: string): string => {
+  if (day.includes('土')) {
+    return 'text-[#2563eb]'
+  }
+  if (day.includes('日')) {
+    return 'text-[#dc2626]'
+  }
+  return 'text-[#111827]'
 }
 
 const canGoNextWeek = computed(
@@ -198,11 +257,57 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 <span class="hidden sm:inline">前の週</span>
               </UButton>
 
-              <div
-                class="min-h-9 min-w-0 truncate whitespace-nowrap rounded-md bg-[#f3f4f6] px-2 py-2 text-center text-xs font-medium text-[#111827] sm:px-3 sm:text-sm"
+              <UPopover
+                v-model:open="weekCalendarOpen"
+                :content="{ align: 'center', side: 'bottom', sideOffset: 8, collisionPadding: 12 }"
               >
-                {{ weekLabel }}
-              </div>
+                <UButton
+                  type="button"
+                  color="neutral"
+                  variant="ghost"
+                  class="min-h-9 w-full min-w-0 cursor-pointer justify-center rounded-md !bg-[#f3f4f6] px-2 py-2 text-center text-xs font-medium !text-[#111827] hover:!bg-[#e5e7eb] focus-visible:!ring-4 focus-visible:!ring-[#c7d2fe] sm:px-3 sm:text-sm"
+                  aria-label="週をカレンダーで選択"
+                >
+                  <span class="min-w-0 truncate whitespace-nowrap">
+                    {{ weekLabel }}
+                  </span>
+                  <UIcon
+                    name="i-lucide-calendar-days"
+                    class="ml-1 size-4 shrink-0 text-[#6b7280]"
+                  />
+                </UButton>
+
+                <template #content>
+                  <div class="p-2">
+                    <UCalendar
+                      v-model="calendarValue"
+                      :max-value="maxCalendarValue"
+                      :week-starts-on="1"
+                      prevent-deselect
+                      color="neutral"
+                      variant="subtle"
+                      size="sm"
+                      :ui="{
+                        root: 'min-w-[17.5rem]',
+                        body: 'pt-3',
+                        headCell: 'font-semibold',
+                        cellTrigger: 'data-[selected]:!bg-transparent data-[selected]:!text-inherit data-[selected]:!ring-0 data-today:not-data-[selected]:!text-[#4f46e5] hover:not-data-[selected]:!bg-[#eef2ff] focus-visible:!ring-[#c7d2fe]'
+                      }"
+                    >
+                      <template #week-day="{ day }">
+                        <span :class="getCalendarWeekDayClass(day)">
+                          {{ day }}
+                        </span>
+                      </template>
+                      <template #day="{ day }">
+                        <span :class="getCalendarDayClass(day)">
+                          {{ day.day }}
+                        </span>
+                      </template>
+                    </UCalendar>
+                  </div>
+                </template>
+              </UPopover>
 
               <UButton
                 type="button"
