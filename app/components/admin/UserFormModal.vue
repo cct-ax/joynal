@@ -6,7 +6,7 @@
  *   ReportInputModal と同じ「entity prop の有無でモード判定」パターン。
  * - CommentInputModal と同じ UModal パターン（全画面モバイル対応、defineExpose）。
  * - 役割選択は USelectMenu（value-key="value" で v-model は UserRole 文字列）。
- * - フォームは name/email/role を常に必須とする（is_active は UserTable 側で扱う）。
+ * - フォームは name/employee_id/email/role を常に必須とする（is_active は UserTable 側で扱う）。
  * - 409（メール重複）は専用エラーメッセージを表示。
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
@@ -47,6 +47,7 @@ const roleOptions = (VALID_ROLES as readonly UserRole[]).map(r => ({
 
 const state = reactive<Partial<UserCreateSchema>>({
   name: '',
+  employee_id: '',
   email: '',
   role: undefined
 })
@@ -58,10 +59,12 @@ watch(
   (opened) => {
     if (opened && props.user) {
       state.name = props.user.name
+      state.employee_id = props.user.employee_id
       state.email = props.user.email
       state.role = props.user.role as UserRole
     } else {
       state.name = ''
+      state.employee_id = ''
       state.email = ''
       state.role = undefined
     }
@@ -80,7 +83,7 @@ const close = (): void => {
 const submit = async (data: UserCreateSchema): Promise<void> => {
   loading.value = true
   try {
-    const body = { name: data.name, email: data.email, role: data.role }
+    const body = { name: data.name, employee_id: data.employee_id, email: data.email, role: data.role }
     if (isEdit.value && props.user) {
       await $fetch(`/api/users/${props.user.id}`, { method: 'PUT', body })
       toast.add({ title: '更新しました', color: 'success' })
@@ -93,6 +96,7 @@ const submit = async (data: UserCreateSchema): Promise<void> => {
   } catch (error: unknown) {
     apiError.notify(error, {
       statusMessages: { 409: 'このメールアドレスは既に登録されています' },
+      codeMessages: { EMPLOYEE_ID_TAKEN: 'この社員IDは既に使用されています' },
       fallback: isEdit.value ? 'ユーザー情報の更新に失敗しました' : 'ユーザーの追加に失敗しました'
     })
   } finally {
@@ -128,6 +132,18 @@ defineExpose({ submit })
           <UInput
             v-model="state.name"
             placeholder="例: 山田 太郎"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          name="employee_id"
+          label="社員ID"
+          required
+        >
+          <UInput
+            v-model="state.employee_id"
+            placeholder="例: E001 / 2024-1234"
             class="w-full"
           />
         </UFormField>

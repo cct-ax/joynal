@@ -101,12 +101,14 @@ export type AssignmentForAdmin = {
 
 export type UserCreateBody = {
   name: string
+  employee_id: string
   email: string
   role: UserRole
 }
 
 export type UserUpdateBody = {
   name?: string
+  employee_id?: string
   email?: string
   role?: UserRole
   is_active?: boolean

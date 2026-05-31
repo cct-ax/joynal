@@ -93,6 +93,7 @@ export const resetWithOtpSchema = z
 
 export const userCreateSchema = z.object({
   name: z.string().min(1, '名前は必須です'),
+  employee_id: z.string().trim().min(1, '社員IDは必須です').max(50, '社員IDは50文字以内で入力してください'),
   email: z.email('有効なメールアドレスを入力してください'),
   role: z.enum(['trainee', 'mentor', 'ojt', 'admin'] as const, {
     error: 'ロールを選択してください'
@@ -185,6 +186,7 @@ export const assignmentUpsertBodySchema = z.object({
 /** POST /api/users ボディ */
 export const userCreateBodySchema = z.object({
   name: z.string().min(1, 'name は必須です').max(255),
+  employee_id: z.string().trim().min(1, '社員IDは必須です').max(50, '社員IDは50文字以内で入力してください'),
   email: z.email('有効なメールアドレスを指定してください'),
   role: z.enum(['trainee', 'mentor', 'ojt', 'admin'] as const)
 })
@@ -192,6 +194,7 @@ export const userCreateBodySchema = z.object({
 /** PUT /api/users/[id] ボディ */
 export const userUpdateBodySchema = z.object({
   name: z.string().min(1).max(255).optional(),
+  employee_id: z.string().trim().min(1).max(50).optional(),
   email: z.email().optional(),
   role: z.enum(['trainee', 'mentor', 'ojt', 'admin'] as const).optional(),
   is_active: z.boolean().optional()

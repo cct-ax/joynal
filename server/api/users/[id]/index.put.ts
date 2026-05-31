@@ -20,7 +20,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   }
 
   const id = parseRouteParam(event, 'id', uuidSchema)
-  const { name, email, role, is_active } = await parseBody(event, userUpdateBodySchema)
+  const { name, employee_id, email, role, is_active } = await parseBody(event, userUpdateBodySchema)
 
   // 自己ロックアウト防止: 管理者は自分自身の管理者権限を降格したり、自分を無効化したりできない。
   // （最後の管理者が締め出され、誰も管理操作できなくなる事態を防ぐ。他の admin が対象なら可。）
@@ -35,6 +35,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
 
   const updates: ProfileUpdate = {}
   if (name !== undefined) updates.name = name
+  if (employee_id !== undefined) updates.employee_id = employee_id
   if (email !== undefined) updates.email = email
   if (role !== undefined) updates.role = role
   if (is_active !== undefined) updates.is_active = is_active
@@ -70,6 +71,14 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   if (error) {
     if (error.code === 'PGRST116') {
       throw createError({ statusCode: 404, message: 'ユーザーが見つかりません' })
+    }
+    // employee_id の UNIQUE 衝突（社員ID重複）。email 一意性は上段の auth で担保済み。
+    if (error.code === '23505') {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Conflict',
+        data: { message: 'この社員IDは既に使用されています', code: 'EMPLOYEE_ID_TAKEN' }
+      })
     }
     console.error('[api/users/:id PUT] profile update', error)
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })

@@ -71,11 +71,11 @@ describe('UserFormModal', () => {
       wrapper = await mountSuspended(UserFormModal, { props: { open: true } })
       const vm = exposedOf(wrapper)
 
-      await vm.submit({ name: '田中 一郎', email: 'ichiro@example.com', role: 'trainee' })
+      await vm.submit({ name: '田中 一郎', employee_id: 'E003', email: 'ichiro@example.com', role: 'trainee' })
 
       expect(fetchMock).toHaveBeenCalledWith('/api/users', {
         method: 'POST',
-        body: { name: '田中 一郎', email: 'ichiro@example.com', role: 'trainee' }
+        body: { name: '田中 一郎', employee_id: 'E003', email: 'ichiro@example.com', role: 'trainee' }
       })
       expect(toastAddMock).toHaveBeenCalledWith(
         expect.objectContaining({ title: '招待しました', color: 'success' })
@@ -90,12 +90,13 @@ describe('UserFormModal', () => {
       wrapper = await mountSuspended(UserFormModal, { props: { open: true } })
       const vm = exposedOf(wrapper)
 
-      await vm.submit({ name: '重複ユーザー', email: 'dup@example.com', role: 'mentor' })
+      await vm.submit({ name: '重複ユーザー', employee_id: 'E099', email: 'dup@example.com', role: 'mentor' })
 
       expect(notifyMock).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          statusMessages: { 409: 'このメールアドレスは既に登録されています' }
+          statusMessages: { 409: 'このメールアドレスは既に登録されています' },
+          codeMessages: { EMPLOYEE_ID_TAKEN: 'この社員IDは既に使用されています' }
         })
       )
       expect(wrapper.emitted('saved')).toBeUndefined()
@@ -106,7 +107,7 @@ describe('UserFormModal', () => {
       wrapper = await mountSuspended(UserFormModal, { props: { open: true } })
       const vm = exposedOf(wrapper)
 
-      await vm.submit({ name: '失敗', email: 'fail@example.com', role: 'ojt' })
+      await vm.submit({ name: '失敗', employee_id: 'E100', email: 'fail@example.com', role: 'ojt' })
 
       expect(notifyMock).toHaveBeenCalledWith(
         expect.anything(),
@@ -136,11 +137,11 @@ describe('UserFormModal', () => {
       })
       const vm = exposedOf(wrapper)
 
-      await vm.submit({ name: '山田 次郎', email: 'taro@example.com', role: 'mentor' })
+      await vm.submit({ name: '山田 次郎', employee_id: 'E001', email: 'taro@example.com', role: 'mentor' })
 
       expect(fetchMock).toHaveBeenCalledWith('/api/users/u1', {
         method: 'PUT',
-        body: { name: '山田 次郎', email: 'taro@example.com', role: 'mentor' }
+        body: { name: '山田 次郎', employee_id: 'E001', email: 'taro@example.com', role: 'mentor' }
       })
       expect(toastAddMock).toHaveBeenCalledWith(
         expect.objectContaining({ title: '更新しました', color: 'success' })
@@ -157,7 +158,7 @@ describe('UserFormModal', () => {
       })
       const vm = exposedOf(wrapper)
 
-      await vm.submit({ name: '失敗', email: 'fail@example.com', role: 'ojt' })
+      await vm.submit({ name: '失敗', employee_id: 'E001', email: 'fail@example.com', role: 'ojt' })
 
       expect(notifyMock).toHaveBeenCalledWith(
         expect.anything(),

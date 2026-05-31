@@ -5,7 +5,7 @@ import { userCreateBodySchema } from '#shared/types/schemas'
 export default defineEventHandler<Promise<Profile>>(async (event) => {
   const userId = await serverUserId(event)
 
-  const { name, email, role } = await parseBody(event, userCreateBodySchema)
+  const { name, employee_id, email, role } = await parseBody(event, userCreateBodySchema)
 
   const client = await serverSupabaseClient(event)
   const { data: callerProfile } = await client
@@ -32,16 +32,6 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
-  const { data: lastUser } = await client
-    .from('profiles')
-    .select('employee_id')
-    .order('employee_id', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const nextNum = lastUser ? parseInt(lastUser.employee_id.replace(/\D/g, ''), 10) + 1 : 1
-  const employee_id = `E${String(nextNum).padStart(3, '0')}`
-
   // email を含む行を返すため service role で挿入する（email は authenticated に非公開）
   const { data, error } = await serviceClient
     .from('profiles')
@@ -51,6 +41,13 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
 
   if (error) {
     await serviceClient.auth.admin.deleteUser(authUser.user.id)
+    if (error.code === '23505') {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Conflict',
+        data: { message: 'この社員IDは既に使用されています', code: 'EMPLOYEE_ID_TAKEN' }
+      })
+    }
     console.error('[api/users POST] profile insert', error)
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }

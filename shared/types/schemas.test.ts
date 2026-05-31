@@ -232,6 +232,7 @@ describe('userCreateSchema', () => {
   it('有効なユーザー作成データを受け入れる', () => {
     const result = userCreateSchema.safeParse({
       name: '山田 太郎',
+      employee_id: 'E001',
       email: 'yamada@example.com',
       role: 'trainee'
     })
@@ -241,6 +242,7 @@ describe('userCreateSchema', () => {
   it('不正なメールアドレスはエラー', () => {
     const result = userCreateSchema.safeParse({
       name: '山田 太郎',
+      employee_id: 'E001',
       email: 'not-an-email',
       role: 'trainee'
     })
@@ -250,8 +252,19 @@ describe('userCreateSchema', () => {
   it('不正なロールはエラー', () => {
     const result = userCreateSchema.safeParse({
       name: '山田 太郎',
+      employee_id: 'E001',
       email: 'yamada@example.com',
       role: 'unknown'
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('社員IDが空ならエラー', () => {
+    const result = userCreateSchema.safeParse({
+      name: '山田 太郎',
+      employee_id: '',
+      email: 'yamada@example.com',
+      role: 'trainee'
     })
     expect(result.success).toBe(false)
   })

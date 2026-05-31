@@ -121,4 +121,31 @@ describe('PUT /api/users/[id]', () => {
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 409 })
     expect(query.update).not.toHaveBeenCalled()
   })
+
+  // --- 社員ID（employee_id）---
+
+  it('employee_id 変更時は update に含めて profiles を更新する', async () => {
+    mockCaller('admin')
+    getRouterParamMock.mockReturnValue(otherId)
+    readBodyMock.mockResolvedValue({ employee_id: 'E042' })
+    const updated = { id: otherId, employee_id: 'E042' }
+    const { query } = mockServiceUpdate({ data: updated, error: null })
+
+    const result = await handler(eventStub)
+
+    expect(query.update).toHaveBeenCalledWith({ employee_id: 'E042' })
+    expect(result).toEqual(updated)
+  })
+
+  it('employee_id 重複(23505)は 409 + code を返す', async () => {
+    mockCaller('admin')
+    getRouterParamMock.mockReturnValue(otherId)
+    readBodyMock.mockResolvedValue({ employee_id: 'E001' })
+    mockServiceUpdate({ data: null, error: { code: '23505' } })
+
+    await expect(handler(eventStub)).rejects.toMatchObject({
+      statusCode: 409,
+      data: { code: 'EMPLOYEE_ID_TAKEN' }
+    })
+  })
 })
