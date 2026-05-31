@@ -17,10 +17,14 @@ export default defineVitestConfig({
         domEnvironment: 'happy-dom'
       }
     },
-    // Vue は <Suspense> 使用時に console.info で実験的機能の注意書きを出す。
-    // mountSuspended が Suspense でラップするため全コンポーネントテストで出るノイズ。該当行のみ抑止。
+    // テストで意図的に発生させる既知のノイズのみ抑止する（console 呼び出し自体は妨げないので spy/アサートは可能）。
     onConsoleLog: (log: string): boolean | undefined => {
+      // 1) Vue が <Suspense>(mountSuspended) 使用時に console.info で出す実験的機能の注意書き
       if (log.includes('<Suspense> is an experimental feature')) {
+        return false
+      }
+      // 2) server ハンドラがエラー経路テスト(意図的な 4xx/5xx)で出す console.error('[api/...]', error)
+      if (log.trimStart().startsWith('[api/')) {
         return false
       }
     },
