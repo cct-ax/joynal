@@ -52,6 +52,13 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   }
 
+  // 招待メール: 初期パスワード設定のため recovery OTP を送る（リンク不使用・/reset-password で設定）。
+  // 送信失敗で作成自体は失敗させない（ユーザーは作成済み。本人は「パスワードをお忘れの方」で再送可）。
+  const { error: inviteError } = await client.auth.resetPasswordForEmail(email)
+  if (inviteError) {
+    console.error('[api/users POST] resetPasswordForEmail', inviteError)
+  }
+
   setResponseStatus(event, 201)
   return data
 })

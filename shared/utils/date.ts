@@ -66,7 +66,7 @@ export const formatDateWithWeekday = (date: Date): string =>
  * 週ラベルを `YYYY/M/DD（月）〜 M/DD（金）` 形式で返す。
  */
 export const formatWeekLabel = (monday: Date): string => {
-  const friday = getWeekDays(monday).at(-1)!
+  const friday = addDays(monday, 4)
   return `${monday.getFullYear()}/${formatMonthDay(monday)}（月）〜 ${formatMonthDay(friday)}（金）`
 }
 

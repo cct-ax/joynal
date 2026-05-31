@@ -11,7 +11,6 @@
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { userCreateSchema, type UserCreateSchema } from '#shared/types/schemas'
-import type { UserRole } from '#shared/types/api'
 import type { Profile } from '#shared/types/models'
 
 const open = defineModel<boolean>('open')
@@ -40,7 +39,7 @@ const isSelf = computed(
 
 // 役割セレクトの選択肢（VALID_ROLES + ROLE_LABELS で生成）。
 // value-key="value" により USelectMenu の v-model は UserRole 文字列になるので state.role に直結する。
-const roleOptions = (VALID_ROLES as readonly UserRole[]).map(r => ({
+const roleOptions = VALID_ROLES.map(r => ({
   label: ROLE_LABELS[r],
   value: r
 }))
@@ -61,7 +60,7 @@ watch(
       state.name = props.user.name
       state.employee_id = props.user.employee_id
       state.email = props.user.email
-      state.role = props.user.role as UserRole
+      state.role = isUserRole(props.user.role) ? props.user.role : undefined
     } else {
       state.name = ''
       state.employee_id = ''

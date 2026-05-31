@@ -21,7 +21,10 @@ export type ValidationErrorPayload = {
 }
 
 const toDetails = (issues: z.core.$ZodIssue[]): ValidationErrorDetail[] =>
-  issues.map(i => ({ path: i.path as (string | number)[], message: i.message }))
+  issues.map(i => ({
+    path: i.path.map(p => (typeof p === 'symbol' ? p.toString() : p)),
+    message: i.message
+  }))
 
 const throwValidationError = (errors: ValidationErrorDetail[]): never => {
   throw createError({

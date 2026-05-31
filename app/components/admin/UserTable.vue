@@ -52,6 +52,9 @@ const onCancelDeactivate = (): void => {
   confirmTargetId.value = null
 }
 
+// Profile.role は DB 上 string。UserRole に絞り込んでバッジへ渡す（DB CHECK で常に妥当）。
+const toRole = (v: string): UserRole => (isUserRole(v) ? v : 'trainee')
+
 const columns: TableColumn<Profile>[] = [
   { accessorKey: 'employee_id', header: '社員ID' },
   { accessorKey: 'name', header: '名前' },
@@ -146,7 +149,7 @@ const columns: TableColumn<Profile>[] = [
       <!-- 役割セル: RoleBadge で色付きバッジ表示 -->
       <template #role-cell="{ row }">
         <RoleBadge
-          :role="(row.original.role as UserRole)"
+          :role="toRole(row.original.role)"
           :class="{ 'opacity-50': !row.original.is_active }"
         />
       </template>

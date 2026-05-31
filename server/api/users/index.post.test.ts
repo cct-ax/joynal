@@ -9,11 +9,16 @@ const eventStub = {} as Parameters<typeof handler>[0]
 
 const selfId = '00000000-0000-4000-8000-000000000001'
 
-/** caller のロールを返す user client をモックする */
+/**
+ * caller のロールを返す user client をモックする。
+ * 招待成功パスで呼ばれる `client.auth.resetPasswordForEmail` の spy を付与し、それを返す。
+ */
 const mockCaller = (role: string) => {
-  vi.mocked(serverSupabaseClient).mockResolvedValue(
-    createSupabaseClientMock({ data: { role }, error: null }).client as never
-  )
+  const resetPasswordForEmail = vi.fn(() => Promise.resolve({ error: null }))
+  const base = createSupabaseClientMock({ data: { role }, error: null }).client
+  const client = { ...base, auth: { resetPasswordForEmail } }
+  vi.mocked(serverSupabaseClient).mockResolvedValue(client as never)
+  return { resetPasswordForEmail }
 }
 
 /**
@@ -58,7 +63,7 @@ describe('POST /api/users', () => {
   })
 
   it('招待成功: employee_id を含めて profiles に insert し作成行を返す', async () => {
-    mockCaller('admin')
+    const { resetPasswordForEmail } = mockCaller('admin')
     const created = {
       id: 'new-id',
       employee_id: 'E010',
@@ -81,6 +86,28 @@ describe('POST /api/users', () => {
       role: 'trainee',
       employee_id: 'E010'
     })
+    expect(resetPasswordForEmail).toHaveBeenCalledWith('hanako@joynal.test')
+    expect(result).toEqual(created)
+  })
+
+  it('OTP 送信失敗でも 201（作成成功）: 例外を投げず作成行を返す', async () => {
+    const { resetPasswordForEmail } = mockCaller('admin')
+    resetPasswordForEmail.mockResolvedValue({ error: { message: 'rate limited' } } as never)
+    const created = {
+      id: 'new-id',
+      employee_id: 'E010',
+      name: '新人 花子',
+      email: 'hanako@joynal.test',
+      role: 'trainee',
+      is_active: true,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z'
+    }
+    mockServiceCreate({ data: created, error: null })
+
+    const result = await handler(eventStub)
+
+    expect(resetPasswordForEmail).toHaveBeenCalledWith('hanako@joynal.test')
     expect(result).toEqual(created)
   })
 

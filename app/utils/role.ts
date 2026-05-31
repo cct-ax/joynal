@@ -1,4 +1,11 @@
-import type { UserRole } from '#shared/types/api'
+import { VALID_ROLES, type UserRole } from '#shared/types/api'
+
+/**
+ * 文字列が UserRole の値域かを判定する type guard。
+ * DB/Profile.role は string のため、UI で UserRole に絞り込む際に使う。
+ */
+export const isUserRole = (v: string | null | undefined): v is UserRole =>
+  v !== null && v !== undefined && (VALID_ROLES as readonly string[]).includes(v)
 
 /**
  * ロール別の日本語ラベル。

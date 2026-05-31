@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { ROLE_BADGE_CLASSES, ROLE_LABELS } from './role'
+import { isUserRole, ROLE_BADGE_CLASSES, ROLE_LABELS } from './role'
+
+describe('isUserRole', () => {
+  it('妥当な UserRole 値なら true を返す', () => {
+    expect(isUserRole('trainee')).toBe(true)
+    expect(isUserRole('mentor')).toBe(true)
+    expect(isUserRole('ojt')).toBe(true)
+    expect(isUserRole('admin')).toBe(true)
+  })
+
+  it('値域外の文字列・空文字・null・undefined なら false を返す', () => {
+    expect(isUserRole('foo')).toBe(false)
+    expect(isUserRole('')).toBe(false)
+    expect(isUserRole(null)).toBe(false)
+    expect(isUserRole(undefined)).toBe(false)
+  })
+})
 
 describe('ROLE_LABELS', () => {
   it('4 ロールすべての日本語ラベルを持つ', () => {

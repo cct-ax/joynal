@@ -17,13 +17,24 @@
 |------|:----:|:-------:|:---:|:------:|
 | SELECT | 全員分○ | 全員分○ | 全員分○ | 全員分○ |
 | INSERT | × | × | × | ○ |
-| UPDATE | 自分のみ | 自分のみ | 自分のみ | 全員分○ |
+| UPDATE | × | × | × | 全員分○ |
 | DELETE | × | × | × | ○ |
+
+> 一般ユーザー（新人/メンター/OJT）は自己編集も不可（×）。UPDATE は管理者のみ。
 
 > SELECT を全員に許可するのは、名前・社員ID・ロールのドロップダウン/表示に必要なため。
 > ただし **`email` カラムだけは PII 保護のため authenticated から除外**している（migration `20260529_01`、
 > カラム権限 `GRANT SELECT (...) ` で email を含めない）。email を要する管理者操作（一覧・作成・更新）は
 > サーバー側で service role 経由に切り替えている。`/api/users/me` も email を返さない。
+>
+> **自己権限昇格の遮断**: `authenticated`/`anon` の UPDATE 権限はカラム/テーブル権限で剥奪済み
+> （migration `20260601_01`、`REVOKE UPDATE ON public.profiles`）。剥奪前は公開 anon key + 自分の JWT の
+> 直接 REST で `PATCH /rest/v1/profiles?id=eq.<self> {"role":"admin"}` が通り自己昇格できた（CRITICAL）。
+> プロフィール編集は全て管理者→service role 経由のため、剥奪しても機能影響はない。
+>
+> **SECURITY DEFINER 関数のハードニング**: `is_admin` / `is_my_trainee` / `handle_updated_at` は
+> `search_path = ''` を固定済み（migration `20260601_01`）。本文は `public.` 修飾済み・`now()` は
+> `pg_catalog` で常時解決できるため、空 search_path で安全。
 
 ### `daily_reports`テーブル
 
@@ -103,12 +114,13 @@ CREATE POLICY "profiles_insert"
   TO authenticated
   WITH CHECK (public.is_admin());
 
--- 管理者は全員を更新可、本人は自分のみ更新可
+-- 管理者のみ更新可（自己権限昇格の遮断のため一般ユーザーの自己編集は不可）。
+-- 加えて authenticated/anon の UPDATE 権限自体を migration 20260601_01 で REVOKE 済み（二重の防御）。
 CREATE POLICY "profiles_update"
   ON public.profiles FOR UPDATE
   TO authenticated
-  USING (public.is_admin() OR id = auth.uid())
-  WITH CHECK (public.is_admin() OR id = auth.uid());
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- 管理者のみ削除可（通常は無効化で対応）
 CREATE POLICY "profiles_delete"
