@@ -22,11 +22,14 @@ const onSubmit = async (event: FormSubmitEvent<ResetPasswordSchema>): Promise<vo
       method: 'POST',
       body: { email: event.data.email }
     })
-    // 列挙防止のため、メール有無に関わらずコード入力画面へ進む。email は引き継ぐ。
+    // 送信成功（登録済み）のときだけコード入力画面へ進む。email は引き継ぐ。
     resetEmail.value = event.data.email
     await navigateTo('/reset-password')
   } catch (error: unknown) {
-    apiError.notify(error, { fallback: 'メールの送信に失敗しました' })
+    apiError.notify(error, {
+      statusMessages: { 404: 'このメールアドレスは登録されていません' },
+      fallback: 'メールの送信に失敗しました'
+    })
   } finally {
     loading.value = false
   }

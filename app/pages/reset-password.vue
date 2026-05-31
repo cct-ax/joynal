@@ -4,7 +4,8 @@
  *
  * /forgot-password で送信した6桁の確認コードと新パスワードを入力する。
  * /api/auth/reset-password-otp が verifyOtp でコードを検証 → updateUser → 全セッション失効。
- * email は /forgot-password から useState で引き継ぐ（直接アクセス/リロード時は入力可）。
+ * email は /forgot-password から useState で引き継ぎ、その場合は編集不可（コードは送信先 email に
+ * 紐づくため）。直接アクセス/リロードで引き継ぎが無いときのみ入力可（行き止まり回避）。
  *
  * セキュリティ: 更新後はサーバー側で全セッションを失効させ、/login で再ログインを促す。
  * リンク方式と違い redirect を一切使わないため /reset-password を Redirect URLs に登録する必要は無い。
@@ -16,6 +17,9 @@ definePageMeta({ layout: false })
 
 const apiError = useApiError()
 const resetEmail = useState<string>('reset-email', () => '')
+
+// 申請画面から email を引き継いだ場合は編集不可（送信先とコードの不一致を防ぐ）。
+const emailLocked = !!resetEmail.value
 
 const state = reactive<Partial<ResetWithOtpSchema>>({
   email: resetEmail.value,
@@ -100,6 +104,7 @@ const goToLogin = (): void => {
           spellcheck="false"
           autocapitalize="none"
           placeholder="mail@example.com"
+          :readonly="emailLocked"
           class="w-full"
         />
       </UFormField>
