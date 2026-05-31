@@ -31,14 +31,8 @@ const editOpen = ref(false)
 const editingUser = ref<Profile | null>(null)
 
 // 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
-const addModalMounted = ref(false)
-const editModalMounted = ref(false)
-watch(addOpen, (v) => {
-  if (v) addModalMounted.value = true
-})
-watch(editOpen, (v) => {
-  if (v) editModalMounted.value = true
-})
+const addModalMounted = useLazyOpen(addOpen)
+const editModalMounted = useLazyOpen(editOpen)
 
 const onEditUser = (user: Profile): void => {
   editingUser.value = user
@@ -63,10 +57,7 @@ const {
 // useAdminUsers / useMentorAssignments は server:false。SSR では idle（空）で描画され、
 // クライアント初回描画では pending になるため分岐が server/client でずれてハイドレーション
 // 不整合になる。report.vue と同じく mounted ゲートで初回は両者ともスケルトンを描画して回避する。
-const mounted = ref(false)
-onMounted(() => {
-  mounted.value = true
-})
+const mounted = useMounted()
 
 // ページヘッダーの at-a-glance サマリ（役割別カウント）。
 // 担当未設定 = メンター未割り当ての新人数（>0 のとき warning 色で注意喚起）。

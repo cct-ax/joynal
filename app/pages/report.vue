@@ -59,10 +59,7 @@ watch(selectedTraineeId, () => {
 // reports/comments は server:false でクライアント取得するため、SSR と hydration 初期は
 // 必ずスケルトンを描画してボード全体のハイドレーションずれを構造的に避ける（mounted ゲート）。
 // マウント後は profile/assignments の取得状況と reports の取得状況（idle/pending）で判定する。
-const mounted = ref(false)
-onMounted(() => {
-  mounted.value = true
-})
+const mounted = useMounted()
 const isLoading = computed(
   () =>
     !mounted.value
@@ -103,10 +100,7 @@ const isModalOpen = computed({
   }
 })
 // 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
-const reportModalMounted = ref(false)
-watch(isModalOpen, (v) => {
-  if (v) reportModalMounted.value = true
-})
+const reportModalMounted = useLazyOpen(isModalOpen)
 
 const onInputReport = (date: Date): void => {
   selectedReport.value = null
@@ -133,10 +127,7 @@ const isCommentModalOpen = computed({
   }
 })
 // 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
-const commentModalMounted = ref(false)
-watch(isCommentModalOpen, (v) => {
-  if (v) commentModalMounted.value = true
-})
+const commentModalMounted = useLazyOpen(isCommentModalOpen)
 const editingComment = computed(() => {
   if (editingCommentRole.value === 'mentor') return mentorComment.value
   if (editingCommentRole.value === 'ojt') return ojtComment.value
