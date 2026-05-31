@@ -76,12 +76,13 @@ export const passwordChangeSchema = z
 
 /**
  * パスワードリセット（OTP方式）の「コード＋新パスワード設定」フォーム用スキーマ。
- * メールで届いた6桁コードと新パスワードを受け取る。現在のパスワードは不要。
+ * メールで届いた確認コードと新パスワードを受け取る。現在のパスワードは不要。
+ * コード長は Supabase の otp_length 設定に依存する（6〜8桁）ため固定 6 桁にしない。
  */
 export const resetWithOtpSchema = z
   .object({
     email: z.email('有効なメールアドレスを入力してください'),
-    token: z.string().regex(/^\d{6}$/, '6桁のコードを入力してください'),
+    token: z.string().regex(/^\d{6,8}$/, '確認コードを正しく入力してください'),
     password: z.string().min(8, 'パスワードは8文字以上で入力してください'),
     confirm: z.string().min(1, '確認用パスワードを入力してください')
   })
@@ -204,7 +205,7 @@ export const updatePasswordBodySchema = z.object({
 /** POST /api/auth/reset-password-otp ボディ。recovery OTP の検証＋新パスワード反映に使う */
 export const resetPasswordOtpBodySchema = z.object({
   email: z.email('有効なメールアドレスを指定してください'),
-  token: z.string().regex(/^\d{6}$/, '6桁のコードを指定してください'),
+  token: z.string().regex(/^\d{6,8}$/, '確認コードを正しく指定してください'),
   password: z.string().min(8, 'パスワードは8文字以上で入力してください')
 })
 

@@ -187,13 +187,18 @@ describe('resetWithOtpSchema', () => {
     confirm: 'new-secret-123'
   }
 
-  it('有効な email＋6桁コード＋新パスワードを受け入れる', () => {
+  it('有効な email＋確認コード（6桁）＋新パスワードを受け入れる', () => {
     expect(resetWithOtpSchema.safeParse(valid).success).toBe(true)
   })
 
-  it('コードが6桁の数字でないとエラー', () => {
+  it('8桁の確認コードも受け入れる（otp_length 依存）', () => {
+    expect(resetWithOtpSchema.safeParse({ ...valid, token: '12345678' }).success).toBe(true)
+  })
+
+  it('コードが数字でない/範囲外（5桁・9桁）はエラー', () => {
     expect(resetWithOtpSchema.safeParse({ ...valid, token: '12ab5' }).success).toBe(false)
-    expect(resetWithOtpSchema.safeParse({ ...valid, token: '1234567' }).success).toBe(false)
+    expect(resetWithOtpSchema.safeParse({ ...valid, token: '12345' }).success).toBe(false)
+    expect(resetWithOtpSchema.safeParse({ ...valid, token: '123456789' }).success).toBe(false)
   })
 
   it('8 文字未満のパスワードはエラー', () => {

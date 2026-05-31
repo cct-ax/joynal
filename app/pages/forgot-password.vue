@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * パスワードリセット申請画面。
- * メールアドレスを入力すると、Supabase が6桁の確認コード（recovery OTP）をメール送信する。
+ * メールアドレスを入力すると、Supabase が確認コード（recovery OTP・桁数は otp_length 設定依存）をメール送信する。
  * 入力した email は useState で /reset-password に引き継ぎ、コード入力画面へ遷移する。
  */
 import type { FormSubmitEvent } from '@nuxt/ui'

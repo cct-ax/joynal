@@ -2,7 +2,7 @@
 /**
  * 新パスワード設定画面（OTP方式）。
  *
- * /forgot-password で送信した6桁の確認コードと新パスワードを入力する。
+ * /forgot-password で送信した確認コードと新パスワードを入力する。
  * /api/auth/reset-password-otp が verifyOtp でコードを検証 → updateUser → 全セッション失効。
  * email は /forgot-password から useState で引き継ぎ、その場合は編集不可（コードは送信先 email に
  * 紐づくため）。直接アクセス/リロードで引き継ぎが無いときのみ入力可（行き止まり回避）。
@@ -90,7 +90,7 @@ const goToLogin = (): void => {
       @submit="onSubmit"
     >
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        メールに届いた6桁の確認コードと、新しいパスワード（8文字以上）を入力してください。
+        メールに届いた確認コードと、新しいパスワード（8文字以上）を入力してください。
       </p>
       <UFormField
         name="email"
@@ -110,15 +110,15 @@ const goToLogin = (): void => {
       </UFormField>
       <UFormField
         name="token"
-        label="確認コード（6桁）"
+        label="確認コード"
         required
       >
         <UInput
           v-model="state.token"
           inputmode="numeric"
           autocomplete="one-time-code"
-          maxlength="6"
-          placeholder="123456"
+          maxlength="8"
+          placeholder="メールに記載のコード"
           class="w-full"
         />
       </UFormField>
