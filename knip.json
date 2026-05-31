@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreDependencies": [
+    "@vueuse/core",
+    "wrangler",
+    "@supabase/supabase-js",
+    "h3",
+    "vitest-environment-nuxt"
+  ],
+  "ignore": []
+}
