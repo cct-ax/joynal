@@ -81,6 +81,29 @@ email_sent = 30    # 1時間あたりのメール送信上限
 
 ---
 
+## メール送信元（SMTP）の設定（未設定・TODO）
+
+現在は **Supabase の共有メーラー**（差出人 `Supabase Auth <noreply@mail.app.supabase.io>`）を使用中。これは:
+- **差出人（sender）を変更できない**
+- **送信レート制限が低い**（テスト中に `over_email_send_rate_limit` で 500 になりやすい）
+- **本番では非推奨**（Supabase 公式もテスト用と明記）
+
+独自の差出人にする／レート制限を緩めるには **独自 SMTP** を設定する。やること:
+
+1. **メール送信プロバイダを用意**: Resend / SendGrid / AWS SES / Postmark / Mailgun / Brevo など。
+2. **送信ドメインを検証**（SPF / DKIM）。未検証だと迷惑メール判定・拒否されやすい。
+3. **Supabase に SMTP を設定**: Dashboard → Authentication → Emails → **SMTP Settings**（Enable Custom SMTP）で以下を入力:
+   - Host / Port（587 など）
+   - Username / Password（プロバイダの API キー等）
+   - **Sender email**（差出人アドレス。例 `noreply@joynal.example.com`）← これで sender が変わる
+   - **Sender name**（表示名。例 `Joynal`）
+4. **レート制限**: Authentication → Rate Limits で送信上限を必要に応じて引き上げる。
+5. **（CLI 運用なら）** `config.toml` の `[auth.email.smtp]`（現在コメントアウト）を有効化し、`pass` は secret/env で渡して `supabase config push`。
+
+> メモ: 差出人の変更とレート制限の緩和は SMTP 設定で**同時に**解決する。本番リリース前に必須。
+
+---
+
 ## マイグレーション
 
 DB スキーマ変更は `migrations/` に SQL を追加します（命名 `YYYYMMDD_NN_説明.sql`）。適用後はアプリ側の型を再生成:
