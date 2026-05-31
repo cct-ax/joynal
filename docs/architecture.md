@@ -77,8 +77,7 @@ joynal/
 │   ├── pages/
 │   │   ├── index.vue             # / → /report リダイレクト
 │   │   ├── login.vue             # ログイン画面
-│   │   ├── forgot-password.vue   # パスワードリセット申請（メール送信）
-│   │   ├── reset-password.vue    # 新パスワード設定（リカバリーリンク着地）
+│   │   ├── reset-password.vue    # パスワードリセット（OTPコード送信〜新パスワード設定・1画面2ステップ）
 │   │   ├── confirm.vue           # 認証コールバック
 │   │   ├── report.vue            # 日報画面（全ロール共通）
 │   │   └── admin.vue             # 管理画面（管理者のみ）

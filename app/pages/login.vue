@@ -5,12 +5,26 @@ import { loginSchema, type LoginSchema } from '#shared/types/schemas'
 definePageMeta({ layout: false })
 
 const apiError = useApiError()
+const toast = useToast()
+const route = useRoute()
 
 const state = reactive<Partial<LoginSchema>>({
   email: '',
   password: ''
 })
 const loading = ref(false)
+
+// パスワードリセット成功で /login?reset=success に遷移してきたとき、完了 toast を出す。
+// ssr:false（CSR）のため onMounted で実行し、再表示防止に query を除去する（replace でリロード無し）。
+onMounted(() => {
+  if (route.query.reset === 'success') {
+    toast.add({
+      title: 'パスワードを更新しました。新しいパスワードでログインしてください。',
+      color: 'success'
+    })
+    void navigateTo({ path: '/login', query: {} }, { replace: true })
+  }
+})
 
 const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
   loading.value = true
@@ -80,7 +94,7 @@ const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
 
     <template #footer>
       <NuxtLink
-        to="/forgot-password"
+        to="/reset-password"
         class="block text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
       >
         パスワードをお忘れの方はこちら

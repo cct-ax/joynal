@@ -23,6 +23,19 @@ export default defineEventHandler(async (event) => {
 
   const { error: updateError } = await client.auth.updateUser({ password })
   if (updateError) {
+    // 新パスワードが現在のパスワードと同一だと Supabase は 422 same_password を返す。
+    // これは「コードが不正」ではないので 400 と区別し、専用コードで理由を明示する。
+    if (updateError.code === 'same_password') {
+      throw createError({
+        statusCode: 422,
+        statusMessage: 'Unprocessable Entity',
+        data: {
+          message: '新しいパスワードは現在のパスワードと異なるものを設定してください',
+          code: 'SAME_PASSWORD'
+        }
+      })
+    }
+    console.error('[api/auth/reset-password-otp] updateUser', updateError)
     throw createError({ statusCode: 400, message: 'パスワードの更新に失敗しました' })
   }
 

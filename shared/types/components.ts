@@ -9,6 +9,8 @@ import type {
   CommentSchema,
   PasswordChangeSchema,
   ReportSchema,
+  ResetPasswordSchema,
+  ResetWithOtpSchema,
   UserCreateSchema
 } from '#shared/types/schemas'
 
@@ -43,4 +45,13 @@ export type CommentInputModalExposed = {
  */
 export type UserFormModalExposed = {
   submit: (data: UserCreateSchema) => Promise<void>
+}
+
+/**
+ * reset-password ページが defineExpose で公開する API（OTP方式の2ステップ）。
+ * テストから各 step の submit を直接呼ぶ際に使用する。
+ */
+export type ResetPasswordPageExposed = {
+  requestCode: (data: ResetPasswordSchema) => Promise<void>
+  submitNewPassword: (data: ResetWithOtpSchema) => Promise<void>
 }

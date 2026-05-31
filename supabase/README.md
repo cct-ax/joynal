@@ -14,17 +14,18 @@
 
 リンクではなく **6桁の確認コード（OTP）** を送る方式です。`redirect_to` を使わないので Redirect URLs の登録は不要です。
 
+`/reset-password` の 1 画面・単一フォーム（同一ブラウザにコードを手入力する方式）で完結します。コード送信はフォーム内のインラインボタン、パスワード更新はフォーム submit です。
+
 ```
-/forgot-password   メール入力 → POST /api/auth/reset-password（コード送信）
-      ↓ /reset-password へ遷移（email は引き継ぎ）
-/reset-password    email＋6桁コード＋新パスワード
+/reset-password  メール入力 → [送信] → POST /api/auth/reset-password（コード送信）
+                 email＋6桁コード＋新パスワードを入力 → [パスワードを更新]
       → POST /api/auth/reset-password-otp
          （verifyOtp(type=recovery) → updateUser → 全セッション失効 signOut）
-      → /login で新パスワードで再ログイン
+      → /login?reset=success へ遷移し完了 toast 表示 → 新パスワードで再ログイン
 ```
 
 関連コード:
-- 画面: `app/pages/forgot-password.vue`（申請）, `app/pages/reset-password.vue`（コード＋新パス）
+- 画面: `app/pages/reset-password.vue`（コード送信〜新パスワード設定を単一フォームで）
 - API: `server/api/auth/reset-password.post.ts`（コード送信）, `reset-password-otp.post.ts`（検証＋更新）
 - スキーマ: `shared/types/schemas.ts`（`resetPasswordSchema` / `resetWithOtpSchema` / `resetPasswordOtpBodySchema`）
 

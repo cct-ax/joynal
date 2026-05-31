@@ -54,6 +54,21 @@ describe('POST /api/auth/reset-password-otp', () => {
     expect(auth.signOut).not.toHaveBeenCalled()
   })
 
+  it('updateUser が same_password のときは 422（SAME_PASSWORD）で signOut しない', async () => {
+    // 新パスワードが現在と同一: Supabase は 422 same_password を返す。「コード不正」と混同しない。
+    const { client, auth } = createSupabaseAuthMock({ error: null })
+    auth.updateUser.mockResolvedValue({
+      error: { code: 'same_password', status: 422, message: 'New password should be different from the old password.' }
+    })
+    vi.mocked(serverSupabaseClient).mockResolvedValue(client as never)
+
+    await expect(handler(eventStub)).rejects.toMatchObject({
+      statusCode: 422,
+      data: { code: 'SAME_PASSWORD' }
+    })
+    expect(auth.signOut).not.toHaveBeenCalled()
+  })
+
   it('不正な body（コードが6桁でない）は 400', async () => {
     readBodyMock.mockResolvedValue({ ...validBody, token: '12ab' })
     vi.mocked(serverSupabaseClient).mockResolvedValue(createSupabaseAuthMock().client as never)

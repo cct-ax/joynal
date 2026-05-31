@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 認証系画面（login / forgot-password / reset-password）の共通レイアウト。
+ * 認証系画面（login / reset-password）の共通レイアウト。
  *
  * - 画面中央に Joynal ブランド名（任意）+ UCard を配置。
  * - title / subtitle プロップで上部のブランド表示を切り替え（省略時は非表示）。
