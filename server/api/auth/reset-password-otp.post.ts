@@ -23,6 +23,9 @@ export default defineEventHandler(async (event) => {
 
   const { error: updateError } = await client.auth.updateUser({ password })
   if (updateError) {
+    // verifyOtp 成功で確立した recovery セッションを残さないよう失効させる（更新失敗で離脱しても
+    // 認証済み状態を残さない）。OTP は verify 成功時点で消費済みのため、再試行にはコード再送が必要。
+    await client.auth.signOut()
     // 新パスワードが現在のパスワードと同一だと Supabase は 422 same_password を返す。
     // これは「コードが不正」ではないので 400 と区別し、専用コードで理由を明示する。
     if (updateError.code === 'same_password') {

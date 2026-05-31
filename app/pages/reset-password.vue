@@ -23,25 +23,33 @@ import {
   type ResetPasswordSchema,
   type ResetWithOtpSchema
 } from '#shared/types/schemas'
+import { RESET_SUCCESS_QUERY_KEY, RESET_SUCCESS_QUERY_VALUE } from '~/utils/passwordReset'
 
 definePageMeta({ layout: false })
 
 const apiError = useApiError()
-const toast = useToast()
 
 const state = reactive({ email: '', token: '', password: '', confirm: '' })
 const loading = ref(false) // 「パスワードを更新」送信中
 const sendLoading = ref(false) // 「送信/再送」中（submit と分離）
 const codeSent = ref(false) // 送信済みヒント表示＋ボタン文言切替
+const emailError = ref('') // 送信ボタン押下時の email 単独検証エラー（フィールドにインライン表示）
+
+// メールを編集したら「送信済み」状態と email エラーをリセットする（別アドレスに送った誤認を防ぐ）。
+watch(() => state.email, () => {
+  codeSent.value = false
+  emailError.value = ''
+})
 
 // メール欄右のボタンから呼ぶ。フォーム送信ではないので email のみ検証してコードを送信する。
 // テストでは defineExpose 経由で直接呼ぶ。
 const requestCode = async (data: ResetPasswordSchema): Promise<void> => {
   const parsed = resetPasswordSchema.safeParse(data)
   if (!parsed.success) {
-    toast.add({ title: '有効なメールアドレスを入力してください', color: 'error' })
+    emailError.value = parsed.error.issues[0]?.message ?? '有効なメールアドレスを入力してください'
     return
   }
+  emailError.value = ''
   sendLoading.value = true
   try {
     await $fetch('/api/auth/reset-password', {
@@ -72,7 +80,7 @@ const submitNewPassword = async (data: ResetWithOtpSchema): Promise<void> => {
       }
     })
     // セッションは失効済みのため external 遷移でクライアント状態をクリアし、完了 toast は login 側で出す。
-    await navigateTo('/login?reset=success', { external: true })
+    await navigateTo(`/login?${RESET_SUCCESS_QUERY_KEY}=${RESET_SUCCESS_QUERY_VALUE}`, { external: true })
   } catch (error: unknown) {
     apiError.notify(error, {
       statusMessages: { 400: 'コードが正しくないか期限切れです。再度お試しください' },
@@ -112,6 +120,7 @@ defineExpose({ requestCode, submitNewPassword })
         name="email"
         label="メールアドレス"
         required
+        :error="emailError || undefined"
       >
         <div class="flex gap-2">
           <UInput
@@ -135,6 +144,7 @@ defineExpose({ requestCode, submitNewPassword })
         </div>
         <p
           v-if="codeSent"
+          role="status"
           class="mt-1 text-sm text-green-600 dark:text-green-400"
         >
           ✓ 確認コードを送信しました

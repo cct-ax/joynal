@@ -45,16 +45,16 @@ describe('POST /api/auth/reset-password-otp', () => {
     expect(auth.signOut).not.toHaveBeenCalled()
   })
 
-  it('updateUser エラーは 400 で signOut しない', async () => {
+  it('updateUser エラーは 400。recovery セッションを残さないよう signOut する', async () => {
     const { client, auth } = createSupabaseAuthMock({ error: null })
     auth.updateUser.mockResolvedValue({ error: { message: 'weak password' } })
     vi.mocked(serverSupabaseClient).mockResolvedValue(client as never)
 
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 400 })
-    expect(auth.signOut).not.toHaveBeenCalled()
+    expect(auth.signOut).toHaveBeenCalled()
   })
 
-  it('updateUser が same_password のときは 422（SAME_PASSWORD）で signOut しない', async () => {
+  it('updateUser が same_password のときは 422（SAME_PASSWORD）。recovery セッションは失効させる', async () => {
     // 新パスワードが現在と同一: Supabase は 422 same_password を返す。「コード不正」と混同しない。
     const { client, auth } = createSupabaseAuthMock({ error: null })
     auth.updateUser.mockResolvedValue({
@@ -66,7 +66,7 @@ describe('POST /api/auth/reset-password-otp', () => {
       statusCode: 422,
       data: { code: 'SAME_PASSWORD' }
     })
-    expect(auth.signOut).not.toHaveBeenCalled()
+    expect(auth.signOut).toHaveBeenCalled()
   })
 
   it('不正な body（コードが6桁でない）は 400', async () => {

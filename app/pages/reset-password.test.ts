@@ -7,9 +7,6 @@ import ResetPassword from './reset-password.vue'
 const notifyMock = vi.fn()
 mockNuxtImport('useApiError', () => () => ({ notify: notifyMock }))
 
-const toastAddMock = vi.fn()
-mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
-
 const navigateToMock = vi.fn()
 // factory は hoist されるため、navigateToMock は呼び出し時に遅延参照する（直接返すと初期化前アクセスになる）
 mockNuxtImport('navigateTo', () => (...args: unknown[]) => navigateToMock(...args))
@@ -25,7 +22,6 @@ describe('reset-password ページ', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     notifyMock.mockReset()
-    toastAddMock.mockReset()
     navigateToMock.mockReset()
     vi.stubGlobal('$fetch', fetchMock)
   })
@@ -62,15 +58,28 @@ describe('reset-password ページ', () => {
     expect(wrapper.text()).toContain('再送')
   })
 
-  it('requestCode で email 不正なら $fetch を呼ばず error トーストを出す', async () => {
+  it('requestCode で email 不正なら $fetch を呼ばずフィールドにインラインエラーを表示する', async () => {
     wrapper = await mountSuspended(ResetPassword)
 
     await exposedOf(wrapper).requestCode({ email: '' })
+    await flushPromises()
 
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(toastAddMock).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'error' })
-    )
+    expect(wrapper.text()).toContain('有効なメールアドレスを入力してください')
+  })
+
+  it('送信後にメールアドレスを変更すると送信済みヒントが消える', async () => {
+    fetchMock.mockResolvedValueOnce(undefined)
+    wrapper = await mountSuspended(ResetPassword)
+
+    await exposedOf(wrapper).requestCode({ email: 'taro@example.com' })
+    await flushPromises()
+    expect(wrapper.text()).toContain('確認コードを送信しました')
+
+    await wrapper.find('input[type="email"]').setValue('other@example.com')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('確認コードを送信しました')
   })
 
   it('requestCode 404 で notify を呼ぶ', async () => {

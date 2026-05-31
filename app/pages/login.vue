@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { loginSchema, type LoginSchema } from '#shared/types/schemas'
+import { RESET_SUCCESS_QUERY_KEY, RESET_SUCCESS_QUERY_VALUE } from '~/utils/passwordReset'
 
 definePageMeta({ layout: false })
 
@@ -17,7 +18,7 @@ const loading = ref(false)
 // パスワードリセット成功で /login?reset=success に遷移してきたとき、完了 toast を出す。
 // ssr:false（CSR）のため onMounted で実行し、再表示防止に query を除去する（replace でリロード無し）。
 onMounted(() => {
-  if (route.query.reset === 'success') {
+  if (route.query[RESET_SUCCESS_QUERY_KEY] === RESET_SUCCESS_QUERY_VALUE) {
     toast.add({
       title: 'パスワードを更新しました。新しいパスワードでログインしてください。',
       color: 'success'
