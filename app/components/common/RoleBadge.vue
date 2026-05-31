@@ -8,7 +8,7 @@
  * variant="soft" はリング無しのため、bg/text の上書きだけで素直に配色できる。
  *
  * ラベルは文字数がロールごとに異なる（新人=2 / メンター=4 / OJT=3 / 管理者=3）ため、
- * 最長ラベル基準の固定 min-width（min-w-[4.5rem]）＋ justify-center で全ロールの幅を揃える。
+ * 最長ラベル基準の固定 min-width（min-w-18）＋ justify-center で全ロールの幅を揃える。
  */
 import type { UserRole } from '#shared/types/api'
 
@@ -21,6 +21,6 @@ defineProps<{ role: UserRole }>()
     color="neutral"
     variant="soft"
     size="md"
-    :class="[ROLE_BADGE_CLASSES[role], 'min-w-[4.5rem] justify-center']"
+    :class="[ROLE_BADGE_CLASSES[role], 'min-w-18 justify-center']"
   />
 </template>
