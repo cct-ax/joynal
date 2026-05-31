@@ -80,7 +80,7 @@ const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
 
     <template #footer>
       <NuxtLink
-        to="/reset-password"
+        to="/forgot-password"
         class="block text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
       >
         パスワードをお忘れの方はこちら

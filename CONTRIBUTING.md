@@ -25,7 +25,6 @@ cp .env.example .env
 # - NUXT_PUBLIC_SUPABASE_URL: Supabase プロジェクトの URL
 # - NUXT_PUBLIC_SUPABASE_KEY: Supabase の anon key
 # - NUXT_SUPABASE_SECRET_KEY: Supabase の service_role（secret）key（ユーザー管理・招待・無効化機能に必要。@nuxtjs/supabase v2 はこの名前で読む）
-# - NUXT_PUBLIC_SITE_URL: （任意）パスワードリセットメールのリンク先 origin（例 https://joynal.example.com）。未設定ならリクエストの origin にフォールバック
 
 # 開発サーバーを起動
 pnpm dev
@@ -184,6 +183,12 @@ pnpm supabase:types   # Supabase の型定義を再生成（DBスキーマを変
 
 PR を出す前に `pnpm lint` と `pnpm test` を実行して green になることを確認してください。
 ファイルの整形は `pnpm lint:fix` だけで完結します（Prettier は使いません — @nuxt/eslint の stylistic ルールが整形を担当します）。
+
+### Supabase Auth 設定（メールテンプレ / OTP）
+
+メールテンプレート・OTP 有効期限・送信レート制限などの Auth 設定は `supabase/config.toml`（テンプレ HTML は `supabase/templates/`）で管理します。本番反映は `supabase config push`（リモートの auth 設定を config.toml の内容で**上書き**するため、push 前に内容をレビューすること）。CLI を使わない場合は同じ内容をダッシュボードに手入力します。
+
+設定方法・パスワードリセット（OTP方式）の仕組み・本番チェックリストは [supabase/README.md](supabase/README.md) を参照してください。
 
 ---
 

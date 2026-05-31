@@ -74,6 +74,22 @@ export const passwordChangeSchema = z
     message: '新しいパスワードと確認用パスワードが一致しません'
   })
 
+/**
+ * パスワードリセット（OTP方式）の「コード＋新パスワード設定」フォーム用スキーマ。
+ * メールで届いた6桁コードと新パスワードを受け取る。現在のパスワードは不要。
+ */
+export const resetWithOtpSchema = z
+  .object({
+    email: z.email('有効なメールアドレスを入力してください'),
+    token: z.string().regex(/^\d{6}$/, '6桁のコードを入力してください'),
+    password: z.string().min(8, 'パスワードは8文字以上で入力してください'),
+    confirm: z.string().min(1, '確認用パスワードを入力してください')
+  })
+  .refine(v => v.password === v.confirm, {
+    path: ['confirm'],
+    message: 'パスワードが一致しません'
+  })
+
 export const userCreateSchema = z.object({
   name: z.string().min(1, '名前は必須です'),
   email: z.email('有効なメールアドレスを入力してください'),
@@ -185,6 +201,13 @@ export const updatePasswordBodySchema = z.object({
   password: z.string().min(8, 'パスワードは8文字以上で入力してください')
 })
 
+/** POST /api/auth/reset-password-otp ボディ。recovery OTP の検証＋新パスワード反映に使う */
+export const resetPasswordOtpBodySchema = z.object({
+  email: z.email('有効なメールアドレスを指定してください'),
+  token: z.string().regex(/^\d{6}$/, '6桁のコードを指定してください'),
+  password: z.string().min(8, 'パスワードは8文字以上で入力してください')
+})
+
 // ----------------------------------------------------------------
 // 型の導出
 // ----------------------------------------------------------------
@@ -194,5 +217,6 @@ export type CommentSchema = z.output<typeof commentSchema>
 export type LoginSchema = z.output<typeof loginSchema>
 export type ResetPasswordSchema = z.output<typeof resetPasswordSchema>
 export type PasswordChangeSchema = z.output<typeof passwordChangeSchema>
+export type ResetWithOtpSchema = z.output<typeof resetWithOtpSchema>
 export type UserCreateSchema = z.output<typeof userCreateSchema>
 export type AssignmentSchema = z.output<typeof assignmentSchema>

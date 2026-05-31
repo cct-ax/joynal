@@ -1,0 +1,19 @@
+# Supabase Auth 設定（source-of-truth）。
+# - ローカル（supabase start）に適用される。
+# - 本番反映は `supabase config push`（リモートの auth 設定を config.toml の内容で上書きする。
+#   省略キーは CLI 既定値が入るため、既存の site_url / SMTP / 外部プロバイダ等を意図せず
+#   戻さないよう、push 前に内容をレビューすること）。
+# - CLI を使わない場合は、本ファイルを正とし同じ内容をダッシュボードに手入力してもよい。
+project_id = "joynal"
+
+[auth.email]
+otp_length = 6     # パスワードリセット等の確認コード桁数
+otp_expiry = 900   # 確認コードの有効期限（秒）= 15分。短めにして総当たり耐性を上げる
+
+# パスワードリセット（recovery）メール: 日本語＋6桁コード表示（リンクは使わない＝OTP方式）
+[auth.email.template.recovery]
+subject = "【Joynal】パスワード再設定コード"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.rate_limit]
+email_sent = 30    # 1時間あたりのメール送信上限

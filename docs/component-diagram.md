@@ -19,7 +19,8 @@ graph TD
 
   subgraph Pages["ページ"]
     LoginPage["login.vue"]
-    ResetPage["reset-password.vue"]
+    ForgotPage["forgot-password.vue\nリセット申請"]
+    ResetPage["reset-password.vue\n新パスワード設定"]
     ConfirmPage["confirm.vue"]
     ReportPage["report.vue\n/report\n週次日報＋コメント\nロール別表示切替"]
     AdminPage["admin.vue\n/admin（骨格）"]
@@ -68,7 +69,7 @@ graph TD
     CommentsAPI["comments/ GET·PUT(upsert)"]
     AssignmentsAPI["assignments/ GET /me·PUT"]
     UsersAPI["users/ GET·POST·PUT, GET /me"]
-    AuthAPI["auth/ login·logout·reset·update-password"]
+    AuthAPI["auth/ login·logout·reset·reset-otp·update-password"]
   end
 
   subgraph Supabase["Supabase（外部サービス）"]
@@ -118,8 +119,9 @@ graph TD
 |---------|------|------|
 | `index.vue` | `/` | `/report` へリダイレクト |
 | `login.vue` | `/login` | メール・パスワードでログイン |
-| `reset-password.vue` | `/reset-password` | パスワードリセットメール送信 |
-| `confirm.vue` | `/confirm` | メールリンクからの認証コールバック |
+| `forgot-password.vue` | `/forgot-password` | リセット確認コード（6桁 OTP）送信（申請） |
+| `reset-password.vue` | `/reset-password` | コード入力＋新パスワード設定（`verifyOtp`→`updateUser`・更新後は全セッション失効→ `/login`） |
+| `confirm.vue` | `/confirm` | メールリンクからの認証コールバック（汎用） |
 | `report.vue` | `/report` | 週次日報＋週次コメント。ロールで表示・操作が切り替わる共通画面 |
 | `admin.vue` | `/admin` | ユーザー管理・メンター割り当て（MS4 で中身を実装） |
 | `error.vue` | （自動） | 404 / 500 エラー画面 |
@@ -129,7 +131,7 @@ graph TD
 | ファイル | 役割 | 主な利用元 |
 |---------|------|-----------|
 | `AppHeader.vue` / `AppFooter.vue` | 共通ヘッダー（ユーザーメニュー・ログアウト）／フッター | `layouts/default.vue` |
-| `AuthCard.vue` | ログイン等のカード枠 | `login` / `reset-password` |
+| `AuthCard.vue` | ログイン等のカード枠 | `login` / `forgot-password` / `reset-password` |
 | `PasswordChangeModal.vue` | パスワード変更モーダル | `AppHeader` |
 | `TraineeSelector.vue` | 担当新人セレクタ（表示専用・`USelectMenu`） | `report.vue`（非 trainee） |
 | `WeekNavigator.vue` / `WeekPickerModal.vue` | 週ナビ（前後）／週ジャンプ（日付ピッカー） | `report.vue` |
@@ -183,7 +185,7 @@ graph TD
 | `assignments/index.put.ts` | `PUT /api/assignments` | メンター割り当て更新（管理者のみ） |
 | `users/index.get.ts` / `index.post.ts` / `[id]/index.put.ts` | `GET/POST/PUT /api/users(/:id)` | ユーザー一覧・招待・更新（管理者のみ） |
 | `users/me.get.ts` | `GET /api/users/me` | ログインユーザーの profile（email を除く） |
-| `auth/*.post.ts` | `POST /api/auth/*` | login / logout / reset-password / update-password |
+| `auth/*.post.ts` | `POST /api/auth/*` | login / logout / reset-password（コード送信）/ reset-password-otp（コード検証＋更新）/ update-password |
 
 ### 今後追加するコンポーネント（MS4）
 

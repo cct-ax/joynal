@@ -3,17 +3,16 @@ import { resetPasswordSchema } from '#shared/types/schemas'
 
 /**
  * POST /api/auth/reset-password
- * パスワードリセットメールを送信する。
- * リダイレクト先はサーバー側で resolveSiteBaseUrl により決定し、クライアント入力を信用しない
- * （オープンリダイレクト防止）。NUXT_PUBLIC_SITE_URL があればその origin、無ければリクエスト origin。
+ * パスワードリセット用の認証コード（6桁 OTP）をメール送信する。
+ * リンクは使わない（Supabase の recovery メールテンプレを `{{ .Token }}` 表示に設定すること）。
+ * コードの検証＋新パスワード反映は /api/auth/reset-password-otp（verifyOtp）で行う。
+ * メール存在の列挙を防ぐため、未登録メールでも Supabase は成功扱いになる。
  */
 export default defineEventHandler(async (event) => {
   const { email } = await parseBody(event, resetPasswordSchema)
 
-  const redirectTo = new URL('/confirm', resolveSiteBaseUrl(event)).toString()
-
   const client = await serverSupabaseClient(event)
-  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo })
+  const { error } = await client.auth.resetPasswordForEmail(email)
 
   if (error) {
     throw createError({ statusCode: 500, message: 'メールの送信に失敗しました' })

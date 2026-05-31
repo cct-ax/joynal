@@ -41,7 +41,8 @@ export const createSupabaseAuthMock = (authResult: { error: unknown } = { error:
     signInWithPassword: vi.fn(() => Promise.resolve(authResult)),
     signOut: vi.fn(() => Promise.resolve(authResult)),
     resetPasswordForEmail: vi.fn(() => Promise.resolve(authResult)),
-    updateUser: vi.fn(() => Promise.resolve(authResult))
+    updateUser: vi.fn(() => Promise.resolve(authResult)),
+    verifyOtp: vi.fn(() => Promise.resolve(authResult))
   }
   const client = { auth }
   return { client, auth }

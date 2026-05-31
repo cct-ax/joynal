@@ -18,16 +18,9 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  runtimeConfig: {
-    public: {
-      // 本番のメールリンク等で使う公開 origin。NUXT_PUBLIC_SITE_URL で上書きし、
-      // 空ならサーバーがリクエスト origin にフォールバックする。
-      siteUrl: ''
-    }
-  },
-
   routeRules: {
     '/login': { ssr: false },
+    '/forgot-password': { ssr: false },
     '/reset-password': { ssr: false },
     '/confirm': { ssr: false }
   },
@@ -69,7 +62,9 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/login', '/reset-password']
+      // /reset-password はリカバリーリンク着地ページ。コード交換前は未認証のため、
+      // 除外しないと交換完了前に /login へ弾かれる。/forgot-password は申請（メール送信）画面。
+      exclude: ['/login', '/forgot-password', '/reset-password']
     },
     types: '#shared/types/database.types.ts'
   }

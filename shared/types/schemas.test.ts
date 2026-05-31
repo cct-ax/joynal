@@ -4,6 +4,7 @@ import {
   commentSchema,
   loginSchema,
   passwordChangeSchema,
+  resetWithOtpSchema,
   reportSchema,
   resetPasswordSchema,
   userCreateSchema
@@ -174,6 +175,38 @@ describe('passwordChangeSchema', () => {
     if (!result.success) {
       const confirmError = result.error.issues.find(i => i.path[0] === 'confirm')
       expect(confirmError?.message).toContain('一致しません')
+    }
+  })
+})
+
+describe('resetWithOtpSchema', () => {
+  const valid = {
+    email: 'yamada@example.com',
+    token: '123456',
+    password: 'new-secret-123',
+    confirm: 'new-secret-123'
+  }
+
+  it('有効な email＋6桁コード＋新パスワードを受け入れる', () => {
+    expect(resetWithOtpSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it('コードが6桁の数字でないとエラー', () => {
+    expect(resetWithOtpSchema.safeParse({ ...valid, token: '12ab5' }).success).toBe(false)
+    expect(resetWithOtpSchema.safeParse({ ...valid, token: '1234567' }).success).toBe(false)
+  })
+
+  it('8 文字未満のパスワードはエラー', () => {
+    const result = resetWithOtpSchema.safeParse({ ...valid, password: 'short', confirm: 'short' })
+    expect(result.success).toBe(false)
+  })
+
+  it('確認パスワード不一致はエラー', () => {
+    const result = resetWithOtpSchema.safeParse({ ...valid, confirm: 'different-secret' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const confirmError = result.error.issues.find(i => i.path[0] === 'confirm')
+      expect(confirmError?.message).toBe('パスワードが一致しません')
     }
   })
 })

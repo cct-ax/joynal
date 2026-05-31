@@ -5,41 +5,22 @@ import '../../test/serverGlobals'
 import handler from './reset-password.post'
 
 const readBodyMock = vi.fn()
-const resolveSiteBaseUrlMock = vi.fn()
 const eventStub = {} as Parameters<typeof handler>[0]
 
 describe('POST /api/auth/reset-password', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('readBody', readBodyMock)
-    // resolveSiteBaseUrl は server-only auto-import（free identifier）なので global stub で制御する。
-    vi.stubGlobal('resolveSiteBaseUrl', resolveSiteBaseUrlMock)
     readBodyMock.mockResolvedValue({ email: 'trainee@joynal.test' })
-    resolveSiteBaseUrlMock.mockReturnValue('https://app.example.com')
   })
 
-  it('resolveSiteBaseUrl が返す origin の /confirm を redirectTo にする', async () => {
-    resolveSiteBaseUrlMock.mockReturnValue('https://app.example.com')
+  it('email でリセットコードを送信する（redirectTo なし）', async () => {
     const { client, auth } = createSupabaseAuthMock({ error: null })
     vi.mocked(serverSupabaseClient).mockResolvedValue(client as never)
 
     await handler(eventStub)
 
-    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('trainee@joynal.test', {
-      redirectTo: 'https://app.example.com/confirm'
-    })
-  })
-
-  it('base が変われば redirectTo もその origin になる', async () => {
-    resolveSiteBaseUrlMock.mockReturnValue('https://req.example.com')
-    const { client, auth } = createSupabaseAuthMock({ error: null })
-    vi.mocked(serverSupabaseClient).mockResolvedValue(client as never)
-
-    await handler(eventStub)
-
-    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('trainee@joynal.test', {
-      redirectTo: 'https://req.example.com/confirm'
-    })
+    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith('trainee@joynal.test')
   })
 
   it('送信失敗は 500', async () => {
