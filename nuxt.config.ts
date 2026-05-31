@@ -18,6 +18,14 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  runtimeConfig: {
+    public: {
+      // 本番のメールリンク等で使う公開 origin。NUXT_PUBLIC_SITE_URL で上書きし、
+      // 空ならサーバーがリクエスト origin にフォールバックする。
+      siteUrl: ''
+    }
+  },
+
   routeRules: {
     '/login': { ssr: false },
     '/reset-password': { ssr: false },

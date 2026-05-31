@@ -1,9 +1,16 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { AssignmentForAdmin, AssignmentForMentor } from '#shared/types/api'
-import { assignmentsMeQuerySchema } from '#shared/types/schemas'
+import { assignmentsMeQuerySchema, uuidSchema } from '#shared/types/schemas'
 
 export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMentor[]>>(async (event) => {
   const userId = await serverUserId(event)
+
+  // 防御的検証: userId は検証済み JWT の sub だが、後段の mentor/ojt 経路で PostgREST の
+  // .or() フィルタに文字列補間する。UUID 形状なら PostgREST のメタ文字（, . ( ) :）を
+  // 含み得ないため補間が安全になる。万一形状が壊れていれば未認証として弾く。
+  if (!uuidSchema.safeParse(userId).success) {
+    throw createError({ statusCode: 401, message: '認証が必要です' })
+  }
 
   const { year: yearInput } = parseQuery(event, assignmentsMeQuerySchema)
   const year = resolveYear(yearInput)

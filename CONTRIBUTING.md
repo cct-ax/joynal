@@ -25,6 +25,7 @@ cp .env.example .env
 # - NUXT_PUBLIC_SUPABASE_URL: Supabase プロジェクトの URL
 # - NUXT_PUBLIC_SUPABASE_KEY: Supabase の anon key
 # - NUXT_SUPABASE_SECRET_KEY: Supabase の service_role（secret）key（ユーザー管理・招待・無効化機能に必要。@nuxtjs/supabase v2 はこの名前で読む）
+# - NUXT_PUBLIC_SITE_URL: （任意）パスワードリセットメールのリンク先 origin（例 https://joynal.example.com）。未設定ならリクエストの origin にフォールバック
 
 # 開発サーバーを起動
 pnpm dev
@@ -154,7 +155,7 @@ type DailyReport = { id: string; content: string }
 
 ### フォームバリデーション
 
-Nuxt UI の `UForm` と `zod` を使います。詳しくは `app/components/FormExample.vue` を参照してください。
+Nuxt UI の `UForm` と `zod` を使います。スキーマは `shared/types/schemas.ts` に定義し（`#shared/types/schemas` でインポート）、`UForm` の `:schema` に渡します。実装例は `app/components/report/ReportInputModal.vue` などの既存モーダルを参照してください。
 
 ### トースト通知
 

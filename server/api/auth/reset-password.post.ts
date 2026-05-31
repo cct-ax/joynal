@@ -4,13 +4,13 @@ import { resetPasswordSchema } from '#shared/types/schemas'
 /**
  * POST /api/auth/reset-password
  * パスワードリセットメールを送信する。
- * リダイレクト先はサーバーでリクエスト origin から導出する（クライアント入力を信用せず
- * オープンリダイレクトを防ぐ）。本番では NUXT_PUBLIC_SITE_URL 等の runtimeConfig 化も検討。
+ * リダイレクト先はサーバー側で resolveSiteBaseUrl により決定し、クライアント入力を信用しない
+ * （オープンリダイレクト防止）。NUXT_PUBLIC_SITE_URL があればその origin、無ければリクエスト origin。
  */
 export default defineEventHandler(async (event) => {
   const { email } = await parseBody(event, resetPasswordSchema)
 
-  const redirectTo = new URL('/confirm', getRequestURL(event).origin).toString()
+  const redirectTo = new URL('/confirm', resolveSiteBaseUrl(event)).toString()
 
   const client = await serverSupabaseClient(event)
   const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo })

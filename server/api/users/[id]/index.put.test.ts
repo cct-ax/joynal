@@ -19,11 +19,20 @@ const mockCaller = (role: string) => {
   )
 }
 
-/** service role 経由の update 結果をモックする */
-const mockServiceUpdate = (result: QueryResult) => {
+/**
+ * service role 経由の update 結果をモックする。
+ * email 同期・ban で使う auth.admin.updateUserById も併設し、その spy を返す。
+ * authResult で auth 側の戻り（既定 success）を差し替えられる。
+ */
+const mockServiceUpdate = (
+  result: QueryResult,
+  authResult: { error: unknown } = { error: null }
+) => {
   const mock = createSupabaseClientMock(result)
-  vi.mocked(serverSupabaseServiceRole).mockReturnValue(mock.client as never)
-  return mock
+  const updateUserById = vi.fn(() => Promise.resolve(authResult))
+  const serviceClient = { ...mock.client, auth: { admin: { updateUserById } } }
+  vi.mocked(serverSupabaseServiceRole).mockReturnValue(serviceClient as never)
+  return { ...mock, updateUserById }
 }
 
 describe('PUT /api/users/[id]', () => {
@@ -85,5 +94,31 @@ describe('PUT /api/users/[id]', () => {
 
     const result = await handler(eventStub)
     expect(result).toEqual(updated)
+  })
+
+  // --- email を auth.users と同期 ---
+
+  it('email 変更時は auth.users の email も同期し profiles も更新する', async () => {
+    mockCaller('admin')
+    getRouterParamMock.mockReturnValue(otherId)
+    readBodyMock.mockResolvedValue({ email: 'new@joynal.test' })
+    const updated = { id: otherId, email: 'new@joynal.test' }
+    const { query, updateUserById } = mockServiceUpdate({ data: updated, error: null })
+
+    const result = await handler(eventStub)
+
+    expect(updateUserById).toHaveBeenCalledWith(otherId, { email: 'new@joynal.test', email_confirm: true })
+    expect(query.update).toHaveBeenCalledWith({ email: 'new@joynal.test' })
+    expect(result).toEqual(updated)
+  })
+
+  it('auth の email 重複(422)は 409 で profiles を更新しない', async () => {
+    mockCaller('admin')
+    getRouterParamMock.mockReturnValue(otherId)
+    readBodyMock.mockResolvedValue({ email: 'dup@joynal.test' })
+    const { query } = mockServiceUpdate({ data: null, error: null }, { error: { status: 422 } })
+
+    await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 409 })
+    expect(query.update).not.toHaveBeenCalled()
   })
 })

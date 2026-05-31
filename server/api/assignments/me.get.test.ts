@@ -61,6 +61,13 @@ describe('GET /api/assignments/me', () => {
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 401 })
   })
 
+  it('sub が UUID 形状でない場合は 401（profiles を引く前に弾く）', async () => {
+    vi.mocked(serverSupabaseUser).mockResolvedValue({ sub: 'not-a-uuid' } as never)
+    const { from } = mockClient({ profiles: { data: { role: 'admin' }, error: null } })
+    await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 401 })
+    expect(from).not.toHaveBeenCalled()
+  })
+
   it('プロフィール取得エラーは 500', async () => {
     mockClient({ profiles: { data: null, error: { message: 'boom' } } })
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 500 })
