@@ -11,10 +11,13 @@
  *
  * design プロト joynal-mentor-pc.html L946-956（newbieSelector）を Vue 化したもの。
  */
+/** 選択中の新人 ID（未選択時は null）。v-model で双方向バインド。 */
 const model = defineModel<string | null>()
 
 const props = defineProps<{
+  /** 新人の選択肢リスト（id / name） */
   options: { id: string, name: string }[]
+  /** true のとき「選択してください」プレースホルダを表示（admin 初期未選択） */
   placeholder?: boolean
 }>()
 

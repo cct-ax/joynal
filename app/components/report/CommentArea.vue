@@ -17,13 +17,18 @@ import type { UserRole, CommentWithCommenter } from '#shared/types/api'
 type CommentRole = Extract<UserRole, 'mentor' | 'ojt'>
 
 const props = defineProps<{
+  /** 表示対象週の開始日（月曜日） */
   weekStart: Date
+  /** メンターの週次コメント（未入力時は null） */
   mentorComment: CommentWithCommenter | null
+  /** OJT の週次コメント（未入力時は null） */
   ojtComment: CommentWithCommenter | null
+  /** 現在のユーザーロール（自分のロールと一致するときに編集ボタンを表示） */
   role: UserRole
 }>()
 
 const emit = defineEmits<{
+  /** コメント入力/編集ボタン押下時（対象ロールを渡す） */
   editComment: [target: CommentRole]
 }>()
 

@@ -2,6 +2,7 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { CommentWithCommenter } from '#shared/types/api'
 import { commentsQuerySchema } from '#shared/types/schemas'
 
+/** GET /api/comments — 指定週・新人の週次コメント一覧を投稿者プロフィール付きで返す。行の可視範囲は RLS に委譲。 */
 export default defineEventHandler<Promise<CommentWithCommenter[]>>(async (event) => {
   await serverUserId(event)
 

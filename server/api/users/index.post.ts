@@ -2,6 +2,10 @@ import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/serve
 import type { Profile } from '#shared/types/models'
 import { userCreateBodySchema } from '#shared/types/schemas'
 
+/**
+ * POST /api/users — ユーザーを招待作成し 201 を返す（管理者のみ）。
+ * auth.users を service role で先行作成後に profiles を挿入し、recovery OTP メールを送付する（送信失敗は非致命的）。
+ */
 export default defineEventHandler<Promise<Profile>>(async (event) => {
   const userId = await serverUserId(event)
 

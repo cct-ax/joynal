@@ -19,7 +19,9 @@ const props = withDefaults(
   defineProps<{
     /** DailyReport.mood が number | null のため受け取り側は緩めに許容する */
     modelValue: MoodValue | number | null | undefined
+    /** true のとき表示専用（クリック・ホバー不可） */
     readonly?: boolean
+    /** 星アイコンのサイズ */
     size?: 'xs' | 'sm' | 'md'
   }>(),
   { readonly: false, size: 'md' }

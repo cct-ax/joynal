@@ -1,5 +1,6 @@
 import type { Profile } from '#shared/types/models'
 
+/** ロールベースのルートガード。/admin は admin ロールのみ許可し、非 admin は /report へリダイレクトする。 */
 export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path !== '/admin') return
 

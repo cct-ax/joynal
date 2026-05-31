@@ -12,8 +12,11 @@
 import type { PersonOption } from '#shared/types/api'
 
 const props = defineProps<{
+  /** 編集対象の新人名 */
   traineeName: string
+  /** メンター選択肢 */
   mentorOptions: PersonOption[]
+  /** OJT 選択肢 */
   ojtOptions: PersonOption[]
 }>()
 

@@ -3,6 +3,7 @@ import type { DailyReport } from '#shared/types/models'
 import { reportsQuerySchema } from '#shared/types/schemas'
 import { parseYmd, addDays, formatYmd } from '#shared/utils/date'
 
+/** GET /api/reports — 指定週（weekStart〜+6日）の日報一覧。userId 指定で絞り込み可。行の可視範囲は RLS に委譲。 */
 export default defineEventHandler<Promise<DailyReport[]>>(async (event) => {
   // 認証ゲート（未認証は 401）。行レベルの可視範囲は RLS に委譲する。
   await serverUserId(event)

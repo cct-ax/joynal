@@ -2,6 +2,10 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { MentorAssignment } from '#shared/types/models'
 import { assignmentUpsertBodySchema } from '#shared/types/schemas'
 
+/**
+ * PUT /api/assignments — メンター/OJT 割り当てを upsert する（trainee_id + year が一意キー）。
+ * 認可は RLS に委譲（管理者のみ INSERT/UPDATE 可）。ユーザー不在は 404、権限不足は 403 を返す。
+ */
 export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
   await serverUserId(event)
 

@@ -14,7 +14,9 @@ import type { Profile } from '#shared/types/models'
 
 withDefaults(
   defineProps<{
+    /** 表示するユーザー一覧 */
     users: Profile[]
+    /** テーブルのローディング状態 */
     loading?: boolean
     /** ログイン中ユーザーの id。自分の行は無効化を抑止し「あなた」バッジを出す。 */
     currentUserId?: string
@@ -26,7 +28,9 @@ withDefaults(
 )
 
 const emit = defineEmits<{
+  /** 編集ボタン押下時（対象ユーザーを渡す） */
   edit: [user: Profile]
+  /** 有効化/無効化ボタン押下時（id と新しい is_active を渡す） */
   setActive: [id: string, isActive: boolean]
 }>()
 

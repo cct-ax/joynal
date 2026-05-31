@@ -14,16 +14,24 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import type { CommentWithCommenter } from '#shared/types/api'
 import { commentSchema, type CommentSchema } from '#shared/types/schemas'
 
+/** モーダルの開閉状態（v-model:open） */
 const open = defineModel<boolean>('open')
 
 const props = defineProps<{
+  /** 対象週の開始日（月曜日）。API ボディの weekStart に使う。 */
   weekStart: Date
+  /** コメント対象の新人 ID */
   traineeId: string
+  /** コメントを書くロール（mentor / ojt）。モーダルタイトルには使わない。 */
   targetRole: 'mentor' | 'ojt'
+  /** 既存コメント（編集時）。null なら新規入力モード。 */
   existing: CommentWithCommenter | null
 }>()
 
-const emit = defineEmits<{ saved: [] }>()
+const emit = defineEmits<{
+  /** 保存完了時（親側でリスト再取得を行う） */
+  saved: []
+}>()
 
 const toast = useToast()
 const apiError = useApiError()

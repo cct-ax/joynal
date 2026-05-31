@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/** メール認証リンク経由のトークン交換ページ。@nuxtjs/supabase が自動処理し、完了後 /report へリダイレクトする。 */
 // @nuxtjs/supabase がトークン交換を自動処理する
 // 処理完了後に /report へリダイレクト
 definePageMeta({ layout: false })

@@ -1,6 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { uuidSchema } from '#shared/types/schemas'
 
+/** DELETE /api/reports/:id — 日報を削除し 204 を返す。削除権限は RLS に委譲（権限不足は 403、対象不存在は 404）。 */
 export default defineEventHandler(async (event) => {
   await serverUserId(event)
 

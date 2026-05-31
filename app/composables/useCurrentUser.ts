@@ -3,6 +3,13 @@ import { getFetchStatus } from '~/utils/fetchError'
 import { reuseAsyncData } from '~/utils/asyncDataCache'
 import { isUserRole } from '~/utils/role'
 
+/**
+ * ログインユーザーのプロフィールとロールを返す composable。
+ * /api/users/me を共有キー 'current-user' でキャッシュし、複数コンポーネントから
+ * 呼んでも取得リクエストを 1 回に集約する。
+ * @returns profile（プロフィール情報）、pending（ローディング中）、profileMissing（招待未経由の 404）、
+ *          role（ユーザーロール）、isAdmin / isMentor / isOjt / isTrainee（ロール判定フラグ）
+ */
 export const useCurrentUser = () => {
   const user = useSupabaseUser()
   const requestFetch = useRequestFetch()

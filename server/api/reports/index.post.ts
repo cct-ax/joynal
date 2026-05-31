@@ -2,6 +2,10 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { DailyReport } from '#shared/types/models'
 import { reportCreateBodySchema } from '#shared/types/schemas'
 
+/**
+ * POST /api/reports — 日報を新規作成し 201 を返す。
+ * user_id はサーバー側でセッションから付与。日付重複は 409、書き込み権限は RLS に委譲（権限不足は 403）。
+ */
 export default defineEventHandler<Promise<DailyReport>>(async (event) => {
   const userId = await serverUserId(event)
 

@@ -2,6 +2,11 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { DailyReport, DailyReportUpdate } from '#shared/types/models'
 import { reportUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 
+/**
+ * PUT /api/reports/:id — 日報を部分更新する。
+ * check_in/check_out を片方のみ更新する場合は既存値を読み出して出勤<退勤を検証する。
+ * 更新権限は RLS に委譲（権限不足は 403、対象不存在は 404）。
+ */
 export default defineEventHandler<Promise<DailyReport>>(async (event) => {
   await serverUserId(event)
 

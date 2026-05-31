@@ -12,7 +12,10 @@
  */
 import type { UserRole } from '#shared/types/api'
 
-defineProps<{ role: UserRole }>()
+defineProps<{
+  /** 表示するユーザーロール */
+  role: UserRole
+}>()
 </script>
 
 <template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/** ログインページ。メールアドレスとパスワードで認証し、成功後 /report へ遷移する。 */
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { loginSchema, type LoginSchema } from '#shared/types/schemas'
 import { RESET_SUCCESS_QUERY_KEY, RESET_SUCCESS_QUERY_VALUE } from '~/utils/passwordReset'

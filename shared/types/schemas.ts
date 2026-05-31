@@ -91,6 +91,7 @@ export const resetWithOtpSchema = z
     message: 'パスワードが一致しません'
   })
 
+/** 管理画面のユーザー招待フォーム用スキーマ */
 export const userCreateSchema = z.object({
   name: z.string().min(1, '名前は必須です'),
   employee_id: z.string().trim().min(1, '社員IDは必須です').max(50, '社員IDは50文字以内で入力してください'),
@@ -100,6 +101,7 @@ export const userCreateSchema = z.object({
   })
 })
 
+/** メンター/OJT 割り当てフォーム用スキーマ */
 export const assignmentSchema = z.object({
   traineeId: z.guid('有効なユーザーIDを指定してください'),
   mentorId: z.guid().nullable(),
@@ -216,11 +218,19 @@ export const resetPasswordOtpBodySchema = z.object({
 // 型の導出
 // ----------------------------------------------------------------
 
+/** 日報フォームの出力型 */
 export type ReportSchema = z.output<typeof reportSchema>
+/** 週次コメントフォームの出力型 */
 export type CommentSchema = z.output<typeof commentSchema>
+/** ログインフォームの出力型 */
 export type LoginSchema = z.output<typeof loginSchema>
+/** パスワードリセット申請フォームの出力型 */
 export type ResetPasswordSchema = z.output<typeof resetPasswordSchema>
+/** パスワード変更フォームの出力型 */
 export type PasswordChangeSchema = z.output<typeof passwordChangeSchema>
+/** OTP 方式パスワードリセットフォームの出力型 */
 export type ResetWithOtpSchema = z.output<typeof resetWithOtpSchema>
+/** ユーザー招待フォームの出力型 */
 export type UserCreateSchema = z.output<typeof userCreateSchema>
+/** メンター/OJT 割り当てフォームの出力型 */
 export type AssignmentSchema = z.output<typeof assignmentSchema>

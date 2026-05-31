@@ -13,15 +13,20 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import { userCreateSchema, type UserCreateSchema } from '#shared/types/schemas'
 import type { Profile } from '#shared/types/models'
 
+/** モーダルの開閉状態（v-model:open） */
 const open = defineModel<boolean>('open')
 
 const props = defineProps<{
+  /** 編集対象ユーザー（null / undefined なら招待モード） */
   user?: Profile | null
   /** ログイン中ユーザーの id。自分自身の編集時は役割変更を抑止する。 */
   currentUserId?: string
 }>()
 
-const emit = defineEmits<{ saved: [] }>()
+const emit = defineEmits<{
+  /** 保存完了時（親側でユーザー一覧を再取得する） */
+  saved: []
+}>()
 
 const toast = useToast()
 const apiError = useApiError()

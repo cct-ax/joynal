@@ -1,6 +1,10 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 import type { Profile } from '#shared/types/models'
 
+/**
+ * GET /api/users — 全ユーザーの一覧を返す（管理者のみ）。
+ * email はカラム権限で authenticated に非公開のため、service role クライアントで取得する。
+ */
 export default defineEventHandler<Promise<Profile[]>>(async (event) => {
   const userId = await serverUserId(event)
 

@@ -4,8 +4,10 @@ import type { Comment, Profile } from './models'
 // Shared
 // ----------------------------------------------------------------
 
+/** アプリケーション全体で使用するユーザーロール */
 export type UserRole = 'trainee' | 'mentor' | 'ojt' | 'admin'
 
+/** 有効なロールの一覧（バリデーションや選択肢生成に使用） */
 export const VALID_ROLES: readonly UserRole[] = ['trainee', 'mentor', 'ojt', 'admin']
 
 /**
@@ -25,11 +27,13 @@ export const isMoodValue = (v: unknown): v is MoodValue =>
 // Reports
 // ----------------------------------------------------------------
 
+/** GET /api/reports のクエリ（対象週と任意のユーザー絞り込み） */
 export type ReportsQuery = {
   weekStart: string
   userId?: string
 }
 
+/** POST /api/reports のリクエストボディ */
 export type ReportCreateBody = {
   date: string
   check_in: string
@@ -38,6 +42,7 @@ export type ReportCreateBody = {
   mood?: MoodValue
 }
 
+/** PUT /api/reports/[id] のリクエストボディ（全フィールド任意） */
 export type ReportUpdateBody = {
   check_in?: string
   check_out?: string
@@ -49,17 +54,20 @@ export type ReportUpdateBody = {
 // Comments
 // ----------------------------------------------------------------
 
+/** GET /api/comments のクエリ（対象週と新人 ID） */
 export type CommentsQuery = {
   weekStart: string
   traineeId: string
 }
 
+/** PUT /api/comments のリクエストボディ（週次コメント upsert） */
 export type CommentUpsertBody = {
   weekStart: string
   traineeId: string
   content: string
 }
 
+/** コメントにコメント投稿者の名前・ロールを結合したレスポンス型 */
 export type CommentWithCommenter = Comment & {
   commenter: Pick<Profile, 'name' | 'role'>
 }
@@ -68,10 +76,12 @@ export type CommentWithCommenter = Comment & {
 // Assignments
 // ----------------------------------------------------------------
 
+/** GET /api/assignments/me のクエリ（任意の年度絞り込み） */
 export type AssignmentsMeQuery = {
   year?: string
 }
 
+/** PUT /api/assignments のリクエストボディ（メンター/OJT 割り当て upsert） */
 export type AssignmentUpsertBody = {
   traineeId: string
   mentorId: string | null
@@ -79,12 +89,14 @@ export type AssignmentUpsertBody = {
   year?: number
 }
 
+/** メンター向け担当新人一覧の行型（氏名・社員 ID のみ） */
 export type AssignmentForMentor = {
   trainee_id: string
   year: number
   trainee: Pick<Profile, 'name' | 'employee_id'>
 }
 
+/** 管理者向け担当割り当て一覧の行型（新人・メンター・OJT の氏名を含む） */
 export type AssignmentForAdmin = {
   trainee_id: string
   mentor_id: string | null
@@ -99,6 +111,7 @@ export type AssignmentForAdmin = {
 // Users
 // ----------------------------------------------------------------
 
+/** POST /api/users のリクエストボディ（管理者によるユーザー招待） */
 export type UserCreateBody = {
   name: string
   employee_id: string
@@ -106,6 +119,7 @@ export type UserCreateBody = {
   role: UserRole
 }
 
+/** PUT /api/users/[id] のリクエストボディ（全フィールド任意） */
 export type UserUpdateBody = {
   name?: string
   employee_id?: string

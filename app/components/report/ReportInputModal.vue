@@ -16,14 +16,20 @@ import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBo
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
 const props = defineProps<{
+  /** 開閉状態（v-model:open） */
   open: boolean
+  /** 入力対象日（YYYY-MM-DD）。新規入力時に使用。report がある場合は report.date を優先。 */
   date: string | null
+  /** 編集対象の日報（null なら新規入力モード） */
   report: DailyReport | null
 }>()
 
 const emit = defineEmits<{
+  /** 開閉状態の更新（v-model:open） */
   'update:open': [value: boolean]
+  /** 保存完了時（親側でリスト再取得を行う） */
   'saved': []
+  /** 削除完了時（親側でリスト再取得を行う） */
   'deleted': []
 }>()
 

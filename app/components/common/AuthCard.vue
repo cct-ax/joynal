@@ -13,7 +13,9 @@
  */
 withDefaults(
   defineProps<{
+    /** ブランド名（省略時は非表示） */
     title?: string
+    /** ブランド名下のサブテキスト（省略時は非表示） */
     subtitle?: string
   }>(),
   { title: '', subtitle: '' }

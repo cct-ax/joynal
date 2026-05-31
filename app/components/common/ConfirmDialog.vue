@@ -17,12 +17,19 @@
  */
 const props = withDefaults(
   defineProps<{
+    /** 開閉状態（v-model:open） */
     open: boolean
+    /** ダイアログ見出し */
     title?: string
+    /** 本文メッセージ */
     message: string
+    /** 確認ボタンのラベル */
     confirmLabel?: string
+    /** キャンセルボタンのラベル */
     cancelLabel?: string
+    /** 確認ボタンの色（error=破壊的操作、primary=一般） */
     confirmColor?: 'primary' | 'error'
+    /** 確認ボタンのローディング状態 */
     loading?: boolean
   }>(),
   {
@@ -35,8 +42,11 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
+  /** 開閉状態の更新（v-model:open） */
   'update:open': [value: boolean]
+  /** 確認ボタン押下時 */
   'confirm': []
+  /** キャンセル時（キャンセルボタン押下またはモーダル外クリック） */
   'cancel': []
 }>()
 

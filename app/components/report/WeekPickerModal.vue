@@ -15,11 +15,15 @@
 import { CalendarDate, type DateValue } from '@internationalized/date'
 
 const props = defineProps<{
+  /** 開閉状態（v-model:open） */
   open: boolean
+  /** 現在選択中の週の任意の日（ハイライト・初期表示月の基準） */
   currentWeek: Date
 }>()
 const emit = defineEmits<{
+  /** 開閉状態の更新（v-model:open） */
   'update:open': [value: boolean]
+  /** 週選択確定時（その週の月曜日を渡す） */
   'select': [value: Date]
 }>()
 

@@ -21,15 +21,22 @@ import type { UserRole } from '#shared/types/api'
 import type { DailyReport } from '#shared/types/models'
 
 const props = defineProps<{
+  /** この行が表す日付 */
   date: Date
+  /** その日の日報（未入力時は null） */
   report: DailyReport | null
+  /** 現在のユーザーロール（trainee のみ編集ペンを表示） */
   role: UserRole
+  /** 詳細展開中かどうか（親が管理する） */
   isExpanded?: boolean
 }>()
 
 const emit = defineEmits<{
+  /** 未入力の日付で入力モーダルを開く（trainee のみ） */
   inputReport: [date: Date]
+  /** 既存日報の編集モーダルを開く（trainee のみ） */
   editReport: [report: DailyReport]
+  /** 行の詳細パネル開閉を親に通知 */
   toggleDetail: [date: Date]
 }>()
 

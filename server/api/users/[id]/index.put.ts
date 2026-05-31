@@ -5,6 +5,11 @@ import { userUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 // 実質的な永久 ban（Supabase は 'none' で解除、それ以外は PostgreSQL interval 文字列）
 const BAN_DURATION_PERMANENT = '876000h'
 
+/**
+ * PUT /api/users/:id — ユーザー情報を更新する（管理者のみ）。
+ * email 変更時は auth.users を先に更新して一意性を保証。is_active 変更時は ban_duration で GoTrue セッションを制御する。
+ * 自己ロックアウト防止のため、管理者は自分自身の権限降格・無効化は不可。
+ */
 export default defineEventHandler<Promise<Profile>>(async (event) => {
   const userId = await serverUserId(event)
 

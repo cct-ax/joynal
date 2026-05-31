@@ -12,9 +12,11 @@
  *   <WeekNavigator v-model="currentWeekStart" />
  */
 const props = defineProps<{
+  /** 現在表示中の週の開始日（月曜日）。v-model で双方向バインド。 */
   modelValue: Date
 }>()
 const emit = defineEmits<{
+  /** 週の変更（前週・次週・今週・ピッカー選択時に emit） */
   'update:modelValue': [value: Date]
 }>()
 

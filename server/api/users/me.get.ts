@@ -1,6 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { CurrentUserProfile } from '#shared/types/api'
 
+/** GET /api/users/me — ログインユーザー自身のプロフィールを返す（email は PII のため除外）。 */
 export default defineEventHandler<Promise<CurrentUserProfile>>(async (event) => {
   const userId = await serverUserId(event)
   const client = await serverSupabaseClient(event)

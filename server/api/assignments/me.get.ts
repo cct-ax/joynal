@@ -2,6 +2,10 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { AssignmentForAdmin, AssignmentForMentor } from '#shared/types/api'
 import { assignmentsMeQuerySchema, uuidSchema } from '#shared/types/schemas'
 
+/**
+ * GET /api/assignments/me — 自分の担当新人一覧を返す（trainee は 403）。
+ * admin は全割り当てを AssignmentForAdmin[]、mentor/ojt は自分が担当する新人のみ AssignmentForMentor[] で返す。
+ */
 export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMentor[]>>(async (event) => {
   const userId = await serverUserId(event)
 

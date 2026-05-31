@@ -9,8 +9,11 @@
 import { Icon } from '@iconify/vue'
 
 defineProps<{
+  /** 表示する絵文字（icon と排他） */
   emoji?: string
+  /** Iconify アイコン名（emoji と排他） */
   icon?: string
+  /** 空状態の説明テキスト */
   message: string
 }>()
 </script>

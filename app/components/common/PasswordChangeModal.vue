@@ -12,8 +12,14 @@
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { passwordChangeSchema, type PasswordChangeSchema } from '#shared/types/schemas'
 
-const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ 'update:open': [value: boolean] }>()
+const props = defineProps<{
+  /** 開閉状態（v-model:open） */
+  open: boolean
+}>()
+const emit = defineEmits<{
+  /** 開閉状態の更新（v-model:open） */
+  'update:open': [value: boolean]
+}>()
 
 const toast = useToast()
 const apiError = useApiError()
