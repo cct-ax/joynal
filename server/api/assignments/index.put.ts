@@ -24,14 +24,9 @@ export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
     .single()
 
   if (error) {
-    if (error.code === '23503') {
-      throw createError({ statusCode: 404, message: '指定されたユーザーが存在しません' })
-    }
-    if (error.code === '42501') {
-      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-    }
-    console.error('[api/assignments PUT]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/assignments PUT', {
+      23503: { statusCode: 404, message: '指定されたユーザーが存在しません' }
+    })
   }
 
   return data

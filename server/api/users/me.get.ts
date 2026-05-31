@@ -14,8 +14,7 @@ export default defineEventHandler<Promise<CurrentUserProfile>>(async (event) => 
     .maybeSingle()
 
   if (error) {
-    console.error('[api/users/me GET]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/users/me GET')
   }
 
   if (!data) {

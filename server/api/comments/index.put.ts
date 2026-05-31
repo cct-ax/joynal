@@ -22,11 +22,7 @@ export default defineEventHandler<Promise<Comment>>(async (event) => {
     .single()
 
   if (error) {
-    if (error.code === '42501') {
-      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-    }
-    console.error('[api/comments PUT]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/comments PUT')
   }
 
   return data

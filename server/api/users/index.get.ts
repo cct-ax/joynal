@@ -29,8 +29,7 @@ export default defineEventHandler<Promise<Profile[]>>(async (event) => {
     .order('created_at', { ascending: true })
 
   if (error) {
-    console.error('[api/users GET]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/users GET')
   }
 
   return data

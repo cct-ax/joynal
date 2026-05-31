@@ -74,19 +74,15 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     .single()
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      throw createError({ statusCode: 404, message: 'ユーザーが見つかりません' })
-    }
     // employee_id の UNIQUE 衝突（社員ID重複）。email 一意性は上段の auth で担保済み。
-    if (error.code === '23505') {
-      throw createError({
+    throwSupabaseError(error, 'api/users/:id PUT profile update', {
+      PGRST116: { statusCode: 404, message: 'ユーザーが見つかりません' },
+      23505: {
         statusCode: 409,
         statusMessage: 'Conflict',
         data: { message: 'この社員IDは既に使用されています', code: 'EMPLOYEE_ID_TAKEN' }
-      })
-    }
-    console.error('[api/users/:id PUT] profile update', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+      }
+    })
   }
 
   if (is_active !== undefined) {

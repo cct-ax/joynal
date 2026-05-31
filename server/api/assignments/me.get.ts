@@ -27,8 +27,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
     .single()
 
   if (profileError) {
-    console.error('[api/assignments/me GET] profile fetch', profileError)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(profileError, 'api/assignments/me GET profile fetch')
   }
 
   if (profile.role === 'trainee') {
@@ -51,8 +50,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
       .overrideTypes<AssignmentForAdmin[], { merge: false }>()
 
     if (error) {
-      console.error('[api/assignments/me GET] admin query', error)
-      throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+      throwSupabaseError(error, 'api/assignments/me GET admin query')
     }
 
     return data
@@ -70,8 +68,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
     .overrideTypes<AssignmentForMentor[], { merge: false }>()
 
   if (error) {
-    console.error('[api/assignments/me GET] mentor query', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/assignments/me GET mentor query')
   }
 
   return data

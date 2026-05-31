@@ -45,15 +45,13 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
 
   if (error) {
     await serviceClient.auth.admin.deleteUser(authUser.user.id)
-    if (error.code === '23505') {
-      throw createError({
+    throwSupabaseError(error, 'api/users POST profile insert', {
+      23505: {
         statusCode: 409,
         statusMessage: 'Conflict',
         data: { message: 'この社員IDは既に使用されています', code: 'EMPLOYEE_ID_TAKEN' }
-      })
-    }
-    console.error('[api/users POST] profile insert', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+      }
+    })
   }
 
   // 招待メール: 初期パスワード設定のため recovery OTP を送る（リンク不使用・/reset-password で設定）。

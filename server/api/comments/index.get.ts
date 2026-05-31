@@ -27,8 +27,7 @@ export default defineEventHandler<Promise<CommentWithCommenter[]>>(async (event)
     .overrideTypes<CommentWithCommenter[], { merge: false }>()
 
   if (error) {
-    console.error('[api/comments GET]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/comments GET')
   }
 
   return data

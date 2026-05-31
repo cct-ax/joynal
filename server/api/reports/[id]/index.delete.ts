@@ -14,11 +14,7 @@ export default defineEventHandler(async (event) => {
     .eq('id', id)
 
   if (error) {
-    if (error.code === '42501') {
-      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-    }
-    console.error('[api/reports/:id DELETE]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/reports/:id DELETE')
   }
 
   if (count === 0) {

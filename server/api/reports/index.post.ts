@@ -19,14 +19,9 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
     .single()
 
   if (error) {
-    if (error.code === '23505') {
-      throw createError({ statusCode: 409, message: '同じ日付の日報が既に存在します' })
-    }
-    if (error.code === '42501') {
-      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-    }
-    console.error('[api/reports POST]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/reports POST', {
+      23505: { statusCode: 409, message: '同じ日付の日報が既に存在します' }
+    })
   }
 
   setResponseStatus(event, 201)

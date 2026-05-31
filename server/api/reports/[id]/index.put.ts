@@ -32,14 +32,9 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
       .single()
 
     if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        throw createError({ statusCode: 404, message: '日報が見つかりません' })
-      }
-      if (fetchError.code === '42501') {
-        throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-      }
-      console.error('[api/reports/:id PUT] fetch', fetchError)
-      throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+      throwSupabaseError(fetchError, 'api/reports/:id PUT fetch', {
+        PGRST116: { statusCode: 404, message: '日報が見つかりません' }
+      })
     }
 
     const effectiveIn = (check_in ?? current.check_in).slice(0, 5)
@@ -57,14 +52,9 @@ export default defineEventHandler<Promise<DailyReport>>(async (event) => {
     .single()
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      throw createError({ statusCode: 404, message: '日報が見つかりません' })
-    }
-    if (error.code === '42501') {
-      throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-    }
-    console.error('[api/reports/:id PUT]', error)
-    throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
+    throwSupabaseError(error, 'api/reports/:id PUT', {
+      PGRST116: { statusCode: 404, message: '日報が見つかりません' }
+    })
   }
 
   return data
