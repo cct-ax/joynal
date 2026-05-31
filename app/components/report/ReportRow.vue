@@ -148,40 +148,13 @@ const onPencil = (): void => {
     </div>
 
     <!-- 詳細展開（PC） -->
-    <Transition
-      enter-active-class="transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none"
-      enter-from-class="opacity-0 -translate-y-1"
-      leave-active-class="transition-[opacity,transform] duration-150 ease-in motion-reduce:transition-none"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div
-        v-if="isExpanded && report"
-        :id="`${baseId}-pc`"
-        class="px-5 py-4 bg-primary/5 border-t border-default"
-      >
-        <div class="flex flex-wrap gap-4 mb-3 text-sm">
-          <span class="text-muted tabular-nums">
-            出勤 <strong class="text-highlighted">{{ toHm(report.check_in) }}</strong>
-          </span>
-          <span class="text-muted tabular-nums">
-            退勤 <strong class="text-highlighted">{{ toHm(report.check_out) }}</strong>
-          </span>
-          <span
-            v-if="report.mood"
-            class="flex items-center gap-1 text-muted"
-          >
-            気分 <MoodStars
-              :model-value="report.mood"
-              readonly
-              size="sm"
-            />
-          </span>
-        </div>
-        <p class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
-          {{ report.content }}
-        </p>
-      </div>
-    </Transition>
+    <ReportRowDetail
+      v-if="report"
+      :report="report"
+      variant="pc"
+      :panel-id="`${baseId}-pc`"
+      :is-open="isExpanded ?? false"
+    />
   </div>
 
   <!-- SP レイアウト -->
@@ -259,21 +232,12 @@ const onPencil = (): void => {
       </div>
     </div>
     <!-- SP 詳細展開 -->
-    <Transition
-      enter-active-class="transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none"
-      enter-from-class="opacity-0 -translate-y-1"
-      leave-active-class="transition-[opacity,transform] duration-150 ease-in motion-reduce:transition-none"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div
-        v-if="isExpanded && report"
-        :id="`${baseId}-sp`"
-        class="px-4 py-3 bg-primary/5"
-      >
-        <p class="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
-          {{ report.content }}
-        </p>
-      </div>
-    </Transition>
+    <ReportRowDetail
+      v-if="report"
+      :report="report"
+      variant="sp"
+      :panel-id="`${baseId}-sp`"
+      :is-open="isExpanded ?? false"
+    />
   </div>
 </template>
