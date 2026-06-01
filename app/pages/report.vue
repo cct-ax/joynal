@@ -179,14 +179,14 @@ const onCommentSaved = async (): Promise<void> => {
     <!-- mentor/ojt は担当0件: 自分で割り当てできないので管理者に連絡を促す -->
     <EmptyState
       v-if="mentorNoTrainees"
-      emoji="📋"
+      icon="i-lucide-clipboard-list"
       message="担当の新人がまだ割り当てられていません。管理者にお問い合わせください。"
     />
 
     <!-- admin は新人0件: 管理画面で新人を追加するよう CTA を表示する -->
     <EmptyState
       v-else-if="adminNoTrainees"
-      emoji="📋"
+      icon="i-lucide-clipboard-list"
       message="新人がまだ登録されていません"
     >
       <UButton
@@ -201,7 +201,7 @@ const onCommentSaved = async (): Promise<void> => {
     <!-- admin 初期など未選択のときは空状態 -->
     <EmptyState
       v-else-if="showEmpty"
-      emoji="📋"
+      icon="i-lucide-clipboard-list"
       message="閲覧する新人を選択してください"
     />
 

@@ -145,9 +145,13 @@ defineExpose({ requestCode, submitNewPassword })
         <p
           v-if="codeSent"
           role="status"
-          class="mt-1 text-sm text-green-600 dark:text-green-400"
+          class="mt-1 flex items-center gap-1 text-sm text-green-600 dark:text-green-400"
         >
-          ✓ 確認コードを送信しました
+          <UIcon
+            name="i-lucide-check"
+            class="size-4 shrink-0"
+          />
+          確認コードを送信しました
         </p>
       </UFormField>
       <UFormField
@@ -200,9 +204,13 @@ defineExpose({ requestCode, submitNewPassword })
     <template #footer>
       <NuxtLink
         to="/login"
-        class="block text-center text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+        class="flex items-center justify-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
       >
-        ← ログイン画面に戻る
+        <UIcon
+          name="i-lucide-arrow-left"
+          class="size-4"
+        />
+        ログイン画面に戻る
       </NuxtLink>
     </template>
   </AuthCard>

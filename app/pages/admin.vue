@@ -192,7 +192,7 @@ const statItems = computed(() => {
 
           <EmptyState
             v-else-if="rows.length === 0"
-            emoji="👥"
+            icon="i-lucide-users"
             message="割り当て対象の新人がいません"
           />
 

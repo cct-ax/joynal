@@ -9,10 +9,9 @@
  * - 同じ星を再クリックすると null（未入力）に戻る。
  * - ホバー時は一時的にその位置までハイライト。
  *
- * アイコンは @iconify/vue の <Icon> を使う。動的なクラス制御（fill 状態切替）が
- * UIcon 経由よりも素直なため。
+ * アイコンは Nuxt UI の <UIcon> を使う。塗り状態は `i-mdi-star`（塗り）/
+ * `i-mdi-star-outline`（線）の名前出し分け＋ text-* の色で表現する。
  */
-import { Icon } from '@iconify/vue'
 import { MOOD_VALUES, type MoodValue } from '#shared/types/api'
 
 const props = withDefaults(
@@ -80,8 +79,8 @@ const onMouseLeave = (): void => {
       :aria-label="readonly ? undefined : `気分 ${n}`"
       v-on="readonly ? {} : { click: () => onClick(n), mouseenter: () => onMouseEnter(n), mouseleave: onMouseLeave }"
     >
-      <Icon
-        :icon="n <= displayValue ? 'mdi:star' : 'mdi:star-outline'"
+      <UIcon
+        :name="n <= displayValue ? 'i-mdi-star' : 'i-mdi-star-outline'"
         aria-hidden="true"
         :class="[
           sizeClass,

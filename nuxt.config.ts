@@ -36,7 +36,6 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: [
-        '@iconify/vue',
         '@internationalized/date',
         'zod'
       ]
