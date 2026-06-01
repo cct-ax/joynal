@@ -143,7 +143,7 @@ graph TD
 | `AppHeader.vue` / `AppFooter.vue` | 共通ヘッダー（ユーザーメニュー・ログアウト）／フッター | `layouts/default.vue` |
 | `AuthCard.vue` | ログイン等のカード枠 | `login` / `reset-password` |
 | `PasswordChangeModal.vue` | パスワード変更モーダル | `AppHeader` |
-| `EmptyState.vue` | 空状態プレースホルダ（絵文字/アイコン＋メッセージ＋slot） | `report.vue` ほか |
+| `EmptyState.vue` | 空状態プレースホルダ（アイコン＋メッセージ＋slot） | `report.vue` ほか |
 | `ConfirmDialog.vue` | 破壊的操作の確認ダイアログ | 削除確認など |
 | `RoleBadge.vue` | ロールバッジ | `CommentArea` ほか |
 
