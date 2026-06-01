@@ -2,9 +2,11 @@
   "recommendations": [
     "Vue.volar",
     "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
     "antfu.nuxt",
     "eamodio.gitlens",
     "usernamehw.errorlens"
+  ],
+  "unwantedRecommendations": [
+    "esbenp.prettier-vscode"
   ]
 }
