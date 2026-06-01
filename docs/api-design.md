@@ -348,6 +348,35 @@ null  // 204 No Content
 
 ### ユーザー管理 `/api/users`
 
+#### `GET /api/users/me` — ログインユーザー自身のプロフィール取得
+
+**対象ロール**: 全員（ログイン済み）
+
+> `useCurrentUser` composable が内部で呼び出す。`email` は PII 保護のため返さない（DB 側でもカラム権限で `authenticated` から除外）。
+
+**レスポンス** `200 OK`
+
+```json
+{
+  "id": "uuid",
+  "employee_id": "E001",
+  "name": "山田 太郎",
+  "role": "trainee",
+  "is_active": true,
+  "created_at": "2026-04-01T00:00:00Z",
+  "updated_at": "2026-04-01T00:00:00Z"
+}
+```
+
+**エラー**
+
+| ステータス | 条件 |
+|----------|------|
+| 401 | 未ログイン |
+| 404 | プロフィールが存在しない（招待のみ作成されるため、行が無いユーザー） |
+
+---
+
 #### `GET /api/users` — ユーザー一覧取得
 
 **対象ロール**: 管理者のみ
@@ -381,12 +410,14 @@ null  // 204 No Content
 
 **対象ロール**: 管理者のみ
 
-> Supabase Auth にユーザーを作成し、`profiles` テーブルにレコードを挿入する。`employee_id` は自動採番。
+> service role で Supabase Auth にユーザーを作成し、`profiles` テーブルにレコードを挿入する。`employee_id` は**管理者が手入力**する（自動採番はしない）。
+> 作成後、初期パスワード設定のため recovery OTP（確認コード）メールを送付する（リンクは使わず `/reset-password` でコード入力）。メール送信に失敗してもユーザー作成自体は成功扱いとする（本人が「パスワードをお忘れの方」から再送できる）。
 
 **リクエストボディ**
 
 ```json
 {
+  "employee_id": "E001",
   "name": "新しい 社員",
   "email": "new@example.com",
   "role": "trainee"
@@ -395,6 +426,7 @@ null  // 204 No Content
 
 | フィールド | 型 | 必須 | 説明 |
 |-----------|-----|:---:|------|
+| `employee_id` | `string` | ○ | 社員ID（自由形式・最大50文字・一意） |
 | `name` | `string` | ○ | 表示名 |
 | `email` | `string` | ○ | メールアドレス（Supabase Auth に登録） |
 | `role` | `string` | ○ | `trainee` / `mentor` / `ojt` / `admin` |
@@ -408,6 +440,7 @@ null  // 204 No Content
 | 400 | 必須項目不足 / 不正な role |
 | 403 | 管理者以外のロールが呼び出した |
 | 409 | 同じメールアドレスが既に存在する |
+| 409 | 同じ社員IDが既に存在する（`{ code: "EMPLOYEE_ID_TAKEN" }`） |
 
 ---
 
@@ -419,12 +452,21 @@ null  // 204 No Content
 
 ```json
 {
+  "employee_id": "E002",
   "name": "更新後の名前",
   "email": "updated@example.com",
   "role": "mentor",
   "is_active": false
 }
 ```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|:---:|------|
+| `employee_id` | `string` | × | 社員ID（自由形式・最大50文字・一意） |
+| `name` | `string` | × | 表示名 |
+| `email` | `string` | × | メールアドレス |
+| `role` | `string` | × | `trainee` / `mentor` / `ojt` / `admin` |
+| `is_active` | `boolean` | × | 無効化フラグ |
 
 **レスポンス** `200 OK` — 更新後の profiles レコード
 
@@ -437,6 +479,65 @@ null  // 204 No Content
 | 400 | 不正な role |
 | 403 | 管理者以外のロールが呼び出した |
 | 404 | 対象ユーザーが存在しない |
+| 409 | 同じメール / 社員IDが既に存在する |
+
+---
+
+### 認証 `/api/auth`
+
+> 認証も `server/api/auth/*` 経由で行い、ブラウザから `supabase.auth.*` を直接呼ばない。
+> 成功時のステータスはいずれも `204 No Content`（ボディなし）。セッションは `@supabase/ssr` の Cookie アダプタが Set-Cookie で管理する。
+
+#### `POST /api/auth/login` — ログイン
+
+**リクエストボディ**: `{ "email": string, "password": string }`
+**レスポンス**: `204 No Content`
+**エラー**: `401`（メール/パスワード不一致）
+
+#### `POST /api/auth/logout` — ログアウト
+
+**リクエストボディ**: なし
+**レスポンス**: `204 No Content`
+
+#### `POST /api/auth/reset-password` — リセット用コード送信
+
+メールアドレス宛に recovery OTP（確認コード）を送る。**未登録メールにはコードを送らず 404** を返す（存在の有無を区別する仕様）。
+
+**リクエストボディ**: `{ "email": string }`
+**レスポンス**: `204 No Content`
+**エラー**: `404`（未登録メール）
+
+#### `POST /api/auth/reset-password-otp` — コード検証＋新パスワード設定
+
+`verifyOtp(type=recovery)` → `updateUser(password)` を実行し、最後に全セッションを失効（`signOut`）させる。リンク方式ではなく、同一ブラウザにコードを手入力する。
+
+**リクエストボディ**
+
+```json
+{ "email": "user@example.com", "token": "123456", "password": "newpassword" }
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|:---:|------|
+| `email` | `string` | ○ | 対象メールアドレス |
+| `token` | `string` | ○ | 確認コード（桁数は `otp_length` 設定依存・6〜8桁） |
+| `password` | `string` | ○ | 新パスワード（8文字以上） |
+
+**レスポンス**: `204 No Content`
+
+**エラー**
+
+| ステータス | 条件 |
+|----------|------|
+| 400 | コードが不正・期限切れ / 更新失敗 |
+| 422 | 新パスワードが現在と同一（`{ code: "SAME_PASSWORD" }`） |
+
+#### `POST /api/auth/update-password` — ログイン中のパスワード変更
+
+ヘッダーの「パスワード変更」から呼び出す。新パスワードのみ受け取る（現在/確認用はフォーム UX 用でサーバーには送らない）。
+
+**リクエストボディ**: `{ "password": string }`（8文字以上）
+**レスポンス**: `204 No Content`
 
 ---
 
@@ -475,18 +576,34 @@ await $fetch('/api/assignments', {
   body: { traineeId, mentorId, ojtId }
 })
 
+// ログインユーザー自身のプロフィール（useCurrentUser が内部で利用）
+const me = await $fetch('/api/users/me')
+
 // ユーザー一覧取得（管理者）
 const users = await $fetch('/api/users')
 
-// ユーザー招待（管理者）
+// ユーザー招待（管理者）— 社員IDは手入力
 await $fetch('/api/users', {
   method: 'POST',
-  body: { name: '新しい社員', email: 'new@example.com', role: 'trainee' }
+  body: { employee_id: 'E001', name: '新しい社員', email: 'new@example.com', role: 'trainee' }
 })
 
 // ユーザー更新（管理者）
 await $fetch(`/api/users/${userId}`, {
   method: 'PUT',
   body: { is_active: false }
+})
+
+// ログイン（成功後はセッション反映のためフルリロードする）
+await $fetch('/api/auth/login', {
+  method: 'POST',
+  body: { email: 'user@example.com', password: '...' }
+})
+
+// パスワードリセット: コード送信 → コード検証＋新パスワード設定
+await $fetch('/api/auth/reset-password', { method: 'POST', body: { email } })
+await $fetch('/api/auth/reset-password-otp', {
+  method: 'POST',
+  body: { email, token: '123456', password: '...' }
 })
 ```

@@ -1,7 +1,7 @@
 # コンポーネント構成図
 
-> **進捗**: MS2（日報入力）・MS3（メンターコメント）まで実装済み。MS4（管理者機能）は `admin.vue` の骨格と一部 API のみ。
-> 実線: 実装済み / 点線: 今後（MS4）。
+> コンポーネントは `app/components/` 配下をドメイン別フォルダ（`admin/` `common/` `report/`）で整理している。
+> `pathPrefix: false` を設定しているため、コンポーネント名はフォルダ名を含まず据え置き（`<UserTable>` のように使う）。
 
 ```mermaid
 graph TD
@@ -22,29 +22,32 @@ graph TD
     ResetPage["reset-password.vue\nリセット（コード送信〜新パスワード設定）"]
     ConfirmPage["confirm.vue"]
     ReportPage["report.vue\n/report\n週次日報＋コメント\nロール別表示切替"]
-    AdminPage["admin.vue\n/admin（骨格）"]
+    AdminPage["admin.vue\n/admin\nユーザー管理／割り当て"]
   end
 
-  subgraph ReportParts["report.vue の部品（実装済み）"]
+  subgraph ReportParts["components/report/"]
     TraineeSelector["TraineeSelector\n担当新人セレクタ"]
     WeekNavigator["WeekNavigator / WeekPickerModal\n週ナビ・週ジャンプ"]
-    ReportRow["ReportRow\n1日分の行・インライン展開"]
+    ReportRow["ReportRow\n1日分の行・クリックで展開"]
+    ReportRowDetail["ReportRowDetail\n展開時の詳細パネル"]
     CommentArea["CommentArea\n週次コメント表示"]
     ReportInputModal["ReportInputModal\n日報入力・編集（新人）"]
     CommentInputModal["CommentInputModal\n週次コメント入力（mentor/ojt）"]
     MoodStars["MoodStars\n気分★"]
   end
 
-  subgraph SharedUI["共通 UI"]
+  subgraph SharedUI["components/common/"]
+    AppHeaderFooter["AppHeader / AppFooter / AuthCard"]
     EmptyState["EmptyState"]
     ConfirmDialog["ConfirmDialog"]
     RoleBadge["RoleBadge"]
     PasswordChangeModal["PasswordChangeModal"]
   end
 
-  subgraph AdminParts["admin.vue の部品（今後 MS4）"]
-    UserAddModal["UserAddModal"]
-    UserEditModal["UserEditModal"]
+  subgraph AdminParts["components/admin/"]
+    UserTable["UserTable\nユーザー一覧テーブル"]
+    UserFormModal["UserFormModal\n招待・編集（追加/編集兼用）"]
+    AssignmentRow["AssignmentRow\nメンター/OJT 割り当て1行"]
   end
 
   subgraph Composables["Composables"]
@@ -53,6 +56,9 @@ graph TD
     UseWeeklyReports["useWeeklyReports\n週次日報の取得"]
     UseWeeklyComments["useWeeklyComments\n週次コメント取得・振り分け"]
     UseWeekNavigation["useWeekNavigation\n週の状態管理"]
+    UseAdminUsers["useAdminUsers\nユーザー一覧取得・操作"]
+    UseMentorAssignments["useMentorAssignments\n割り当て編集行のVM"]
+    UseLazyOpen["useLazyOpen\nモーダル遅延マウント"]
     UseApiError["useApiError\n$fetch エラーのトースト化"]
   end
 
@@ -82,7 +88,8 @@ graph TD
 
   ReportPage --> ReportParts
   ReportPage --> CommentArea
-  AdminPage -. MS4 .-> AdminParts
+  ReportRow --> ReportRowDetail
+  AdminPage --> AdminParts
 
   DefaultLayout --> UseCurrentUser
   ReportPage --> UseCurrentUser
@@ -90,12 +97,15 @@ graph TD
   ReportPage --> UseWeeklyReports
   ReportPage --> UseWeeklyComments
   ReportPage --> UseWeekNavigation
+  AdminPage --> UseAdminUsers
+  AdminPage --> UseMentorAssignments
 
   ReportPage --"$fetch / useAsyncData"--> ReportsAPI
   ReportPage --> CommentsAPI
   ReportPage --> AssignmentsAPI
   LoginPage --> AuthAPI
-  AdminPage -. MS4 .-> UsersAPI
+  AdminPage --> UsersAPI
+  AdminPage --> AssignmentsAPI
 
   ReportsAPI --> SupabaseDB
   CommentsAPI --> SupabaseDB
@@ -121,28 +131,44 @@ graph TD
 | `reset-password.vue` | `/reset-password` | 確認コード（OTP）送信〜コード入力＋新パスワード設定を1画面2ステップで（`verifyOtp`→`updateUser`・更新後は全セッション失効→ `/login`） |
 | `confirm.vue` | `/confirm` | メールリンクからの認証コールバック（汎用） |
 | `report.vue` | `/report` | 週次日報＋週次コメント。ロールで表示・操作が切り替わる共通画面 |
-| `admin.vue` | `/admin` | ユーザー管理・メンター割り当て（MS4 で中身を実装） |
+| `admin.vue` | `/admin` | ユーザー管理・メンター割り当て（タブ切替） |
 | `error.vue` | （自動） | 404 / 500 エラー画面 |
 
-### コンポーネント（`app/components/`、実装済み）
+### コンポーネント（`app/components/`、ドメイン別フォルダ）
+
+#### `common/`（共通部品）
 
 | ファイル | 役割 | 主な利用元 |
 |---------|------|-----------|
 | `AppHeader.vue` / `AppFooter.vue` | 共通ヘッダー（ユーザーメニュー・ログアウト）／フッター | `layouts/default.vue` |
 | `AuthCard.vue` | ログイン等のカード枠 | `login` / `reset-password` |
 | `PasswordChangeModal.vue` | パスワード変更モーダル | `AppHeader` |
-| `TraineeSelector.vue` | 担当新人セレクタ（表示専用・`USelectMenu`） | `report.vue`（非 trainee） |
-| `WeekNavigator.vue` / `WeekPickerModal.vue` | 週ナビ（前後）／週ジャンプ（日付ピッカー） | `report.vue` |
-| `ReportRow.vue` | 日報1日分の行。報告があればクリックでインライン展開（全ロール）。新人はペンで入力/編集 | `report.vue` |
-| `MoodStars.vue` | 気分の★表示・入力 | `ReportRow` / `ReportInputModal` |
-| `ReportInputModal.vue` | 日報の入力・編集モーダル（新人のみ） | `report.vue` |
-| `CommentArea.vue` | 週次コメント表示（mentor/ojt 2カラム）。自ロールのときだけ入力/編集ボタン | `report.vue` |
-| `CommentInputModal.vue` | 週次コメント入力・編集モーダル（mentor/ojt） | `report.vue` |
 | `EmptyState.vue` | 空状態プレースホルダ（絵文字/アイコン＋メッセージ＋slot） | `report.vue` ほか |
 | `ConfirmDialog.vue` | 破壊的操作の確認ダイアログ | 削除確認など |
 | `RoleBadge.vue` | ロールバッジ | `CommentArea` ほか |
 
-> 旧設計の `ReportCard.vue` は、テーブル行を直接インライン展開する `ReportRow.vue` + 週次コメントの `CommentArea.vue` に置き換わった。
+#### `report/`（日報UI）
+
+| ファイル | 役割 | 主な利用元 |
+|---------|------|-----------|
+| `TraineeSelector.vue` | 担当新人セレクタ（表示専用・`USelectMenu`） | `report.vue`（非 trainee） |
+| `WeekNavigator.vue` / `WeekPickerModal.vue` | 週ナビ（前後）／週ジャンプ（日付ピッカー） | `report.vue` |
+| `ReportRow.vue` | 日報1日分の行。報告があればクリックで展開（全ロール）。新人はペンで入力/編集 | `report.vue` |
+| `ReportRowDetail.vue` | 展開時の詳細パネル（出退勤・気分★・やったこと全文） | `ReportRow` |
+| `MoodStars.vue` | 気分の★表示・入力 | `ReportRow` / `ReportInputModal` |
+| `ReportInputModal.vue` | 日報の入力・編集モーダル（新人のみ） | `report.vue` |
+| `CommentArea.vue` | 週次コメント表示（mentor/ojt 2カラム）。自ロールのときだけ入力/編集ボタン | `report.vue` |
+| `CommentInputModal.vue` | 週次コメント入力・編集モーダル（mentor/ojt） | `report.vue` |
+
+#### `admin/`（管理UI）
+
+| ファイル | 役割 | 主な利用元 |
+|---------|------|-----------|
+| `UserTable.vue` | ユーザー一覧テーブル（社員ID/名前/メール/役割/操作） | `admin.vue` |
+| `UserFormModal.vue` | ユーザー招待・編集モーダル（追加/編集兼用・社員ID必須入力） | `admin.vue` |
+| `AssignmentRow.vue` | メンター/OJT 割り当て1行（新人ごとにメンター・OJTを選択） | `admin.vue` |
+
+> 旧設計の `ReportCard.vue` は `ReportRow.vue`＋`ReportRowDetail.vue`（詳細パネル）と週次コメントの `CommentArea.vue` に置き換わった。ユーザー追加/編集は当初 `UserAddModal` / `UserEditModal` の2つを想定していたが、単一の `UserFormModal.vue`（追加・編集兼用）に統合した。
 
 ### Composables（`app/composables/`）
 
@@ -153,9 +179,12 @@ graph TD
 | `useWeeklyReports.ts` | 指定週・対象ユーザーの日報を取得（keyed `useAsyncData('reports-week', { server: false })`）。`reportByDate` 索引も提供 |
 | `useWeeklyComments.ts` | 指定週・対象新人の週次コメントを取得し `commenter.role` で mentor/ojt に振り分け |
 | `useWeekNavigation.ts` | 「今週月曜」計算と前後/任意週ジャンプの状態管理 |
+| `useAdminUsers.ts` | 管理画面のユーザー一覧取得（`GET /api/users`）・招待/更新/無効化の操作 |
+| `useMentorAssignments.ts` | 全新人を網羅した割り当て編集行（`AssignmentRowVM`）とメンター/OJT 選択肢を生成 |
+| `useLazyOpen.ts` | モーダルの遅延マウント・`mounted` ゲート（初回オープンまで生成を遅らせる） |
 | `useApiError.ts` | `$fetch` エラーを statusCode/code 別メッセージでトースト通知 |
 
-> ユーティリティ関数は `app/utils/`（`date.ts` / `time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts`）。
+> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts`）。
 
 ### 型定義
 
@@ -181,13 +210,8 @@ graph TD
 | `comments/index.put.ts` | `PUT /api/comments` | 週次コメント保存（upsert・commenter は JWT から付与） |
 | `assignments/me.get.ts` | `GET /api/assignments/me` | 担当新人一覧（admin は全割り当て情報） |
 | `assignments/index.put.ts` | `PUT /api/assignments` | メンター割り当て更新（管理者のみ） |
-| `users/index.get.ts` / `index.post.ts` / `[id]/index.put.ts` | `GET/POST/PUT /api/users(/:id)` | ユーザー一覧・招待・更新（管理者のみ） |
+| `users/index.get.ts` / `index.post.ts` / `[id]/index.put.ts` | `GET/POST/PUT /api/users(/:id)` | ユーザー一覧・招待（社員ID手入力）・更新（管理者のみ） |
 | `users/me.get.ts` | `GET /api/users/me` | ログインユーザーの profile（email を除く） |
 | `auth/*.post.ts` | `POST /api/auth/*` | login / logout / reset-password（コード送信）/ reset-password-otp（コード検証＋更新）/ update-password |
 
-### 今後追加するコンポーネント（MS4）
-
-| ファイル | 役割 |
-|---------|------|
-| `components/UserAddModal.vue` | ユーザー招待フォームモーダル（管理者のみ） |
-| `components/UserEditModal.vue` | ユーザー編集モーダル（名前・メール・役割、管理者のみ） |
+> server 共通ユーティリティ: `server/utils/auth.ts`（`serverUserId` 認証ゲート）・`supabaseError.ts`（`throwSupabaseError` で Supabase エラー→HTTP 変換）・`validate.ts`（`parseBody`/`parseQuery` で Zod 検証）・`year.ts`（年度算出）。

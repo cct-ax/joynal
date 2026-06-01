@@ -110,5 +110,7 @@ email_sent = 30    # 1時間あたりのメール送信上限
 DB スキーマ変更は `migrations/` に SQL を追加します（命名 `YYYYMMDD_NN_説明.sql`）。適用後はアプリ側の型を再生成:
 
 ```bash
-pnpm supabase:types   # shared/types/database.types.ts を更新（編集禁止ファイル）
+# shared/types/database.types.ts を更新（編集禁止ファイル）。リンク済みリモートから生成
+npx supabase gen types typescript --linked > shared/types/database.types.ts
+# ローカルスタック（supabase start）から生成する場合は --local
 ```

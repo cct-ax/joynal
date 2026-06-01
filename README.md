@@ -13,7 +13,7 @@
 | 項目            | 技術                               |
 | --------------- | ---------------------------------- |
 | フロントエンド  | Nuxt 4                             |
-| UI ライブラリ   | Nuxt UI v3（Tailwind CSS v4 含む） |
+| UI ライブラリ   | Nuxt UI v4（Tailwind CSS v4 含む） |
 | データアクセス  | Nuxt Server API（`server/api/`）   |
 | バックエンド/DB | Supabase（認証・DB・RLS）          |
 | ホスティング    | Cloudflare Pages                   |
@@ -24,7 +24,7 @@
 | ---------------------- | ------------------------------------------------ |
 | `@nuxt/ui`             | UIコンポーネント（Modal, Toast, Table, Form 等） |
 | `@nuxtjs/supabase`     | Supabase 連携（認証・データ取得）                |
-| `zod` + `vee-validate` | フォームバリデーション                           |
+| `zod`                  | フォーム・サーバー境界のバリデーション（`UForm` の `:schema` に渡す） |
 | `@vueuse/core`         | ユーティリティ composables                       |
 | `@iconify/vue`         | アイコン                                         |
 
@@ -62,12 +62,14 @@ pnpm dev
 ## 開発コマンド
 
 ```bash
-pnpm dev          # 開発サーバー起動
-pnpm build        # 本番ビルド
-pnpm lint         # ESLint 実行
-pnpm lint:fix     # ESLint 自動修正・整形（フォーマッタ兼用）
-pnpm typecheck    # 型チェック（vue-tsc --noEmit）
-pnpm test         # ユニット・統合テスト実行
+pnpm dev            # 開発サーバー起動
+pnpm build          # 本番ビルド
+pnpm lint           # ESLint 実行
+pnpm lint:fix       # ESLint 自動修正・整形（フォーマッタ兼用）
+pnpm typecheck      # 型チェック（vue-tsc --noEmit）
+pnpm test           # ユニット・統合テスト実行
+pnpm test:watch     # テストをウォッチ実行
+pnpm test:coverage  # カバレッジ付きでテスト実行
 ```
 
 > フォーマッタは @nuxt/eslint の stylistic ルールが担当するため、Prettier は使いません。
@@ -77,22 +79,31 @@ pnpm test         # ユニット・統合テスト実行
 ```
 app/
 ├── assets/css/       # グローバルCSS
-├── components/       # 共通コンポーネント
-├── composables/      # 共通 composables（useCurrentUser 等）
+├── components/       # ドメイン別フォルダで整理（pathPrefix:false で名前は据え置き）
+│   ├── admin/        # 管理UI（UserTable / UserFormModal / AssignmentRow）
+│   ├── common/       # ヘッダー・フッター・認証・共通部品（AppHeader / ConfirmDialog 等）
+│   └── report/       # 日報UI（ReportRow / ReportRowDetail / CommentArea 等）
+├── composables/      # 共通 composables（useCurrentUser / useWeeklyReports / useAdminUsers 等）
 ├── layouts/          # レイアウト（default.vue）
-├── middleware/        # 認証ミドルウェア
+├── middleware/       # 認証ミドルウェア（auth.global.ts）
 ├── pages/            # ページ（login / report / admin / confirm / reset-password）
-└── types/
-    ├── database.types.ts  # Supabase 自動生成（pnpm supabase:types で再生成、編集禁止）
-    └── schemas.ts         # Zod スキーマ（フォームバリデーション用）
-shared/types/         # app・server 両方から参照される共有型定義
-├── models.ts         # DB テーブル型エイリアス
-└── api.ts            # API リクエスト・レスポンスの型・共有定数
-server/api/           # Server API（ブラウザから直接 Supabase を呼ばない）
-├── reports/          # 日報 CRUD
-├── comments/         # 週次コメント取得・保存
-├── assignments/      # 担当新人一覧・割り当て
-└── users/            # ユーザー管理（me・一覧・作成・更新）
+└── utils/            # app 専用ユーティリティ（time / calendarDate / role / fetchError / passwordReset / asyncDataCache）
+shared/               # app・server 両方から参照される共有層
+├── types/            # 全ての型をここに集約（#shared/types/* でインポート）
+│   ├── models.ts          # DB テーブル型エイリアス
+│   ├── api.ts             # API リクエスト・レスポンスの型・共有定数
+│   ├── schemas.ts         # Zod スキーマ（フォーム＋サーバー境界の query/body）
+│   ├── database.types.ts  # Supabase 自動生成（npx supabase gen types で再生成、編集禁止）
+│   └── components.ts       # コンポーネントの defineExpose 型
+└── utils/            # app・server 共通の純粋ロジック（date.ts など）
+server/               # Nuxt Server API（ブラウザから直接 Supabase を呼ばない）
+├── api/
+│   ├── auth/         # 認証（login / logout / reset-password / reset-password-otp / update-password）
+│   ├── reports/      # 日報 CRUD
+│   ├── comments/     # 週次コメント取得・保存
+│   ├── assignments/  # 担当新人一覧・割り当て
+│   └── users/        # ユーザー管理（me・一覧・招待・更新）
+└── utils/            # server 専用ユーティリティ（auth / supabaseError / validate / year）
 docs/                 # 設計ドキュメント・開発計画
 supabase/migrations/  # DBマイグレーション
 ```
