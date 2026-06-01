@@ -22,11 +22,10 @@
 
 | パッケージ             | 用途                                             |
 | ---------------------- | ------------------------------------------------ |
-| `@nuxt/ui`             | UIコンポーネント（Modal, Toast, Table, Form 等） |
+| `@nuxt/ui`             | UIコンポーネント（Modal, Toast, Table, Form, Icon 等） |
 | `@nuxtjs/supabase`     | Supabase 連携（認証・データ取得）                |
 | `zod`                  | フォーム・サーバー境界のバリデーション（`UForm` の `:schema` に渡す） |
 | `@vueuse/core`         | ユーティリティ composables                       |
-| `@iconify/vue`         | アイコン                                         |
 
 ## ユーザー種別
 
