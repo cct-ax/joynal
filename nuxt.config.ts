@@ -33,12 +33,21 @@ export default defineNuxtConfig({
     },
     // 各 server/api ハンドラの defineRouteMeta({ openAPI }) から OpenAPI を生成する。
     experimental: { openAPI: true },
-    // production を設定しないため /_openapi.json・/_scalar・/_swagger は dev 限定（本番ビルドには出ない）。
     openAPI: {
+      production: false,
       meta: {
         title: 'Joynal API',
         version: '1.0.0',
         description: 'Joynal（新人日報アプリ）の社内向け API ドキュメント。dev 限定。'
+      },
+      route: '/_docs/openapi.json',
+      ui: {
+        scalar: {
+          route: '/_docs/scalar'
+        },
+        swagger: {
+          route: '/_docs/swagger'
+        }
       }
     }
   },
