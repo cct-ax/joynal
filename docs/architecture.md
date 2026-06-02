@@ -306,7 +306,7 @@ sequenceDiagram
 | Server API ユニットテスト | Vitest | ハンドラーの入出力・バリデーション（Supabase クライアントをモック） |
 | Vue コンポーネントテスト | Vitest + Vue Test Utils | UI の表示・操作（`$fetch` をモック） |
 | RLS 統合テスト | Vitest | ロール別アクセス制御（実 DB に接続） |
-| E2E テスト | Playwright | 日報CRUD・コメント入力などの主要フロー |
+| E2E テスト | Playwright（ローカル Supabase） | ログイン認証・日報CRUD・週次コメント入力などの主要フロー |
 
 ---
 
@@ -315,9 +315,14 @@ sequenceDiagram
 ```
 GitHub (main ブランチ)
   │
-  ├── GitHub Actions（PR 時）
-  │   ├── ESLint
-  │   └── 型チェック（tsc）
+  ├── GitHub Actions（PR 時 / .github/workflows/ci.yml）
+  │   ├── lint-and-typecheck: ESLint ＋ vue-tsc
+  │   ├── test: Vitest（ユニット・統合）
+  │   ├── build: pnpm build（Cloudflare プリセット）
+  │   └── security: gitleaks（シークレット検出）＋ pnpm audit --audit-level=high
+  │
+  ├── GitHub Actions（PR 時 / .github/workflows/e2e.yml・非ブロッキング）
+  │   └── e2e: Supabase ローカルスタック → Playwright（初期は continue-on-error）
   │
   └── Cloudflare Pages（main マージ時に自動デプロイ）
       ├── ビルド: pnpm run build
