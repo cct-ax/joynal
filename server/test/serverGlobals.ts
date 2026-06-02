@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { serverUserId } from '../utils/auth'
+import { assertAdminRole, serverUserId } from '../utils/auth'
 import { parseBody, parseQuery, parseRouteParam } from '../utils/validate'
 import { resolveYear } from '../utils/year'
 import { throwSupabaseError } from '../utils/supabaseError'
@@ -21,6 +21,7 @@ import { throwSupabaseError } from '../utils/supabaseError'
  */
 vi.stubGlobal('defineEventHandler', <T>(handler: T): T => handler)
 vi.stubGlobal('serverUserId', serverUserId)
+vi.stubGlobal('assertAdminRole', assertAdminRole)
 vi.stubGlobal('parseBody', parseBody)
 vi.stubGlobal('parseQuery', parseQuery)
 vi.stubGlobal('parseRouteParam', parseRouteParam)

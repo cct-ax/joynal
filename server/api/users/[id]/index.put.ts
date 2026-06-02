@@ -1,4 +1,4 @@
-import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Profile, ProfileUpdate } from '#shared/types/models'
 import { userUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 
@@ -61,14 +61,7 @@ defineRouteMeta({
  * 自己ロックアウト防止のため、管理者は自分自身の権限降格・無効化は不可。
  */
 export default defineEventHandler<Promise<Profile>>(async (event) => {
-  const userId = await serverUserId(event)
-
-  const client = await serverSupabaseClient(event)
-  const { data: callerProfile } = await client.from('profiles').select('role').eq('id', userId).single()
-
-  if (callerProfile?.role !== 'admin') {
-    throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-  }
+  const userId = await assertAdminRole(event)
 
   const id = parseRouteParam(event, 'id', uuidSchema)
   const { name, employee_id, email, role, is_active } = await parseBody(event, userUpdateBodySchema)

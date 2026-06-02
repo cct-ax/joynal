@@ -56,16 +56,9 @@ defineRouteMeta({
  * auth.users を service role で先行作成後に profiles を挿入し、recovery OTP メールを送付する（送信失敗は非致命的）。
  */
 export default defineEventHandler<Promise<Profile>>(async (event) => {
-  const userId = await serverUserId(event)
+  await assertAdminRole(event)
 
   const { name, employee_id, email, role } = await parseBody(event, userCreateBodySchema)
-
-  const client = await serverSupabaseClient(event)
-  const { data: callerProfile } = await client.from('profiles').select('role').eq('id', userId).single()
-
-  if (callerProfile?.role !== 'admin') {
-    throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
-  }
 
   const serviceClient = serverSupabaseServiceRole(event)
   const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
@@ -101,6 +94,8 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
 
   // 招待メール: 初期パスワード設定のため recovery OTP を送る（リンク不使用・/reset-password で設定）。
   // 送信失敗で作成自体は失敗させない（ユーザーは作成済み。本人は「パスワードをお忘れの方」で再送可）。
+  // OTP 送信はユーザークライアントで行う（service role は不要）。
+  const client = await serverSupabaseClient(event)
   const { error: inviteError } = await client.auth.resetPasswordForEmail(email)
   if (inviteError) {
     console.error('[api/users POST] resetPasswordForEmail', inviteError)
