@@ -83,7 +83,7 @@ app/
 │   ├── admin/        # 管理UI（UserTable / UserFormModal / AssignmentRow）
 │   ├── common/       # ヘッダー・フッター・認証・共通部品（AppHeader / ConfirmDialog 等）
 │   └── report/       # 日報UI（ReportRow / ReportRowDetail / CommentArea 等）
-├── composables/      # 共通 composables（useCurrentUser / useWeeklyReports / useAdminUsers 等）
+├── composables/      # 共通 composables（useCurrentUser / useWeeklyReports / useAdminUsers / useModalForm / usePageLoading 等）
 ├── layouts/          # レイアウト（default.vue）
 ├── middleware/       # 認証ミドルウェア（auth.global.ts）
 ├── pages/            # ページ（login / report / admin / confirm / reset-password）
