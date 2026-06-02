@@ -30,4 +30,22 @@ describe('ConfirmDialog', () => {
     expect(document.body.textContent).toContain('実行する')
     expect(document.body.textContent).toContain('やめる')
   })
+
+  it('loading=true のとき確認ボタンが disabled になる（二重送信防止）', async () => {
+    await mountSuspended(ConfirmDialog, {
+      props: {
+        open: true,
+        message: '削除しますか？',
+        confirmLabel: '削除する',
+        cancelLabel: 'やめる',
+        loading: true
+      }
+    })
+    // UModal は teleport で body へ移すので document から確認ボタンを探す
+    const confirmBtn = Array.from(document.body.querySelectorAll('button')).find(
+      b => b.textContent?.includes('削除する')
+    )
+    expect(confirmBtn).toBeTruthy()
+    expect(confirmBtn?.disabled).toBe(true)
+  })
 })

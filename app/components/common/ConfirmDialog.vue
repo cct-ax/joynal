@@ -88,6 +88,7 @@ const onConfirm = (): void => {
         <UButton
           :color="confirmColor"
           :loading="loading"
+          :disabled="loading"
           @click="onConfirm"
         >
           {{ confirmLabel }}
