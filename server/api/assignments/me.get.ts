@@ -6,12 +6,41 @@ defineRouteMeta({
   openAPI: {
     tags: ['assignments'],
     summary: '担当新人一覧取得',
-    description: 'メンター・OJT は自分の担当新人、管理者は全新人の割り当て情報を取得する。新人ロールは 403。レスポンス形状はロールにより異なる（メンター・OJT は trainee のみ、管理者は mentor / ojt も含む）。',
+    description:
+      'メンター・OJT は自分の担当新人、管理者は全新人の割り当て情報を取得する。新人ロールは 403。レスポンス形状はロールにより異なる（メンター・OJT は trainee のみ、管理者は mentor / ojt も含む）。',
     parameters: [
-      { in: 'query', name: 'year', required: false, schema: { type: 'integer' }, description: '年度（省略時は現在年度）' }
+      {
+        in: 'query',
+        name: 'year',
+        required: false,
+        schema: { type: 'integer' },
+        description: '年度（省略時は現在年度）'
+      }
     ],
     responses: {
-      200: { description: '担当新人一覧（メンター・OJT 視点 / 管理者視点のいずれか）', content: { 'application/json': { example: { 'メンター・OJT の場合': [{ trainee_id: 'uuid', year: 2026, trainee: { name: '山田 花子', employee_id: 'E001' } }], '管理者の場合': [{ trainee_id: 'uuid', mentor_id: 'uuid', ojt_id: 'uuid', year: 2026, trainee: { name: '山田 花子' }, mentor: { name: '田中 一郎' }, ojt: { name: '佐藤 美咲' } }] } } } },
+      200: {
+        description: '担当新人一覧（メンター・OJT 視点 / 管理者視点のいずれか）',
+        content: {
+          'application/json': {
+            example: {
+              'メンター・OJT の場合': [
+                { trainee_id: 'uuid', year: 2026, trainee: { name: '山田 花子', employee_id: 'E001' } }
+              ],
+              '管理者の場合': [
+                {
+                  trainee_id: 'uuid',
+                  mentor_id: 'uuid',
+                  ojt_id: 'uuid',
+                  year: 2026,
+                  trainee: { name: '山田 花子' },
+                  mentor: { name: '田中 一郎' },
+                  ojt: { name: '佐藤 美咲' }
+                }
+              ]
+            }
+          }
+        }
+      },
       401: { description: '未ログイン' },
       403: { description: '新人ロールが呼び出した' },
       500: { description: 'サーバーエラー' }
@@ -37,11 +66,7 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
   const year = resolveYear(yearInput)
 
   const client = await serverSupabaseClient(event)
-  const { data: profile, error: profileError } = await client
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
+  const { data: profile, error: profileError } = await client.from('profiles').select('role').eq('id', userId).single()
 
   if (profileError) {
     throwSupabaseError(profileError, 'api/assignments/me GET profile fetch')
@@ -54,7 +79,8 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
   if (profile.role === 'admin') {
     const { data, error } = await client
       .from('mentor_assignments')
-      .select(`
+      .select(
+        `
         trainee_id,
         mentor_id,
         ojt_id,
@@ -62,7 +88,8 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
         trainee:profiles!mentor_assignments_trainee_id_fkey(name),
         mentor:profiles!mentor_assignments_mentor_id_fkey(name),
         ojt:profiles!mentor_assignments_ojt_id_fkey(name)
-      `)
+      `
+      )
       .eq('year', year)
       .overrideTypes<AssignmentForAdmin[], { merge: false }>()
 
@@ -75,11 +102,13 @@ export default defineEventHandler<Promise<AssignmentForAdmin[] | AssignmentForMe
 
   const { data, error } = await client
     .from('mentor_assignments')
-    .select(`
+    .select(
+      `
       trainee_id,
       year,
       trainee:profiles!mentor_assignments_trainee_id_fkey(name, employee_id)
-    `)
+    `
+    )
     .or(`mentor_id.eq.${userId},ojt_id.eq.${userId}`)
     .eq('year', year)
     .overrideTypes<AssignmentForMentor[], { merge: false }>()

@@ -7,7 +7,25 @@ defineRouteMeta({
     summary: 'ユーザー一覧取得',
     description: '管理者のみ。email を含む全プロフィールを返す。',
     responses: {
-      200: { description: 'ユーザー一覧', content: { 'application/json': { example: [{ id: 'uuid', employee_id: 'E001', name: '山田 太郎', email: 'yamada@example.com', role: 'trainee', is_active: true, created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' }] } } },
+      200: {
+        description: 'ユーザー一覧',
+        content: {
+          'application/json': {
+            example: [
+              {
+                id: 'uuid',
+                employee_id: 'E001',
+                name: '山田 太郎',
+                email: 'yamada@example.com',
+                role: 'trainee',
+                is_active: true,
+                created_at: '2026-04-01T00:00:00Z',
+                updated_at: '2026-04-01T00:00:00Z'
+              }
+            ]
+          }
+        }
+      },
       401: { description: '未ログイン' },
       403: { description: '管理者以外が呼び出した' },
       500: { description: 'サーバーエラー' }
@@ -25,11 +43,7 @@ export default defineEventHandler<Promise<Profile[]>>(async (event) => {
   // 管理者ガード（profiles_select は USING(true) のため、一覧取得はここで明示的に制限する）。
   // role は authenticated でも参照可能なのでユーザークライアントで確認する。
   const client = await serverSupabaseClient(event)
-  const { data: caller } = await client
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
+  const { data: caller } = await client.from('profiles').select('role').eq('id', userId).single()
 
   if (caller?.role !== 'admin') {
     throw createError({ statusCode: 403, message: 'アクセス権限がありません' })

@@ -12,19 +12,39 @@ defineRouteMeta({
     description: '管理者のみ。変更したいフィールドのみ送る。is_active を false にすると Supabase Auth 側でも ban してログイン不可にする。email / 社員 ID の重複は 409。自己ロックアウト防止のため自分自身の権限降格・無効化は 400。',
     requestBody: {
       required: true,
-      content: { 'application/json': { schema: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          employee_id: { type: 'string', description: '社員ID（最大50文字）' },
-          email: { type: 'string', format: 'email' },
-          role: { type: 'string', enum: ['trainee', 'mentor', 'ojt', 'admin'] },
-          is_active: { type: 'boolean' }
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              employee_id: { type: 'string', description: '社員ID（最大50文字）' },
+              email: { type: 'string', format: 'email' },
+              role: { type: 'string', enum: ['trainee', 'mentor', 'ojt', 'admin'] },
+              is_active: { type: 'boolean' }
+            }
+          }
         }
-      } } }
+      }
     },
     responses: {
-      200: { description: '更新後の profiles レコード', content: { 'application/json': { example: { id: 'uuid', employee_id: 'E002', name: '更新後の名前', email: 'updated@example.com', role: 'mentor', is_active: false, created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-02T00:00:00Z' } } } },
+      200: {
+        description: '更新後の profiles レコード',
+        content: {
+          'application/json': {
+            example: {
+              id: 'uuid',
+              employee_id: 'E002',
+              name: '更新後の名前',
+              email: 'updated@example.com',
+              role: 'mentor',
+              is_active: false,
+              created_at: '2026-04-01T00:00:00Z',
+              updated_at: '2026-04-02T00:00:00Z'
+            }
+          }
+        }
+      },
       400: { description: '不正な role / 自分自身の権限降格・無効化' },
       401: { description: '未ログイン' },
       403: { description: '管理者以外が呼び出した' },
@@ -44,11 +64,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   const userId = await serverUserId(event)
 
   const client = await serverSupabaseClient(event)
-  const { data: callerProfile } = await client
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
+  const { data: callerProfile } = await client.from('profiles').select('role').eq('id', userId).single()
 
   if (callerProfile?.role !== 'admin') {
     throw createError({ statusCode: 403, message: 'アクセス権限がありません' })
@@ -96,12 +112,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
     }
   }
 
-  const { data, error } = await serviceClient
-    .from('profiles')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single()
+  const { data, error } = await serviceClient.from('profiles').update(updates).eq('id', id).select().single()
 
   if (error) {
     // employee_id の UNIQUE 衝突（社員ID重複）。email 一意性は上段の auth で担保済み。

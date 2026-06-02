@@ -9,19 +9,39 @@ defineRouteMeta({
     description: '管理者のみ。service role で Supabase Auth にユーザーを作成し profiles に挿入する。employee_id は手入力（自動採番なし）。作成後に初期パスワード設定用の recovery OTP メールを送る（送信失敗でも作成は成功扱い）。email 重複・employee_id 重複はいずれも 409（employee_id 重複は code: EMPLOYEE_ID_TAKEN）。',
     requestBody: {
       required: true,
-      content: { 'application/json': { schema: {
-        type: 'object',
-        required: ['name', 'employee_id', 'email', 'role'],
-        properties: {
-          name: { type: 'string' },
-          employee_id: { type: 'string', description: '社員ID（自由形式・一意・最大50文字）' },
-          email: { type: 'string', format: 'email' },
-          role: { type: 'string', enum: ['trainee', 'mentor', 'ojt', 'admin'] }
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['name', 'employee_id', 'email', 'role'],
+            properties: {
+              name: { type: 'string' },
+              employee_id: { type: 'string', description: '社員ID（自由形式・一意・最大50文字）' },
+              email: { type: 'string', format: 'email' },
+              role: { type: 'string', enum: ['trainee', 'mentor', 'ojt', 'admin'] }
+            }
+          }
         }
-      } } }
+      }
     },
     responses: {
-      201: { description: '作成された profiles レコード', content: { 'application/json': { example: { id: 'uuid', employee_id: 'E001', name: '新しい 社員', email: 'new@example.com', role: 'trainee', is_active: true, created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01T00:00:00Z' } } } },
+      201: {
+        description: '作成された profiles レコード',
+        content: {
+          'application/json': {
+            example: {
+              id: 'uuid',
+              employee_id: 'E001',
+              name: '新しい 社員',
+              email: 'new@example.com',
+              role: 'trainee',
+              is_active: true,
+              created_at: '2026-04-01T00:00:00Z',
+              updated_at: '2026-04-01T00:00:00Z'
+            }
+          }
+        }
+      },
       400: { description: '必須項目不足 / 不正な role' },
       401: { description: '未ログイン' },
       403: { description: '管理者以外が呼び出した' },
@@ -41,11 +61,7 @@ export default defineEventHandler<Promise<Profile>>(async (event) => {
   const { name, employee_id, email, role } = await parseBody(event, userCreateBodySchema)
 
   const client = await serverSupabaseClient(event)
-  const { data: callerProfile } = await client
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
+  const { data: callerProfile } = await client.from('profiles').select('role').eq('id', userId).single()
 
   if (callerProfile?.role !== 'admin') {
     throw createError({ statusCode: 403, message: 'アクセス権限がありません' })

@@ -5,17 +5,22 @@ defineRouteMeta({
   openAPI: {
     tags: ['auth'],
     summary: 'ログイン',
-    description: 'メール / パスワードでログインする。成功時はセッション Cookie を Set-Cookie で返す。app からは supabase.auth を直接呼ばず必ずここ経由。',
+    description:
+      'メール / パスワードでログインする。成功時はセッション Cookie を Set-Cookie で返す。app からは supabase.auth を直接呼ばず必ずここ経由。',
     requestBody: {
       required: true,
-      content: { 'application/json': { schema: {
-        type: 'object',
-        required: ['email', 'password'],
-        properties: {
-          email: { type: 'string', format: 'email' },
-          password: { type: 'string' }
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['email', 'password'],
+            properties: {
+              email: { type: 'string', format: 'email' },
+              password: { type: 'string' }
+            }
+          }
         }
-      } } }
+      }
     },
     responses: {
       204: { description: '成功（ボディなし・セッション Cookie を発行）' },

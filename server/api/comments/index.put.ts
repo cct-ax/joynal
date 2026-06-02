@@ -6,21 +6,41 @@ defineRouteMeta({
   openAPI: {
     tags: ['comments'],
     summary: '週次コメント保存（upsert）',
-    description: 'メンター・OJT のみ。(weekStart, traineeId, commenterId) が既存なら上書き、無ければ新規作成。担当外の新人へのコメントや権限の無いロールは RLS で 403。',
+    description:
+      'メンター・OJT のみ。(weekStart, traineeId, commenterId) が既存なら上書き、無ければ新規作成。担当外の新人へのコメントや権限の無いロールは RLS で 403。',
     requestBody: {
       required: true,
-      content: { 'application/json': { schema: {
-        type: 'object',
-        required: ['weekStart', 'traineeId', 'content'],
-        properties: {
-          weekStart: { type: 'string', format: 'date', description: '対象週の月曜日 YYYY-MM-DD' },
-          traineeId: { type: 'string', format: 'uuid' },
-          content: { type: 'string' }
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['weekStart', 'traineeId', 'content'],
+            properties: {
+              weekStart: { type: 'string', format: 'date', description: '対象週の月曜日 YYYY-MM-DD' },
+              traineeId: { type: 'string', format: 'uuid' },
+              content: { type: 'string' }
+            }
+          }
         }
-      } } }
+      }
     },
     responses: {
-      200: { description: '保存後のコメント（commenter フィールドなし）', content: { 'application/json': { example: { id: 'uuid', week_start: '2026-05-19', trainee_id: 'uuid', commenter_id: 'uuid', content: '今週のコメント本文', created_at: '2026-05-23T18:00:00Z', updated_at: '2026-05-23T18:00:00Z' } } } },
+      200: {
+        description: '保存後のコメント（commenter フィールドなし）',
+        content: {
+          'application/json': {
+            example: {
+              id: 'uuid',
+              week_start: '2026-05-19',
+              trainee_id: 'uuid',
+              commenter_id: 'uuid',
+              content: '今週のコメント本文',
+              created_at: '2026-05-23T18:00:00Z',
+              updated_at: '2026-05-23T18:00:00Z'
+            }
+          }
+        }
+      },
       400: { description: '必須項目不足' },
       401: { description: '未ログイン' },
       403: { description: '担当外の新人 / メンター・OJT 以外のロール（RLS による）' },

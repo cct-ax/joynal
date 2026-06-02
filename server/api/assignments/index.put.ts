@@ -6,22 +6,32 @@ defineRouteMeta({
   openAPI: {
     tags: ['assignments'],
     summary: 'メンター割り当て更新（upsert）',
-    description: '管理者のみ。(traineeId, year) が既存なら上書き、無ければ新規作成。year 省略時は現在年度を自動セット。mentorId / ojtId は null で未割り当てを表す。存在しない ID は 404。',
+    description:
+      '管理者のみ。(traineeId, year) が既存なら上書き、無ければ新規作成。year 省略時は現在年度を自動セット。mentorId / ojtId は null で未割り当てを表す。存在しない ID は 404。',
     requestBody: {
       required: true,
-      content: { 'application/json': { schema: {
-        type: 'object',
-        required: ['traineeId', 'mentorId', 'ojtId'],
-        properties: {
-          traineeId: { type: 'string', format: 'uuid' },
-          mentorId: { type: ['string', 'null'], format: 'uuid' },
-          ojtId: { type: ['string', 'null'], format: 'uuid' },
-          year: { type: 'integer', description: '年度（省略時は現在年度）' }
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['traineeId', 'mentorId', 'ojtId'],
+            properties: {
+              traineeId: { type: 'string', format: 'uuid' },
+              mentorId: { type: ['string', 'null'], format: 'uuid' },
+              ojtId: { type: ['string', 'null'], format: 'uuid' },
+              year: { type: 'integer', description: '年度（省略時は現在年度）' }
+            }
+          }
         }
-      } } }
+      }
     },
     responses: {
-      200: { description: '保存後の割り当てレコード', content: { 'application/json': { example: { trainee_id: 'uuid', mentor_id: 'uuid', ojt_id: 'uuid', year: 2026 } } } },
+      200: {
+        description: '保存後の割り当てレコード',
+        content: {
+          'application/json': { example: { trainee_id: 'uuid', mentor_id: 'uuid', ojt_id: 'uuid', year: 2026 } }
+        }
+      },
       400: { description: 'traineeId が未指定' },
       401: { description: '未ログイン' },
       403: { description: '管理者以外が呼び出した（RLS による）' },
