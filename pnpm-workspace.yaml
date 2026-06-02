@@ -8,3 +8,6 @@ allowBuilds:
 overrides:
   cac: "^6.7.14"
   commander: "^13.1.0"
+  # devalue <5.8.1 は GHSA-77vg-94rm-hx3p（sparse array deserialization の DoS, high）。
+  # nuxt/nitro 経由の推移的依存。patched 版へ底上げして pnpm audit --audit-level=high を green に保つ。
+  devalue: "^5.8.1"
