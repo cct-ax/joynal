@@ -1,0 +1,75 @@
+name: E2E
+
+# E2E（Playwright）。ローカル Supabase スタックを runner 上に立てて実行する。
+# 初期は非ブロッキング: ジョブに continue-on-error を付け、失敗しても PR をブロックしない
+# （branch protection の required checks には含めない運用前提）。安定したら required 化する。
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # Supabase CLI を導入（GitHub runner の Docker 上でローカルスタックを動かす）。
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # PostgreSQL + Auth + PostgREST 等のローカルスタックを起動する。
+      - name: Start Supabase
+        run: supabase start
+
+      # migrations と supabase/seed.sql を流し込んでクリーンな状態を作る。
+      - name: Reset database (apply migrations + seed)
+        run: supabase db reset
+
+      # ローカルスタックの接続情報を Nuxt が期待する env 名にマッピングして
+      # $GITHUB_ENV に流し込み、後続ステップ（build・E2E）から参照できるようにする。
+      # URL は公式に確認済みの override-name (api.url) で直接マッピングし、
+      # anon key は標準出力名 ANON_KEY を取り出して NUXT_PUBLIC_SUPABASE_KEY に詰め替える
+      # （anon key のドット記法名は版によって揺れるため、標準出力名から拾う方が堅牢）。
+      - name: Export Supabase env
+        run: |
+          supabase status -o env --override-name api.url=NUXT_PUBLIC_SUPABASE_URL \
+            | grep '^NUXT_PUBLIC_SUPABASE_URL=' >> "$GITHUB_ENV"
+          ANON_KEY=$(supabase status -o env | sed -n 's/^ANON_KEY=//p' | tr -d '"')
+          echo "NUXT_PUBLIC_SUPABASE_KEY=${ANON_KEY}" >> "$GITHUB_ENV"
+
+      # ※ ビルドは playwright.config.ts の webServer（pnpm build && pnpm preview）が
+      #   CI では reuseExistingServer:false で自前起動するため、ここでは別途ビルドしない。
+      #   Export Supabase env で設定した $GITHUB_ENV は webServer プロセスにも継承される。
+
+      # Playwright のブラウザを依存込みで導入（chromium のみ）。
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # E2E 実行。test:e2e スクリプトは親が package.json に追加する。
+      - name: Run E2E tests
+        run: pnpm test:e2e
+
+      # 失敗時のレポート/トレース/動画をアーティファクトとして保存する。
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore

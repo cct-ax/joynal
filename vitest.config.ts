@@ -32,7 +32,8 @@ export default defineVitestConfig({
       }
     },
     include: ['**/*.test.ts', '**/*.spec.ts'],
-    exclude: ['node_modules', '.nuxt', 'dist'],
+    // e2e/ は Playwright(@playwright/test)用。Vitest が拾うと test() が衝突して落ちるため除外。
+    exclude: ['node_modules', '.nuxt', 'dist', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
