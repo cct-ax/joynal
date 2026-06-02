@@ -6,11 +6,15 @@
  *   詳細を展開する（design プロト DayRow と同じ＝ロール非依存）。
  * - 新人ロールは加えてペンで入力/編集モーダルを起動する。
  * - PC/SP は CSS-only で切替（`max-sm:`/`sm:`）。JS の isMobile 判定は使わない。
+ *   行本体・トグル・詳細パネルは単一の DOM ツリーで表現し、表示の違いだけを
+ *   `max-sm:`/`sm:` のユーティリティで出し分ける（旧版の PC/SP 二重レイアウトを統合）。
  *
  * a11y: トグルは「行全体」ではなく**コンテンツ領域だけ**を `<button aria-expanded aria-controls>`
  * にし（`<component :is>`）、ペン/chevron はその外側（兄弟）に置く。こうすることで
  * `<button>` の中に別の `<button>`（ペン・星）が入るネストを避けつつ、`<div @click>` の
- * キーボード非対応アンチパターンも避ける。装飾的な chevron は `aria-hidden`。詳細パネルの
+ * キーボード非対応アンチパターンも避ける。装飾的な chevron は `aria-hidden`。
+ * 単一のトグル button から PC/SP 両方の詳細パネルを制御するため、aria-controls は
+ * 両パネル id をスペース区切りで指す（ARIA は IDREF リストを許容）。詳細パネルの
  * 開閉は `<Transition>` で transform/opacity のみアニメーションし、`prefers-reduced-motion`
  * を尊重する。配色は @nuxt/ui の semantic トークン（today は primary）。
  *
@@ -48,9 +52,25 @@ const isToday = computed(() => formatYmd(props.date) === formatYmd(new Date()))
 
 // 詳細パネルと aria-controls を結ぶ ID（PC/SP で重複しないよう接尾辞を付ける）
 const baseId = useId()
+const pcPanelId = computed(() => `${baseId}-pc`)
+const spPanelId = computed(() => `${baseId}-sp`)
+// 単一 button から PC/SP 両パネルを制御する（ARIA は IDREF リストを許容）。
+const panelControls = computed(() => `${pcPanelId.value} ${spPanelId.value}`)
 
 // 曜日ラベルは shared/utils/date の weekdayLabel に集約
 const dayLabel = computed(() => weekdayLabel(props.date))
+
+// 本文プレビューは PC=80 字 / SP=60 字で truncate（design 準拠の表示差）。
+const pcPreview = computed(() => {
+  if (!props.report) return ''
+  const { content } = props.report
+  return content.slice(0, 80) + (content.length > 80 ? '…' : '')
+})
+const spPreview = computed(() => {
+  if (!props.report) return ''
+  const { content } = props.report
+  return content.slice(0, 60) + (content.length > 60 ? '…' : '')
+})
 
 // コンテンツトグル。展開可能なときにのみ click を束ねる（下の v-on を参照）
 const onRowActivate = (): void => {
@@ -65,38 +85,52 @@ const onPencil = (): void => {
 </script>
 
 <template>
-  <!-- PC レイアウト -->
-  <div class="max-sm:hidden border-b border-default">
+  <div class="border-b border-default">
     <div
-      class="grid grid-cols-[1fr_auto] items-center transition-colors motion-reduce:transition-none"
+      class="grid grid-cols-[1fr_auto] transition-colors motion-reduce:transition-none max-sm:items-start sm:items-center"
       :class="{ 'bg-elevated': isToday, 'hover:bg-elevated': isExpandable }"
     >
-      <!-- コンテンツ領域がトグル（ペンは外側） -->
+      <!-- コンテンツ領域がトグル（ペンは外側）。PC=横一列 / SP=縦積みカード -->
       <component
         :is="isExpandable ? 'button' : 'div'"
         :type="isExpandable ? 'button' : undefined"
-        class="flex items-center min-h-12 min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+        class="min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary max-sm:px-4 max-sm:py-3 sm:flex sm:items-center sm:min-h-12 sm:rounded-none max-sm:rounded"
         :class="{ 'cursor-pointer': isExpandable }"
         :aria-expanded="isExpandable ? isExpanded : undefined"
-        :aria-controls="isExpandable ? `${baseId}-pc` : undefined"
+        :aria-controls="isExpandable ? panelControls : undefined"
         :aria-label="isExpandable ? (isExpanded ? '詳細を閉じる' : '詳細を開く') : undefined"
         v-on="isExpandable ? { click: onRowActivate } : {}"
       >
-        <div class="w-36 shrink-0 px-4 py-2.5 flex items-center gap-2">
+        <!-- SP 上段: 日付 + 出退勤/未入力（PC では日付列のみ担当） -->
+        <div class="flex items-center gap-2 min-w-0 sm:w-36 sm:shrink-0 sm:px-4 sm:py-2.5">
           <span
-            class="text-sm"
-            :class="{ 'text-primary font-semibold': isToday }"
+            class="text-sm max-sm:font-semibold whitespace-nowrap"
+            :class="{ 'text-primary sm:font-semibold': isToday }"
           >
             {{ formatMonthDay(date) }}（{{ dayLabel }}）
           </span>
           <span
             v-if="isToday"
-            class="inline-block w-1.5 h-1.5 rounded-full bg-primary"
+            class="inline-block w-1.5 h-1.5 rounded-full bg-primary shrink-0 max-sm:hidden"
             aria-hidden="true"
           />
+          <!-- SP のみ: 日付の隣に出退勤/未入力をインライン表示 -->
+          <span
+            v-if="report"
+            class="sm:hidden text-xs text-muted whitespace-nowrap tabular-nums"
+          >
+            {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
+          </span>
+          <span
+            v-else
+            class="sm:hidden text-xs text-dimmed"
+          >
+            未入力
+          </span>
         </div>
 
-        <div class="w-32 shrink-0 px-2 py-2.5 text-sm text-muted tabular-nums">
+        <!-- PC のみ: 出退勤の独立列 -->
+        <div class="max-sm:hidden w-32 shrink-0 px-2 py-2.5 text-sm text-muted tabular-nums">
           <template v-if="report">
             {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
           </template>
@@ -105,19 +139,21 @@ const onPencil = (): void => {
           </template>
         </div>
 
+        <!-- PC のみ: 本文 80 字（常時表示・1 行 ellipsis） -->
         <div
-          class="flex-1 min-w-0 px-2 py-2.5 text-sm overflow-hidden whitespace-nowrap text-ellipsis"
+          class="max-sm:hidden flex-1 min-w-0 px-2 py-2.5 text-sm overflow-hidden whitespace-nowrap text-ellipsis"
           :class="hasReport ? '' : 'text-dimmed'"
         >
           <template v-if="report">
-            {{ report.content.slice(0, 80) }}{{ report.content.length > 80 ? '…' : '' }}
+            {{ pcPreview }}
           </template>
           <template v-else>
             未入力
           </template>
         </div>
 
-        <div class="w-28 shrink-0 px-2 py-2.5 flex justify-center">
+        <!-- PC のみ: mood 列（中央寄せ・size sm） -->
+        <div class="max-sm:hidden w-28 shrink-0 px-2 py-2.5 flex justify-center">
           <MoodStars
             v-if="report?.mood"
             :model-value="report.mood"
@@ -125,119 +161,66 @@ const onPencil = (): void => {
             size="sm"
           />
         </div>
+
+        <!-- SP のみ: 下段の本文 60 字 + mood（未展開時のみ） -->
+        <div
+          v-if="report && !isExpanded"
+          class="sm:hidden flex items-center gap-2 mt-1"
+        >
+          <p class="text-sm text-muted overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0">
+            {{ spPreview }}
+          </p>
+          <MoodStars
+            v-if="report.mood"
+            :model-value="report.mood"
+            readonly
+            size="xs"
+          />
+        </div>
       </component>
 
-      <!-- 操作（ペン）はトグル button の外側 -->
-      <div class="w-20 px-3 flex justify-end items-center">
+      <!-- 操作（ペン）はトグル button の外側。PC=w-20 右寄せ / SP=コンパクト -->
+      <div class="flex justify-end items-center sm:w-20 sm:px-3 max-sm:px-3 max-sm:py-3">
         <UButton
           v-if="isTrainee"
           variant="ghost"
-          size="sm"
           icon="i-lucide-pencil"
+          size="sm"
           :aria-label="hasReport ? '日報を編集' : '日報を入力'"
           @click="onPencil"
         />
         <UIcon
           v-else-if="isExpandable"
           name="i-lucide-chevron-down"
-          class="size-5 text-dimmed transition-transform motion-reduce:transition-none"
+          class="text-dimmed transition-transform motion-reduce:transition-none max-sm:size-4 sm:size-5"
           aria-hidden="true"
           :class="{ 'rotate-180': isExpanded }"
         />
       </div>
     </div>
 
-    <!-- 詳細展開（PC） -->
-    <ReportRowDetail
-      v-if="report"
-      :report="report"
-      variant="pc"
-      :panel-id="`${baseId}-pc`"
-      :is-open="isExpanded ?? false"
-    />
-  </div>
-
-  <!-- SP レイアウト -->
-  <div class="sm:hidden border-b border-default">
+    <!-- 詳細展開（PC: メタ行＋本文 / SP: 本文のみ）。CSS で片方ずつ表示する -->
     <div
-      class="px-4 py-3 transition-colors motion-reduce:transition-none"
-      :class="{ 'bg-elevated': isToday }"
-    >
-      <div class="grid grid-cols-[1fr_auto] items-start gap-2">
-        <!-- コンテンツ領域がトグル（ペンは外側） -->
-        <component
-          :is="isExpandable ? 'button' : 'div'"
-          :type="isExpandable ? 'button' : undefined"
-          class="min-w-0 text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-          :class="{ 'cursor-pointer': isExpandable }"
-          :aria-expanded="isExpandable ? isExpanded : undefined"
-          :aria-controls="isExpandable ? `${baseId}-sp` : undefined"
-          :aria-label="isExpandable ? (isExpanded ? '詳細を閉じる' : '詳細を開く') : undefined"
-          v-on="isExpandable ? { click: onRowActivate } : {}"
-        >
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="text-sm font-semibold whitespace-nowrap"
-              :class="{ 'text-primary': isToday }"
-            >
-              {{ formatMonthDay(date) }}（{{ dayLabel }}）
-            </span>
-            <span
-              v-if="report"
-              class="text-xs text-muted whitespace-nowrap tabular-nums"
-            >
-              {{ toHm(report.check_in) }} 〜 {{ toHm(report.check_out) }}
-            </span>
-            <span
-              v-else
-              class="text-xs text-dimmed"
-            >
-              未入力
-            </span>
-          </div>
-          <div
-            v-if="report && !isExpanded"
-            class="flex items-center gap-2 mt-1"
-          >
-            <p class="text-sm text-muted overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0">
-              {{ report.content.slice(0, 60) }}{{ report.content.length > 60 ? '…' : '' }}
-            </p>
-            <MoodStars
-              v-if="report.mood"
-              :model-value="report.mood"
-              readonly
-              size="xs"
-            />
-          </div>
-        </component>
-
-        <!-- 操作（ペン）はトグル button の外側 -->
-        <div class="shrink-0">
-          <UButton
-            v-if="isTrainee"
-            variant="ghost"
-            size="xs"
-            icon="i-lucide-pencil"
-            :aria-label="hasReport ? '日報を編集' : '日報を入力'"
-            @click="onPencil"
-          />
-          <UIcon
-            v-else-if="isExpandable"
-            name="i-lucide-chevron-down"
-            class="size-4 text-dimmed transition-transform motion-reduce:transition-none"
-            aria-hidden="true"
-            :class="{ 'rotate-180': isExpanded }"
-          />
-        </div>
-      </div>
-    </div>
-    <!-- SP 詳細展開 -->
-    <ReportRowDetail
       v-if="report"
-      :report="report"
-      variant="sp"
-      :panel-id="`${baseId}-sp`"
-      :is-open="isExpanded ?? false"
-    />
+      class="max-sm:hidden"
+    >
+      <ReportRowDetail
+        :report="report"
+        variant="pc"
+        :panel-id="pcPanelId"
+        :is-open="isExpanded ?? false"
+      />
+    </div>
+    <div
+      v-if="report"
+      class="sm:hidden"
+    >
+      <ReportRowDetail
+        :report="report"
+        variant="sp"
+        :panel-id="spPanelId"
+        :is-open="isExpanded ?? false"
+      />
+    </div>
   </div>
 </template>

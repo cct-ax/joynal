@@ -57,7 +57,10 @@ const {
 // useAdminUsers / useMentorAssignments は server:false。SSR では idle（空）で描画され、
 // クライアント初回描画では pending になるため分岐が server/client でずれてハイドレーション
 // 不整合になる。report.vue と同じく mounted ゲートで初回は両者ともスケルトンを描画して回避する。
+// ユーザー一覧と担当割り当てはそれぞれ別の pending を持つため、ローディング判定も別々に集約する。
 const mounted = useMounted()
+const usersLoading = usePageLoading(() => !mounted.value, usersPending)
+const assignLoading = usePageLoading(() => !mounted.value, assignPending)
 
 // ページヘッダーの at-a-glance サマリ（役割別カウント）。
 // 担当未設定 = メンター未割り当ての新人数（>0 のとき warning 色で注意喚起）。
@@ -87,7 +90,7 @@ const statItems = computed(() => {
 
       <!-- stat chips -->
       <div
-        v-if="!mounted || usersPending"
+        v-if="usersLoading"
         class="flex flex-wrap gap-2"
       >
         <USkeleton
@@ -141,7 +144,7 @@ const statItems = computed(() => {
           </div>
           <UserTable
             :users="users"
-            :loading="!mounted || usersPending"
+            :loading="usersLoading"
             :current-user-id="currentUser?.id"
             @edit="onEditUser"
             @set-active="onSetActive"
@@ -180,7 +183,7 @@ const statItems = computed(() => {
           </div>
 
           <div
-            v-if="!mounted || assignPending"
+            v-if="assignLoading"
             class="space-y-2 p-4"
           >
             <USkeleton

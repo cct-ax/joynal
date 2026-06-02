@@ -15,6 +15,12 @@ import type {
 } from '#shared/types/schemas'
 
 /**
+ * @nuxt/ui の USelectMenu / USelect に渡す items の要素型（label 表示 / value=ID）。
+ * AssignmentRow などの選択 UI が共有する。
+ */
+export type SelectItem = { label: string, value: string }
+
+/**
  * ReportInputModal が defineExpose で公開する API。
  * テストから submit / onDelete を直接呼ぶ際に使用する。
  */

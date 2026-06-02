@@ -10,6 +10,7 @@
  * design プロト docs/design/ を参照。
  */
 import type { PersonOption } from '#shared/types/api'
+import type { SelectItem } from '#shared/types/components'
 
 const props = defineProps<{
   /** 編集対象の新人名 */
@@ -32,8 +33,6 @@ const ojtId = defineModel<string | null>('ojtId')
  * そのため非空の番兵を使い、外向き model の null と相互変換する。
  */
 const NONE = '__unassigned__'
-
-type SelectItem = { label: string, value: string }
 
 /**
  * USelectMenu の items リスト生成ヘルパー。

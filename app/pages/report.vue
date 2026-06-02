@@ -60,13 +60,11 @@ watch(selectedTraineeId, () => {
 // 必ずスケルトンを描画してボード全体のハイドレーションずれを構造的に避ける（mounted ゲート）。
 // マウント後は profile/assignments の取得状況と reports の取得状況（idle/pending）で判定する。
 const mounted = useMounted()
-const isLoading = computed(
-  () =>
-    !mounted.value
-    || profilePending.value
-    || assigneesPending.value
-    || reportsStatus.value === 'idle'
-    || reportsStatus.value === 'pending'
+const isLoading = usePageLoading(
+  () => !mounted.value,
+  profilePending,
+  assigneesPending,
+  () => reportsStatus.value === 'idle' || reportsStatus.value === 'pending'
 )
 
 // 担当新人が 1 件以上いるか。
