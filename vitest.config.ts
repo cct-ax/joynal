@@ -17,6 +17,9 @@ export default defineVitestConfig({
         domEnvironment: 'happy-dom'
       }
     },
+    // 各 server/api ハンドラの top-level defineRouteMeta（Nitro ビルドマクロ・テスト環境に無い）の
+    // ReferenceError を防ぐため no-op を global 登録する。
+    setupFiles: ['./server/test/setup.ts'],
     // テストで意図的に発生させる既知のノイズのみ抑止する（console 呼び出し自体は妨げないので spy/アサートは可能）。
     onConsoleLog: (log: string): boolean | undefined => {
       // 1) Vue が <Suspense>(mountSuspended) 使用時に console.info で出す実験的機能の注意書き

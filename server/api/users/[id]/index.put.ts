@@ -5,6 +5,36 @@ import { userUpdateBodySchema, uuidSchema } from '#shared/types/schemas'
 // 実質的な永久 ban（Supabase は 'none' で解除、それ以外は PostgreSQL interval 文字列）
 const BAN_DURATION_PERMANENT = '876000h'
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['users'],
+    summary: 'ユーザー更新',
+    description: '管理者のみ。変更したいフィールドのみ送る。is_active を false にすると Supabase Auth 側でも ban してログイン不可にする。email / 社員 ID の重複は 409。自己ロックアウト防止のため自分自身の権限降格・無効化は 400。',
+    requestBody: {
+      required: true,
+      content: { 'application/json': { schema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          employee_id: { type: 'string', description: '社員ID（最大50文字）' },
+          email: { type: 'string', format: 'email' },
+          role: { type: 'string', enum: ['trainee', 'mentor', 'ojt', 'admin'] },
+          is_active: { type: 'boolean' }
+        }
+      } } }
+    },
+    responses: {
+      200: { description: '更新後の profiles レコード', content: { 'application/json': { example: { id: 'uuid', employee_id: 'E002', name: '更新後の名前', email: 'updated@example.com', role: 'mentor', is_active: false, created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-02T00:00:00Z' } } } },
+      400: { description: '不正な role / 自分自身の権限降格・無効化' },
+      401: { description: '未ログイン' },
+      403: { description: '管理者以外が呼び出した' },
+      404: { description: '対象ユーザーが存在しない' },
+      409: { description: '同じメール / 社員 ID が既に存在する（code: EMPLOYEE_ID_TAKEN）' },
+      500: { description: 'サーバーエラー' }
+    }
+  }
+})
+
 /**
  * PUT /api/users/:id — ユーザー情報を更新する（管理者のみ）。
  * email 変更時は auth.users を先に更新して一意性を保証。is_active 変更時は ban_duration で GoTrue セッションを制御する。

@@ -2,6 +2,23 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { AssignmentForAdmin, AssignmentForMentor } from '#shared/types/api'
 import { assignmentsMeQuerySchema, uuidSchema } from '#shared/types/schemas'
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['assignments'],
+    summary: '担当新人一覧取得',
+    description: 'メンター・OJT は自分の担当新人、管理者は全新人の割り当て情報を取得する。新人ロールは 403。レスポンス形状はロールにより異なる（メンター・OJT は trainee のみ、管理者は mentor / ojt も含む）。',
+    parameters: [
+      { in: 'query', name: 'year', required: false, schema: { type: 'integer' }, description: '年度（省略時は現在年度）' }
+    ],
+    responses: {
+      200: { description: '担当新人一覧（メンター・OJT 視点 / 管理者視点のいずれか）', content: { 'application/json': { example: { 'メンター・OJT の場合': [{ trainee_id: 'uuid', year: 2026, trainee: { name: '山田 花子', employee_id: 'E001' } }], '管理者の場合': [{ trainee_id: 'uuid', mentor_id: 'uuid', ojt_id: 'uuid', year: 2026, trainee: { name: '山田 花子' }, mentor: { name: '田中 一郎' }, ojt: { name: '佐藤 美咲' } }] } } } },
+      401: { description: '未ログイン' },
+      403: { description: '新人ロールが呼び出した' },
+      500: { description: 'サーバーエラー' }
+    }
+  }
+})
+
 /**
  * GET /api/assignments/me — 自分の担当新人一覧を返す（trainee は 403）。
  * admin は全割り当てを AssignmentForAdmin[]、mentor/ojt は自分が担当する新人のみ AssignmentForMentor[] で返す。

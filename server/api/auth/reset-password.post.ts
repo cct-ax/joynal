@@ -1,6 +1,28 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 import { resetPasswordSchema } from '#shared/types/schemas'
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['auth'],
+    summary: 'リセット用コード送信',
+    description: 'メールアドレス宛に recovery OTP（確認コード）を送る。未登録メールにはコードを送らず 404 を返す（存在の有無を区別する仕様）。',
+    requestBody: {
+      required: true,
+      content: { 'application/json': { schema: {
+        type: 'object',
+        required: ['email'],
+        properties: { email: { type: 'string', format: 'email' } }
+      } } }
+    },
+    responses: {
+      204: { description: '成功（ボディなし・コード送信）' },
+      400: { description: 'バリデーションエラー' },
+      404: { description: '未登録メールアドレス' },
+      500: { description: 'サーバーエラー' }
+    }
+  }
+})
+
 /**
  * POST /api/auth/reset-password
  * パスワードリセット用の認証コード（6桁 OTP）をメール送信する。

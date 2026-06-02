@@ -1,6 +1,32 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { resetPasswordOtpBodySchema } from '#shared/types/schemas'
 
+defineRouteMeta({
+  openAPI: {
+    tags: ['auth'],
+    summary: 'コード検証＋新パスワード設定',
+    description: 'verifyOtp(type=recovery) → updateUser(password) を実行し、最後に全セッションを失効させる。コードが不正・期限切れ、または更新失敗時は 400。新パスワードが現在と同一なら 422（code: SAME_PASSWORD）。',
+    requestBody: {
+      required: true,
+      content: { 'application/json': { schema: {
+        type: 'object',
+        required: ['email', 'token', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          token: { type: 'string', description: '確認コード（6〜8桁の数字）' },
+          password: { type: 'string', description: '新パスワード（8文字以上）' }
+        }
+      } } }
+    },
+    responses: {
+      204: { description: '成功（ボディなし・全セッション失効）' },
+      400: { description: 'コードが不正・期限切れ / 更新失敗' },
+      422: { description: '新パスワードが現在と同一（code: SAME_PASSWORD）' },
+      500: { description: 'サーバーエラー' }
+    }
+  }
+})
+
 /**
  * POST /api/auth/reset-password-otp
  * メールで届いた6桁コード（recovery OTP）を検証し、新パスワードを設定する。
