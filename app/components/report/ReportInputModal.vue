@@ -35,20 +35,11 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const apiError = useApiError()
-const loading = ref(false)
 const deleteLoading = ref(false)
 const confirmDeleteOpen = ref(false)
 
 const isEdit = computed(() => props.report !== null)
 const title = computed(() => (isEdit.value ? '日報を編集' : '日報を入力'))
-
-const state = reactive<Partial<ReportSchema>>({
-  date: '',
-  check_in: '',
-  check_out: '',
-  content: '',
-  mood: undefined
-})
 
 /** DB の mood (number | null) を MoodValue | undefined に絞り込む */
 const toMoodValue = (m: unknown): MoodValue | undefined =>
@@ -59,52 +50,24 @@ const openModel = computed({
   set: (v: boolean) => emit('update:open', v)
 })
 
-// UInputTime は @internationalized/date の Time を扱うため、文字列の state と
-// computed プロキシで橋渡しする（state・スキーマ・API ボディは "HH:MM" 文字列のまま）。
-const checkInTime = computed<Time | null>({
-  get: () => toTimeValue(state.check_in),
-  set: (t) => {
-    state.check_in = t ? fromTimeValue(t) : ''
-  }
-})
-const checkOutTime = computed<Time | null>({
-  get: () => toTimeValue(state.check_out),
-  set: (t) => {
-    state.check_out = t ? fromTimeValue(t) : ''
-  }
-})
-
-// モーダルが開くたびに state を初期化。編集時は report の値、新規時は date のみ。
-// immediate: true で初回マウント時にも反映させる。
-watch(
-  () => props.open,
-  (opened) => {
-    if (!opened) return
-    state.date = props.report?.date ?? props.date ?? ''
-    // DB の time 由来 "HH:MM:SS" を正準 "HH:MM" に正規化してから格納する。
-    state.check_in = fromTimeValue(toTimeValue(props.report?.check_in))
-    state.check_out = fromTimeValue(toTimeValue(props.report?.check_out))
-    state.content = props.report?.content ?? ''
-    state.mood = toMoodValue(props.report?.mood)
-  },
-  { immediate: true }
-)
-
-const dateLabel = computed(() => {
-  if (!state.date) return ''
-  const d = parseYmd(state.date)
-  if (!d) return state.date
-  return formatDateWithWeekday(d)
-})
-
 const close = (): void => {
   openModel.value = false
 }
 
-// 送信処理本体。UForm @submit から呼ぶほか、テストでは defineExpose 経由で直接呼ぶ。
-const submit = async (data: ReportSchema): Promise<void> => {
-  loading.value = true
-  try {
+// 開閉リセット＋submit の loading/error 定型は useModalForm に集約する。
+// 開くたびに state を初期化。編集時は report の値、新規時は date のみ。
+const { state, loading, submit } = useModalForm<ReportSchema, Partial<ReportSchema>>({
+  isOpen: () => props.open,
+  buildState: () => ({
+    date: props.report?.date ?? props.date ?? '',
+    // DB の time 由来 "HH:MM:SS" を正準 "HH:MM" に正規化してから格納する。
+    check_in: fromTimeValue(toTimeValue(props.report?.check_in)),
+    check_out: fromTimeValue(toTimeValue(props.report?.check_out)),
+    content: props.report?.content ?? '',
+    mood: toMoodValue(props.report?.mood)
+  }),
+  // 送信処理本体。編集時は PUT、新規時は POST。
+  onSubmit: async (data) => {
     if (isEdit.value && props.report) {
       // MoodValue 統一の効果: data.mood は MoodValue | undefined なので
       // null 合体だけで ReportUpdateBody.mood (MoodValue | null) と一致する
@@ -130,15 +93,34 @@ const submit = async (data: ReportSchema): Promise<void> => {
     }
     emit('saved')
     close()
-  } catch (error: unknown) {
-    apiError.notify(error, {
-      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
-      fallback: '保存に失敗しました'
-    })
-  } finally {
-    loading.value = false
+  },
+  errorOptions: () => ({
+    statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+    fallback: '保存に失敗しました'
+  })
+})
+
+// UInputTime は @internationalized/date の Time を扱うため、文字列の state と
+// computed プロキシで橋渡しする（state・スキーマ・API ボディは "HH:MM" 文字列のまま）。
+const checkInTime = computed<Time | null>({
+  get: () => toTimeValue(state.check_in),
+  set: (t) => {
+    state.check_in = t ? fromTimeValue(t) : ''
   }
-}
+})
+const checkOutTime = computed<Time | null>({
+  get: () => toTimeValue(state.check_out),
+  set: (t) => {
+    state.check_out = t ? fromTimeValue(t) : ''
+  }
+})
+
+const dateLabel = computed(() => {
+  if (!state.date) return ''
+  const d = parseYmd(state.date)
+  if (!d) return state.date
+  return formatDateWithWeekday(d)
+})
 
 const onSubmit = (event: FormSubmitEvent<ReportSchema>): Promise<void> => submit(event.data)
 

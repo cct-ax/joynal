@@ -34,34 +34,22 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
-const apiError = useApiError()
-const loading = ref(false)
 
 const isEdit = computed(() => props.existing !== null)
 const title = computed(() => (isEdit.value ? '週次コメントを編集' : '週次コメントを入力'))
 const weekLabel = computed(() => formatWeekLabel(props.weekStart))
 
-const state = reactive<Partial<CommentSchema>>({ content: '' })
-
-// モーダルの開閉に追従して state を初期化する。
-// 開く時は既存コメント本文を反映し、閉じる時は空に戻す（次回は空から始める）。
-// immediate: true で初回マウント時（open=true 付き）にも反映させる。
-watch(
-  open,
-  (opened) => {
-    state.content = opened ? (props.existing?.content ?? '') : ''
-  },
-  { immediate: true }
-)
-
 const close = (): void => {
   open.value = false
 }
 
-// 送信処理本体。UForm @submit から呼ぶほか、テストでは defineExpose 経由で直接呼ぶ。
-const submit = async (data: CommentSchema): Promise<void> => {
-  loading.value = true
-  try {
+// 開閉リセット＋submit の loading/error 定型は useModalForm に集約する。
+// 開く時は既存コメント本文を反映し、閉じる時は空に戻す（次回は空から始める）。
+const { state, loading, submit } = useModalForm<CommentSchema, Partial<CommentSchema>>({
+  isOpen: () => open.value ?? false,
+  buildState: () => ({ content: open.value ? (props.existing?.content ?? '') : '' }),
+  // 送信処理本体。$fetch・成功トースト・emit・close を行う。
+  onSubmit: async (data) => {
     await $fetch('/api/comments', {
       method: 'PUT',
       body: {
@@ -72,16 +60,13 @@ const submit = async (data: CommentSchema): Promise<void> => {
     })
     toast.add({ title: 'コメントを保存しました', color: 'success' })
     emit('saved')
-    open.value = false
-  } catch (error: unknown) {
-    apiError.notify(error, {
-      statusMessages: { 403: 'アクセス権限がありません' },
-      fallback: 'コメントの保存に失敗しました'
-    })
-  } finally {
-    loading.value = false
-  }
-}
+    close()
+  },
+  errorOptions: () => ({
+    statusMessages: { 403: 'アクセス権限がありません' },
+    fallback: 'コメントの保存に失敗しました'
+  })
+})
 
 const onSubmit = (event: FormSubmitEvent<CommentSchema>): Promise<void> => submit(event.data)
 

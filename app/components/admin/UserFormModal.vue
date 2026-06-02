@@ -29,8 +29,6 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
-const apiError = useApiError()
-const loading = ref(false)
 
 // user の有無でモード判定する（null/undefined = 招待、それ以外 = 編集）。
 const isEdit = computed(() => props.user != null)
@@ -49,44 +47,25 @@ const roleOptions = VALID_ROLES.map(r => ({
   value: r
 }))
 
-const state = reactive<Partial<UserCreateSchema>>({
-  name: '',
-  employee_id: '',
-  email: '',
-  role: undefined
-})
-
-// モーダルの開閉・編集対象の変化に追従して state を初期化する。
-// 開く時は編集対象（あれば）を反映し、招待時・閉じる時は空にリセットする。
-watch(
-  open,
-  (opened) => {
-    if (opened && props.user) {
-      state.name = props.user.name
-      state.employee_id = props.user.employee_id
-      state.email = props.user.email
-      state.role = isUserRole(props.user.role) ? props.user.role : undefined
-    } else {
-      state.name = ''
-      state.employee_id = ''
-      state.email = ''
-      state.role = undefined
-    }
-  },
-  { immediate: true }
-)
-
 const close = (): void => {
   open.value = false
 }
 
-/**
- * フォーム送信処理。テストでは defineExpose 経由で直接呼ぶ。
- * user があれば PUT（更新）、なければ POST（招待）。
- */
-const submit = async (data: UserCreateSchema): Promise<void> => {
-  loading.value = true
-  try {
+// 開閉リセット＋submit の loading/error 定型は useModalForm に集約する。
+// 開く時は編集対象（あれば）を反映し、招待時・閉じる時は空にリセットする。
+const { state, loading, submit } = useModalForm<UserCreateSchema, Partial<UserCreateSchema>>({
+  isOpen: () => open.value ?? false,
+  buildState: () =>
+    open.value && props.user
+      ? {
+          name: props.user.name,
+          employee_id: props.user.employee_id,
+          email: props.user.email,
+          role: isUserRole(props.user.role) ? props.user.role : undefined
+        }
+      : { name: '', employee_id: '', email: '', role: undefined },
+  // 送信処理本体。user があれば PUT（更新）、なければ POST（招待）。
+  onSubmit: async (data) => {
     const body = { name: data.name, employee_id: data.employee_id, email: data.email, role: data.role }
     if (isEdit.value && props.user) {
       await $fetch(`/api/users/${props.user.id}`, { method: 'PUT', body })
@@ -96,17 +75,14 @@ const submit = async (data: UserCreateSchema): Promise<void> => {
       toast.add({ title: '招待しました', color: 'success' })
     }
     emit('saved')
-    open.value = false
-  } catch (error: unknown) {
-    apiError.notify(error, {
-      statusMessages: { 409: 'このメールアドレスは既に登録されています' },
-      codeMessages: { EMPLOYEE_ID_TAKEN: 'この社員IDは既に使用されています' },
-      fallback: isEdit.value ? 'ユーザー情報の更新に失敗しました' : 'ユーザーの追加に失敗しました'
-    })
-  } finally {
-    loading.value = false
-  }
-}
+    close()
+  },
+  errorOptions: () => ({
+    statusMessages: { 409: 'このメールアドレスは既に登録されています' },
+    codeMessages: { EMPLOYEE_ID_TAKEN: 'この社員IDは既に使用されています' },
+    fallback: isEdit.value ? 'ユーザー情報の更新に失敗しました' : 'ユーザーの追加に失敗しました'
+  })
+})
 
 const onSubmit = (event: FormSubmitEvent<UserCreateSchema>): Promise<void> => submit(event.data)
 
