@@ -1,3 +1,20 @@
+import type { ViteConfig } from 'nuxt/schema'
+
+// Vite ビルドの onwarn 型（Rollup の WarningHandlerWithDefault）。vite/rollup は
+// pnpm 非ホイストで直接 import できないため、解決可能な Nuxt の設定型から導出する。
+type RollupOnwarn = NonNullable<NonNullable<NonNullable<ViteConfig['build']>['rollupOptions']>['onwarn']>
+
+// @tailwindcss/vite と nuxt:module-preload-polyfill は変換時に sourcemap を emit
+// しないため、Rollup の SOURCEMAP_BROKEN 警告が出る（生成 CSS / module preload
+// polyfill 注入が対象で実害なし）。ソースマップ生成自体は維持しつつこの警告だけ握りつぶす。
+// UNUSED_EXTERNAL_IMPORT は Nuxt がサーバービルドの onwarn で既定抑制している警告
+// （nitro/runtime 等の external 由来）。サーバー側 onwarn を差し替えると既定が失われる
+// ため同等に抑制する（client では発生しないので共通化して問題ない）。
+const onwarn: RollupOnwarn = (warning, defaultHandler) => {
+  if (warning.code === 'SOURCEMAP_BROKEN' || warning.code === 'UNUSED_EXTERNAL_IMPORT') return
+  defaultHandler(warning)
+}
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxt/fonts', '@nuxtjs/supabase', '@nuxt/eslint', '@vueuse/nuxt'],
@@ -58,7 +75,17 @@ export default defineNuxtConfig({
         '@internationalized/date',
         'zod'
       ]
-    }
+    },
+    // SSR バンドル（500KB超）はエッジで1回読むだけでクライアント性能に無関係なため、
+    // 既定 500KB の閾値を引き上げてチャンクサイズ警告を抑制する。
+    build: {
+      chunkSizeWarningLimit: 1000
+    },
+    // Nuxt はクライアント/サーバーで別々の Vite ビルドを回し、サーバービルドには独自
+    // onwarn を設定する。トップレベル onwarn ではサーバー側に届かないため、$client/
+    // $server 双方で差し替える（onwarn 本体はファイル冒頭で定義）。
+    $client: { build: { rollupOptions: { onwarn } } },
+    $server: { build: { rollupOptions: { onwarn } } }
   },
 
   typescript: {
