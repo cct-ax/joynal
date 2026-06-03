@@ -28,19 +28,26 @@ const sendResetEmail = async () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-[#f9fafb] px-5 py-8">
+  <div class="relative flex min-h-screen items-center justify-center bg-muted px-5 py-8 text-default">
+    <UColorModeButton
+      color="neutral"
+      variant="outline"
+      size="sm"
+      square
+      class="fixed end-4 top-4 z-10 cursor-pointer"
+    />
+
     <UCard
-      class="w-full max-w-sm"
+      class="w-full max-w-sm shadow-sm"
       :ui="{
-        root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
         body: 'p-7'
       }"
     >
       <div class="mb-5">
-        <h1 class="text-xl font-bold text-[#111827]">
+        <h1 class="text-xl font-bold text-highlighted">
           パスワードリセット
         </h1>
-        <p class="mt-2 text-sm text-[#6b7280]">
+        <p class="mt-2 text-sm text-muted">
           登録済みのメールアドレスを入力してください。
         </p>
       </div>
@@ -53,7 +60,6 @@ const sendResetEmail = async () => {
           label="メールアドレス"
           name="email"
           required
-          :ui="{ label: 'mb-1.5 block text-sm font-medium text-[#374151]' }"
         >
           <UInput
             id="email"
@@ -69,13 +75,13 @@ const sendResetEmail = async () => {
 
         <p
           v-if="successMessage"
-          class="text-sm text-[#16a34a]"
+          class="text-sm text-success"
         >
           {{ successMessage }}
         </p>
         <p
           v-if="errorMessage"
-          class="text-sm text-[#dc2626]"
+          class="text-sm text-error"
         >
           {{ errorMessage }}
         </p>
@@ -86,7 +92,7 @@ const sendResetEmail = async () => {
           block
           :loading="loading"
           :disabled="loading"
-          class="cursor-pointer justify-center bg-[#4f46e5] hover:bg-[#4338ca]"
+          class="cursor-pointer"
         >
           {{ loading ? '送信中...' : 'リセットメールを送信' }}
         </UButton>
@@ -95,7 +101,7 @@ const sendResetEmail = async () => {
       <div class="mt-5">
         <NuxtLink
           to="/login"
-          class="text-sm text-[#4f46e5] transition hover:underline"
+          class="text-sm text-primary transition hover:underline"
         >
           ← ログイン画面に戻る
         </NuxtLink>

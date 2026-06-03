@@ -29,20 +29,28 @@ const signIn = async () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-[#f9fafb] px-5 py-8">
+  <div class="relative flex min-h-screen items-center justify-center bg-muted px-5 py-8 text-default">
+    <UColorModeButton
+      color="neutral"
+      variant="outline"
+      size="sm"
+      square
+      class="fixed end-4 top-4 z-10 cursor-pointer"
+    />
+
     <div class="w-full max-w-sm">
       <div class="mb-8 text-center">
-        <h1 class="text-[32px] font-bold leading-none text-[#111827]">
+        <h1 class="text-[32px] font-bold leading-none text-highlighted">
           Joynal
         </h1>
-        <p class="mt-2 text-sm text-[#6b7280]">
+        <p class="mt-2 text-sm text-muted">
           今日の「楽しい」を、明日の成長へ
         </p>
       </div>
 
       <UCard
+        class="shadow-sm"
         :ui="{
-          root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
           body: 'p-7'
         }"
       >
@@ -54,7 +62,6 @@ const signIn = async () => {
             label="メールアドレス"
             name="email"
             required
-            :ui="{ label: 'mb-1.5 block text-sm font-medium text-[#374151]' }"
           >
             <UInput
               id="email"
@@ -72,7 +79,6 @@ const signIn = async () => {
             label="パスワード"
             name="password"
             required
-            :ui="{ label: 'mb-1.5 block text-sm font-medium text-[#374151]' }"
           >
             <UInput
               id="password"
@@ -88,7 +94,7 @@ const signIn = async () => {
 
           <p
             v-if="errorMessage"
-            class="text-sm text-[#dc2626]"
+            class="text-sm text-error"
           >
             {{ errorMessage }}
           </p>
@@ -99,7 +105,7 @@ const signIn = async () => {
             block
             :loading="loading"
             :disabled="loading"
-            class="mt-1 cursor-pointer justify-center bg-[#4f46e5] hover:bg-[#4338ca]"
+            class="mt-1 cursor-pointer"
           >
             {{ loading ? 'ログイン中...' : 'ログイン' }}
           </UButton>
@@ -108,7 +114,7 @@ const signIn = async () => {
         <div class="mt-4 text-center">
           <NuxtLink
             to="/reset-password"
-            class="text-sm text-[#4f46e5] transition hover:underline"
+            class="text-sm text-primary transition hover:underline"
           >
             パスワードをお忘れの方はこちら
           </NuxtLink>

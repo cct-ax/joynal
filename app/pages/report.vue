@@ -123,22 +123,22 @@ const isCalendarDateSelectedWeekStart = (date: DateValue): boolean =>
 
 const getCalendarDayClass = (date: DateValue): string => {
   if (isCalendarDateSelectedWeekStart(date)) {
-    return 'flex size-7 items-center justify-center rounded-full bg-[#4f46e5] font-semibold text-white'
+    return 'flex size-7 items-center justify-center rounded-full bg-primary font-semibold text-inverted'
   }
   if (isCalendarDateInSelectedWorkWeek(date)) {
-    return 'flex size-7 items-center justify-center rounded-full bg-[#eef2ff] font-medium text-[#4f46e5]'
+    return 'flex size-7 items-center justify-center rounded-full bg-primary/10 font-medium text-primary'
   }
   return 'flex size-7 items-center justify-center rounded-full'
 }
 
 const getCalendarWeekDayClass = (day: string): string => {
   if (day.includes('土')) {
-    return 'text-[#2563eb]'
+    return 'text-info'
   }
   if (day.includes('日')) {
-    return 'text-[#dc2626]'
+    return 'text-error'
   }
-  return 'text-[#111827]'
+  return 'text-default'
 }
 
 const canGoNextWeek = computed(
@@ -190,13 +190,13 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-52px)] bg-[#f9fafb] px-4 py-5 sm:px-6 lg:px-8">
+  <div class="min-h-[calc(100vh-52px)] bg-muted px-4 py-5 text-default sm:px-6 lg:px-8">
     <div class="mx-auto max-w-[960px] space-y-4">
       <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
       <UCard
         v-if="showTraineeSelector"
+        class="shadow-sm"
         :ui="{
-          root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
           body: 'p-4'
         }"
       >
@@ -220,12 +220,12 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
       <!-- 管理者で新人未選択の場合 -->
       <UCard
         v-if="showEmptyAdminMessage"
+        class="shadow-sm"
         :ui="{
-          root: 'rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
           body: 'flex min-h-72 items-center justify-center p-8 text-center'
         }"
       >
-        <p class="text-sm text-[#6b7280]">
+        <p class="text-sm text-muted">
           表示したい新人の日報を選んでください
         </p>
       </UCard>
@@ -233,12 +233,12 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
       <template v-else>
         <!-- 週ナビゲーション -->
         <UCard
+          class="shadow-sm"
           :ui="{
-            root: 'overflow-hidden rounded-lg border border-[#e5e7eb] bg-white shadow-sm',
             body: 'p-0 sm:p-0'
           }"
         >
-          <div class="border-b border-[#e5e7eb] p-3 sm:p-4">
+          <div class="border-b border-default p-3 sm:p-4">
             <div
               class="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem_auto] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
             >
@@ -246,7 +246,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 type="button"
                 color="primary"
                 variant="outline"
-                class="h-9 w-9 cursor-pointer justify-center !border-[#c7d2fe] !bg-white px-0 !text-[#4f46e5] !ring-1 !ring-[#c7d2fe] hover:!bg-[#eef2ff] hover:!ring-[#c7d2fe] focus:!ring-4 focus:!ring-[#c7d2fe] sm:w-auto sm:px-3"
+                class="h-9 w-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
                 aria-label="前の週"
                 @click="prevWeek"
               >
@@ -264,8 +264,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 <UButton
                   type="button"
                   color="neutral"
-                  variant="ghost"
-                  class="min-h-9 w-full min-w-0 cursor-pointer justify-center rounded-md !bg-[#f3f4f6] px-2 py-2 text-center text-xs font-medium !text-[#111827] hover:!bg-[#e5e7eb] focus-visible:!ring-4 focus-visible:!ring-[#c7d2fe] sm:px-3 sm:text-sm"
+                  variant="soft"
+                  class="min-h-9 w-full min-w-0 cursor-pointer justify-center rounded-md px-2 py-2 text-center text-xs font-medium sm:px-3 sm:text-sm"
                   aria-label="週をカレンダーで選択"
                 >
                   <span class="min-w-0 truncate whitespace-nowrap">
@@ -273,7 +273,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                   </span>
                   <UIcon
                     name="i-lucide-calendar-days"
-                    class="ml-1 size-4 shrink-0 text-[#6b7280]"
+                    class="ml-1 size-4 shrink-0 text-muted"
                   />
                 </UButton>
 
@@ -284,14 +284,14 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       :max-value="maxCalendarValue"
                       :week-starts-on="1"
                       prevent-deselect
-                      color="neutral"
+                      color="primary"
                       variant="subtle"
                       size="sm"
                       :ui="{
                         root: 'min-w-[17.5rem]',
                         body: 'pt-3',
                         headCell: 'font-semibold',
-                        cellTrigger: 'data-[selected]:!bg-transparent data-[selected]:!text-inherit data-[selected]:!ring-0 data-today:not-data-[selected]:!text-[#4f46e5] hover:not-data-[selected]:!bg-[#eef2ff] focus-visible:!ring-[#c7d2fe]'
+                        cellTrigger: 'data-[selected]:bg-transparent data-[selected]:text-inherit data-[selected]:ring-0'
                       }"
                     >
                       <template #week-day="{ day }">
@@ -313,7 +313,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 type="button"
                 color="primary"
                 variant="outline"
-                class="h-9 w-9 cursor-pointer justify-center !border-[#c7d2fe] !bg-white px-0 !text-[#4f46e5] !ring-1 !ring-[#c7d2fe] hover:!bg-[#eef2ff] hover:!ring-[#c7d2fe] focus:!ring-4 focus:!ring-[#c7d2fe] disabled:cursor-not-allowed disabled:!border-[#e5e7eb] disabled:!bg-[#f9fafb] disabled:!text-[#9ca3af] disabled:!ring-[#e5e7eb] disabled:hover:!bg-[#f9fafb] sm:w-auto sm:px-3"
+                class="h-9 w-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
                 :disabled="!canGoNextWeek"
                 aria-label="次の週"
                 @click="nextWeek"
@@ -327,8 +327,9 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
               <UButton
                 type="button"
+                color="primary"
                 variant="soft"
-                class="min-h-9 w-auto cursor-pointer justify-center !bg-[#eef2ff] px-3 !text-[#4f46e5] hover:!bg-[#e0e7ff] disabled:cursor-not-allowed disabled:!bg-[#f3f4f6] disabled:!text-[#9ca3af]"
+                class="min-h-9 w-auto cursor-pointer justify-center px-3"
                 :disabled="isCurrentWeek"
                 @click="goToThisWeek"
               >
@@ -339,7 +340,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
 
           <!-- 週間日報リスト（月〜金） -->
           <div
-            class="hidden border-b border-[#e5e7eb] bg-[#f9fafb] text-xs font-semibold tracking-wide text-[#6b7280] md:grid md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem]"
+            class="hidden border-b border-default bg-muted text-xs font-semibold tracking-wide text-muted md:grid md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem]"
           >
             <div class="px-4 py-2">
               日付
@@ -360,8 +361,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
             <article
               v-for="item in weekDayItems"
               :key="item.dateKey"
-              class="border-b border-[#e5e7eb] bg-white last:border-b-0"
-              :class="item.isToday ? 'bg-[#fafafa]' : ''"
+              class="border-b border-default last:border-b-0"
+              :class="item.isToday ? 'bg-elevated/50' : 'bg-default'"
             >
               <div class="p-4 md:hidden">
                 <div class="flex items-start justify-between gap-3">
@@ -369,23 +370,23 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                     <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span
                         class="text-[13px] font-semibold"
-                        :class="item.isToday ? 'text-[#4f46e5]' : 'text-[#111827]'"
+                        :class="item.isToday ? 'text-primary' : 'text-highlighted'"
                       >
                         {{ formatDate(item.date) }}（{{ item.weekday }}）
                       </span>
                       <span
                         v-if="item.isToday"
-                        class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4f46e5]"
+                        class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
                       />
                       <span
                         v-if="item.report"
-                        class="truncate text-xs text-[#6b7280]"
+                        class="truncate text-xs text-muted"
                       >
                         {{ item.report.check_in }} 〜 {{ item.report.check_out }}
                       </span>
                       <span
                         v-else
-                        class="text-xs text-[#9ca3af]"
+                        class="text-xs text-dimmed"
                       >
                         未入力
                       </span>
@@ -395,7 +396,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       v-if="item.report"
                       class="mt-1 flex min-w-0 items-center gap-2"
                     >
-                      <p class="min-w-0 flex-1 truncate text-[13px] text-[#6b7280]">
+                      <p class="min-w-0 flex-1 truncate text-[13px] text-muted">
                         {{ trimContent(item.report.content, 60) }}
                       </p>
                       <div
@@ -406,7 +407,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                           v-for="star in moodStars"
                           :key="star"
                           class="text-xs"
-                          :class="star <= (item.report.mood ?? 0) ? 'text-amber-400' : 'text-[#d1d5db]'"
+                          :class="star <= (item.report.mood ?? 0) ? 'text-warning' : 'text-dimmed'"
                         >
                           ★
                         </span>
@@ -470,17 +471,17 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 <div class="flex items-center gap-2 md:px-4 md:py-3">
                   <span
                     class="text-sm font-medium"
-                    :class="item.isToday ? 'text-[#4f46e5]' : 'text-[#111827]'"
+                    :class="item.isToday ? 'text-primary' : 'text-highlighted'"
                   >
                     {{ formatDate(item.date) }}（{{ item.weekday }}）
                   </span>
                   <span
                     v-if="item.isToday"
-                    class="h-1.5 w-1.5 rounded-full bg-[#4f46e5]"
+                    class="h-1.5 w-1.5 rounded-full bg-primary"
                   />
                 </div>
 
-                <div class="text-sm text-[#6b7280] md:px-2 md:py-3">
+                <div class="text-sm text-muted md:px-2 md:py-3">
                   <template v-if="item.report">
                     {{ item.report.check_in }} 〜 {{ item.report.check_out }}
                   </template>
@@ -492,13 +493,13 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 <div class="min-w-0 md:px-2 md:py-3">
                   <p
                     v-if="item.report"
-                    class="truncate text-sm text-[#111827]"
+                    class="truncate text-sm text-default"
                   >
                     {{ trimContent(item.report.content, 80) }}
                   </p>
                   <p
                     v-else
-                    class="text-sm text-[#9ca3af]"
+                    class="text-sm text-dimmed"
                   >
                     未入力
                   </p>
@@ -510,14 +511,14 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       v-for="star in moodStars"
                       :key="star"
                       class="text-sm"
-                      :class="star <= (item.report.mood ?? 0) ? 'text-amber-400' : 'text-[#d1d5db]'"
+                      :class="star <= (item.report.mood ?? 0) ? 'text-warning' : 'text-dimmed'"
                     >
                       ★
                     </span>
                   </template>
                   <span
                     v-else
-                    class="text-sm text-[#d1d5db]"
+                    class="text-sm text-dimmed"
                   > -- </span>
                 </div>
 
@@ -573,13 +574,13 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
           </div>
 
           <!-- 週次コメントエリア -->
-          <div class="border-t-2 border-[#e5e7eb] p-4 sm:p-5">
-            <h2 class="mb-4 text-xs font-semibold tracking-wide text-[#6b7280]">
+          <div class="border-t-2 border-default p-4 sm:p-5">
+            <h2 class="mb-4 text-xs font-semibold tracking-wide text-muted">
               週次コメント
             </h2>
             <div class="grid gap-4 md:grid-cols-2">
               <!-- メンターコメント -->
-              <section class="rounded-lg bg-[#f3f4f6] p-4">
+              <section class="rounded-lg bg-elevated p-4">
                 <div class="mb-2 flex flex-wrap items-center gap-2">
                   <UBadge
                     color="success"
@@ -587,21 +588,21 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                     size="sm"
                     label="メンター"
                   />
-                  <h3 class="text-sm font-medium text-[#111827]">
+                  <h3 class="text-sm font-medium text-highlighted">
                     メンターコメント
                   </h3>
                 </div>
                 <!-- TODO: role === 'mentor' の場合はテキストエリアで編集可能にする -->
                 <p
                   class="text-sm leading-7"
-                  :class="mentorComment ? 'text-[#111827]' : 'italic text-[#9ca3af]'"
+                  :class="mentorComment ? 'text-default' : 'italic text-dimmed'"
                 >
                   {{ mentorComment ?? 'コメントはまだありません' }}
                 </p>
               </section>
 
               <!-- OJTコメント -->
-              <section class="rounded-lg bg-[#f3f4f6] p-4">
+              <section class="rounded-lg bg-elevated p-4">
                 <div class="mb-2 flex flex-wrap items-center gap-2">
                   <UBadge
                     color="secondary"
@@ -609,14 +610,14 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                     size="sm"
                     label="OJT"
                   />
-                  <h3 class="text-sm font-medium text-[#111827]">
+                  <h3 class="text-sm font-medium text-highlighted">
                     OJTコメント
                   </h3>
                 </div>
                 <!-- TODO: role === 'ojt' の場合はテキストエリアで編集可能にする -->
                 <p
                   class="text-sm leading-7"
-                  :class="ojtComment ? 'text-[#111827]' : 'italic text-[#9ca3af]'"
+                  :class="ojtComment ? 'text-default' : 'italic text-dimmed'"
                 >
                   {{ ojtComment ?? 'コメントはまだありません' }}
                 </p>

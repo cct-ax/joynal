@@ -61,11 +61,10 @@ const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<voi
     title="パスワード変更"
     class="w-full max-w-sm"
     :ui="{
-      content: 'overflow-hidden rounded-lg bg-white shadow-lg',
-      header: 'border-b border-[#e5e7eb] px-5 py-3.5',
-      title: 'text-base font-semibold text-[#111827]',
-      body: 'overflow-y-auto p-5',
-      close: 'cursor-pointer text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] focus:ring-4 focus:ring-[#c7d2fe]'
+      header: 'px-5 py-3.5',
+      title: 'text-base',
+      body: 'p-5',
+      close: 'cursor-pointer'
     }"
   >
     <template #body>
@@ -136,7 +135,7 @@ const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<voi
             color="primary"
             :loading="loading"
             :disabled="loading"
-            class="cursor-pointer bg-[#4f46e5] hover:bg-[#4338ca] disabled:cursor-not-allowed disabled:bg-[#c7d2fe]"
+            class="cursor-pointer"
           >
             {{ loading ? '変更中...' : '変更する' }}
           </UButton>
