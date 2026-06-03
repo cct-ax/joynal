@@ -22,6 +22,7 @@
  * `state` はリアクティブなので、テンプレートの v-model にそのまま渡せる。
  * `submit` は UForm @submit ハンドラと defineExpose の双方から呼べる。
  */
+import type { UnwrapNestedRefs } from 'vue'
 import type { ApiErrorOptions } from '~/composables/useApiError'
 
 export type UseModalFormOptions<TData, TState extends object> = {
