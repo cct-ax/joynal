@@ -43,10 +43,12 @@ defineRouteMeta({
 
 /**
  * PUT /api/assignments — メンター/OJT 割り当てを upsert する（trainee_id + year が一意キー）。
- * 認可は RLS に委譲（管理者のみ INSERT/UPDATE 可）。ユーザー不在は 404、権限不足は 403 を返す。
+ * 管理者専用エンドポイントのため、他の管理 API（users 系）と同様に assertAdminRole で
+ * サーバー側でも明示的にガードする（RLS の WITH CHECK(is_admin()) と二重防御）。
+ * 非管理者は 403、ユーザー不在は 404 を返す。
  */
 export default defineEventHandler<Promise<MentorAssignment>>(async (event) => {
-  await serverUserId(event)
+  await assertAdminRole(event)
 
   const { traineeId, mentorId, ojtId, year } = await parseBody(event, assignmentUpsertBodySchema)
 
