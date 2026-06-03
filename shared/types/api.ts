@@ -9,6 +9,14 @@ export type UserRole = 'trainee' | 'mentor' | 'ojt' | 'admin'
 export const VALID_ROLES: readonly UserRole[] = ['trainee', 'mentor', 'ojt', 'admin']
 
 // ----------------------------------------------------------------
+// Auth
+// ----------------------------------------------------------------
+
+export type UpdatePasswordResponse = {
+  success: true
+}
+
+// ----------------------------------------------------------------
 // Reports
 // ----------------------------------------------------------------
 

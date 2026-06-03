@@ -1,81 +1,63 @@
 <script setup lang="ts">
-const emit = defineEmits<{
-  close: []
-}>()
+import type { FormSubmitEvent } from '@nuxt/ui'
+import type { UpdatePasswordResponse } from '#shared/types/api'
+import {
+  passwordChangeSchema,
+  type PasswordChangeSchema,
+  type UpdatePasswordBody
+} from '#shared/types/schemas'
 
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const open = defineModel<boolean>('open', { required: true })
+const form = useTemplateRef('form')
 
-const currentPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
-const errorMessage = ref('')
+const state = reactive<Partial<PasswordChangeSchema>>({
+  current: '',
+  next: '',
+  confirm: ''
+})
+
+const toast = useToast()
 const loading = ref(false)
 
-const close = () => {
-  emit('close')
+const resetForm = (): void => {
+  state.current = ''
+  state.next = ''
+  state.confirm = ''
+  form.value?.clear()
 }
 
-const handleOpenChange = (open: boolean) => {
-  if (!open) {
-    close()
-  }
+const close = (): void => {
+  open.value = false
 }
 
-const submit = async () => {
-  errorMessage.value = ''
-
-  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    errorMessage.value = 'すべての項目を入力してください'
-    return
+watch(open, (isOpen): void => {
+  if (!isOpen) {
+    resetForm()
   }
+})
 
-  if (newPassword.value.length < 6) {
-    errorMessage.value = '新しいパスワードは6文字以上で入力してください'
-    return
-  }
-
-  if (newPassword.value !== confirmPassword.value) {
-    errorMessage.value = '新しいパスワードが一致しません'
-    return
-  }
-
-  if (!user.value?.email) {
-    errorMessage.value = 'ログイン情報を確認できませんでした'
-    return
-  }
-
+const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<void> => {
   loading.value = true
+  const body: UpdatePasswordBody = { password: event.data.next }
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: user.value.email,
-    password: currentPassword.value
-  })
-
-  if (signInError) {
-    errorMessage.value = '現在のパスワードが正しくありません'
+  try {
+    await $fetch<UpdatePasswordResponse>('/api/auth/update-password', {
+      method: 'POST',
+      body
+    })
+    toast.add({ title: 'パスワードを変更しました', color: 'success' })
+    close()
+  } catch {
+    toast.add({ title: 'パスワードの変更に失敗しました', color: 'error' })
+  } finally {
     loading.value = false
-    return
   }
-
-  const { error: updateError } = await supabase.auth.updateUser({
-    password: newPassword.value
-  })
-
-  if (updateError) {
-    errorMessage.value = 'パスワードの変更に失敗しました'
-    loading.value = false
-    return
-  }
-
-  loading.value = false
-  close()
 }
 </script>
 
 <template>
   <UModal
-    :open="true"
+    v-model:open="open"
     title="パスワード変更"
     class="w-full max-w-sm"
     :ui="{
@@ -85,20 +67,23 @@ const submit = async () => {
       body: 'overflow-y-auto p-5',
       close: 'cursor-pointer text-[#6b7280] hover:bg-[#f3f4f6] hover:text-[#111827] focus:ring-4 focus:ring-[#c7d2fe]'
     }"
-    @update:open="handleOpenChange"
   >
     <template #body>
       <UForm
+        ref="form"
+        :schema="passwordChangeSchema"
+        :state="state"
         class="space-y-4"
         @submit="submit"
       >
         <UFormField
           label="現在のパスワード"
-          name="current-password"
+          name="current"
+          required
         >
           <UInput
             id="current-password"
-            v-model="currentPassword"
+            v-model="state.current"
             type="password"
             autocomplete="current-password"
             class="w-full"
@@ -108,11 +93,12 @@ const submit = async () => {
 
         <UFormField
           label="新しいパスワード"
-          name="new-password"
+          name="next"
+          required
         >
           <UInput
             id="new-password"
-            v-model="newPassword"
+            v-model="state.next"
             type="password"
             autocomplete="new-password"
             class="w-full"
@@ -122,24 +108,18 @@ const submit = async () => {
 
         <UFormField
           label="新しいパスワード（確認）"
-          name="confirm-password"
+          name="confirm"
+          required
         >
           <UInput
             id="confirm-password"
-            v-model="confirmPassword"
+            v-model="state.confirm"
             type="password"
             autocomplete="new-password"
             class="w-full"
             :ui="{ base: 'w-full' }"
           />
         </UFormField>
-
-        <p
-          v-if="errorMessage"
-          class="text-sm text-[#dc2626]"
-        >
-          {{ errorMessage }}
-        </p>
 
         <div class="flex justify-end gap-2 pt-1">
           <UButton

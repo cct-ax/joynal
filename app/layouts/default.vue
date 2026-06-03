@@ -14,10 +14,6 @@ const openPasswordModal = () => {
   passwordModalOpen.value = true
 }
 
-const closePasswordModal = () => {
-  passwordModalOpen.value = false
-}
-
 const signOut = async () => {
   await supabase.auth.signOut()
   await router.push('/login')
@@ -128,9 +124,6 @@ const userMenuItems = computed<DropdownMenuItem[]>(() => {
       <slot />
     </main>
 
-    <PasswordChangeModal
-      v-if="passwordModalOpen"
-      @close="closePasswordModal"
-    />
+    <PasswordChangeModal v-model:open="passwordModalOpen" />
   </div>
 </template>
