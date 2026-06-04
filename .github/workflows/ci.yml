@@ -1,11 +1,9 @@
 name: CI
 
 on:
-  push:
   pull_request:
 
-# 同一 ref の古い実行は新しい実行で打ち切る（連打 push 時の無駄削減）。
-# push と PR は ref が異なるためペアの二重実行は残るが、連続実行の無駄は抑えられる。
+# 同一 PR への連打 push（synchronize）で古い実行を打ち切り無駄を削減する。
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
