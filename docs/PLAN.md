@@ -360,7 +360,7 @@
 
 > 認証は `server/api/auth/*` 経由で行う（ブラウザから Supabase を直接呼ばない）。
 
-- [ ] **2-1a-a ログイン画面** — `login.vue` を Nuxt UI（`UPageCard`/`UForm`/`UFormField`/`UInput`/`UButton`）で実装・`$fetch('/api/auth/login')`＋`useApiError`・成功後 `navigateTo('/report', { external: true })`
+- [ ] **2-1a-a ログイン画面** — `login.vue` を共通 `AuthCard`（`app/components/common/AuthCard.vue`・新規作成、認証ページ共通カード／`reset-password` でも共用）＋ `UForm`/`UFormField`/`UInput`/`UButton` で実装・`$fetch('/api/auth/login')`＋`useApiError`・成功後 `navigateTo('/report', { external: true })`（`AuthCard` の新規作成も本タスクの範囲）
 - [ ] **2-1a-b リセット画面** — `reset-password.vue`（1画面フォーム: メール＋コード送信／確認コード／新パスワード）・`/api/auth/reset-password` と `/api/auth/reset-password-otp` を接続
 - [ ] **2-1a-c 仕上げ** — `confirm.vue` スタイリング＋全画面のレスポンシブ調整
 
@@ -369,6 +369,20 @@
 - [ ] **2-1-a 週ナビゲーション** — `WeekNavigator.vue`（前週/今週/次週）＋ `useWeekNavigation` で週状態を管理
 - [ ] **2-1-b 週ジャンプ** — `WeekPickerModal.vue`（日付ピッカーで任意週へ移動）
 - [ ] **2-1-c 週間リスト骨格** — 月〜金を `ReportRow.vue`（1日1行・曜日付き）で表示・レスポンシブ対応
+
+#### 2-1b 共通レイアウト（ヘッダー/フッター）（メンバー 〜6/6）
+
+> 全ページ共通の app shell。`useCurrentUser`（keyed `useAsyncData`）で氏名/ロールを表示。
+
+- [ ] **2-1b-a 共通レイアウト** — `AppHeader.vue`（氏名/ロールバッジ表示・ログアウト・admin のみ管理ナビ／`useCurrentUser` 利用）＋ `AppFooter.vue` を `layouts/default.vue` に組み込む
+  - 新規: `app/components/common/AppHeader.vue`・`app/components/common/AppFooter.vue`
+  - 変更: `app/layouts/default.vue`
+
+#### 2-1c ログイン中のパスワード変更（メンバー 〜6/6）
+
+- [ ] **2-1c-a パスワード変更モーダル** — `PasswordChangeModal.vue`（`AppHeader` から起動・`LazyPasswordChangeModal` で遅延マウント）→ `$fetch('/api/auth/update-password')` を `useApiError` でラップ
+  - 新規: `app/components/common/PasswordChangeModal.vue`
+  - 変更: `app/components/common/AppHeader.vue`（起動ボタン追加）
 
 #### 2-2 日報入力フォームUI（メンバー 〜6/6）
 
@@ -438,7 +452,10 @@
 
 > UIに年度フィルターは設けない（`year` は現在年度で自動設定）。担当交代も既存レコードの UPDATE（upsert）で対応。
 
-- [ ] **3-6-a メンター/OJT割り当て** — `useMentorAssignments` で全新人を網羅した編集行（`AssignmentRowVM`）とメンター/OJT 選択肢（`PersonOption`）を生成 → `AssignmentRow.vue`（未割り当ては null）→「保存」で `$fetch('/api/assignments', { method: 'PUT', body })`（upsert）
+- [ ] **3-6-a 割り当て VM（composable）** — `useMentorAssignments` で `GET /api/assignments`＋ユーザー一覧から、全新人を網羅した編集行（`AssignmentRowVM`・未割り当ては null）とメンター/OJT 選択肢（`PersonOption`）を生成
+  - 変更/新規: `app/composables/useMentorAssignments.ts`
+- [ ] **3-6-b 割り当て行 UI ＋ 保存** — `AssignmentRow.vue` を `useMentorAssignments` の VM で描画 →「保存」で `$fetch('/api/assignments', { method: 'PUT', body })`（upsert）＋`useApiError`・保存後一覧 refresh
+  - 新規: `app/components/admin/AssignmentRow.vue`
 
 #### コードレビュー・修正（PL 随時）
 
