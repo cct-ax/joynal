@@ -201,7 +201,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 type="button"
                 color="primary"
                 variant="outline"
-                class="h-9 w-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
+                class="size-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
                 aria-label="前の週"
                 @click="prevWeek"
               >
@@ -243,10 +243,10 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       variant="subtle"
                       size="sm"
                       :ui="{
-                        root: 'min-w-[17.5rem]',
+                        root: 'min-w-70',
                         body: 'pt-3',
                         headCell: 'font-semibold',
-                        cellTrigger: 'data-[selected]:bg-transparent data-[selected]:text-inherit data-[selected]:ring-0'
+                        cellTrigger: 'data-selected:bg-transparent data-selected:text-inherit data-selected:ring-0'
                       }"
                     >
                       <template #week-day="{ day }">
@@ -268,7 +268,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 type="button"
                 color="primary"
                 variant="outline"
-                class="h-9 w-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
+                class="size-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
                 :disabled="!canGoNextWeek"
                 aria-label="次の週"
                 @click="nextWeek"
@@ -331,7 +331,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       </span>
                       <span
                         v-if="item.isToday"
-                        class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                        class="size-1.5 shrink-0 rounded-full bg-primary"
                       />
                       <span
                         v-if="item.report"
@@ -432,7 +432,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                   </span>
                   <span
                     v-if="item.isToday"
-                    class="h-1.5 w-1.5 rounded-full bg-primary"
+                    class="size-1.5 rounded-full bg-primary"
                   />
                 </div>
 

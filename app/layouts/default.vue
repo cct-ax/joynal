@@ -99,7 +99,7 @@ const userMenuItems = computed<DropdownMenuItem[]>(() => {
         class="shrink-0"
       >
         <div class="flex items-center gap-2">
-          <span class="max-w-[11rem] truncate text-sm text-muted">
+          <span class="max-w-44 truncate text-sm text-muted">
             {{ displayName }}
           </span>
           <UColorModeButton

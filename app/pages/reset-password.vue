@@ -103,7 +103,7 @@ defineExpose({ requestCode, submitNewPassword })
       variant="outline"
       size="sm"
       square
-      class="fixed end-4 top-4 z-10 cursor-pointer"
+      class="fixed inset-e-4 top-4 z-10 cursor-pointer"
     />
 
     <UCard
