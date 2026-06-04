@@ -88,11 +88,11 @@ describe('useAdminUsers', () => {
       requestFetchMock.mockResolvedValueOnce(sampleUsers)
 
       const { create } = await mountAdminUsers()
-      const result = await create({ name: '山田 太郎', email: 'taro@example.com', role: 'trainee' })
+      const result = await create({ name: '山田 太郎', employee_id: 'E010', email: 'taro@example.com', role: 'trainee' })
 
       expect(fetchMock).toHaveBeenCalledWith('/api/users', {
         method: 'POST',
-        body: { name: '山田 太郎', email: 'taro@example.com', role: 'trainee' }
+        body: { name: '山田 太郎', employee_id: 'E010', email: 'taro@example.com', role: 'trainee' }
       })
       expect(result).toBe(true)
     })
@@ -102,7 +102,7 @@ describe('useAdminUsers', () => {
       fetchMock.mockRejectedValueOnce({ statusCode: 409 })
 
       const { create } = await mountAdminUsers()
-      const result = await create({ name: '重複', email: 'dup@example.com', role: 'trainee' })
+      const result = await create({ name: '重複', employee_id: 'E011', email: 'dup@example.com', role: 'trainee' })
 
       expect(notifyMock).toHaveBeenCalledWith(
         expect.anything(),
@@ -118,7 +118,7 @@ describe('useAdminUsers', () => {
       fetchMock.mockRejectedValueOnce({ statusCode: 500 })
 
       const { create } = await mountAdminUsers()
-      const result = await create({ name: '失敗', email: 'fail@example.com', role: 'mentor' })
+      const result = await create({ name: '失敗', employee_id: 'E012', email: 'fail@example.com', role: 'mentor' })
 
       expect(notifyMock).toHaveBeenCalledWith(
         expect.anything(),
