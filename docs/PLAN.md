@@ -542,6 +542,13 @@
   - 変更: `app/composables/useCurrentUser.ts`・`app/composables/useAdminUsers.ts`・`app/composables/useAssignedTrainees.ts`・`app/composables/useMentorAssignments.ts`
 - [ ] **R-6 option 正規化共通化**（前提: 3-6-a・4-1-a 完了）— `PersonOption`/`TraineeOption` の `{ id, name }` 正規化と型を統一
   - 変更: `app/composables/useMentorAssignments.ts`・`app/composables/useAssignedTrainees.ts`・`shared/types/api.ts`
+- [ ] **R-7 AuthCard 抽出**（前提: 2-1a-a・2-1a-b 完了）— login.vue/reset-password.vue のインライン `<UCard>`＋見出し＋戻るリンクを共通 `AuthCard.vue`（既存スタブ）へ集約。挙動・見た目は不変
+  - 変更: `app/components/common/AuthCard.vue`（スタブ→実装）・`app/pages/login.vue`・`app/pages/reset-password.vue`
+- [ ] **R-8 WeekNavigator + useWeekNavigation 抽出**（前提: 2-1-a 完了）— report.vue インラインの週ナビ状態（`currentWeekStart`/`weekDays`/`prevWeek`/`nextWeek`/`canGoNextWeek` 等）を `useWeekNavigation` に、前週/今週/次週 UI を `WeekNavigator.vue`（既存スタブ）へ分離（日付計算は `shared/utils/date.ts`）
+  - 新規: `app/composables/useWeekNavigation.ts`
+  - 変更: `app/components/report/WeekNavigator.vue`（スタブ→実装）・`app/pages/report.vue`
+- [ ] **R-9 WeekPickerModal 抽出**（前提: 2-1-b 完了）— report.vue インラインの週ジャンプ（カレンダー Popover）を `WeekPickerModal.vue`（既存スタブ）へ分離（`ReportRow` は 2-4-a で実装するため対象外）
+  - 変更: `app/components/report/WeekPickerModal.vue`（スタブ→実装）・`app/pages/report.vue`
 
 ---
 
