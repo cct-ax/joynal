@@ -321,10 +321,9 @@ GitHub (main ブランチ)
   │   ├── lint-and-typecheck: ESLint ＋ vue-tsc
   │   ├── test: Vitest（ユニット・統合）
   │   ├── build: pnpm build（Cloudflare プリセット）
-  │   └── security: gitleaks（シークレット検出）＋ pnpm audit --audit-level=high
+  │   └── security: pnpm audit --audit-level=high
   │
-  ├── GitHub Actions（PR 時 / .github/workflows/e2e.yml・非ブロッキング）
-  │   └── e2e: Supabase ローカルスタック → Playwright（初期は continue-on-error）
+  │   ※ E2E（Playwright）は CI では実行せずローカル実行のみ
   │
   └── Cloudflare Pages（main マージ時に自動デプロイ）
       ├── ビルド: pnpm run build

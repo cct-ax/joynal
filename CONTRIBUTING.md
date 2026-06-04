@@ -199,7 +199,7 @@ npx playwright install --with-deps chromium  # 初回のみ: ブラウザ導入
 pnpm test:e2e                                # 実行（playwright.config.ts の webServer が build→preview を起動）
 ```
 
-テストユーザー（共通パスワードは `e2e/fixtures.ts`）: `trainee@e2e.test` / `mentor@e2e.test` / `admin@e2e.test`。CI（`.github/workflows/e2e.yml`）でも同手順で実行しますが、初期は**非ブロッキング**（安定したら required 化）です。
+テストユーザー（共通パスワードは `e2e/fixtures.ts`）: `trainee@e2e.test` / `mentor@e2e.test` / `admin@e2e.test`。**E2E は CI では実行せず**、ローカルでの手動実行のみです。
 
 ### Supabase Auth 設定（メールテンプレ / OTP）
 
