@@ -106,6 +106,7 @@ defineExpose({ requestCode, submitNewPassword })
       class="fixed inset-e-4 top-4 z-10 cursor-pointer"
     />
 
+    <!-- TODO(R-7 #82): この UCard を共通 AuthCard へ抽出予定 -->
     <UCard
       class="w-full max-w-sm shadow-sm"
       :ui="{

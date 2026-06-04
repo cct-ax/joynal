@@ -64,6 +64,7 @@ const signIn = async (): Promise<void> => {
         </p>
       </div>
 
+      <!-- TODO(R-7 #82): この UCard を共通 AuthCard へ抽出予定 -->
       <UCard
         class="shadow-sm"
         :ui="{

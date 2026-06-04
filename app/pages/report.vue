@@ -22,6 +22,7 @@ const traineeSelectItems = computed(() =>
 //   管理者: $fetch('/api/users') → role === 'trainee' のみフィルタ
 
 // --- 週ナビゲーション ---
+// TODO(R-8/R-9 #83/#84): 週ナビ→WeekNavigator＋useWeekNavigation・週ジャンプ→WeekPickerModal へ抽出予定。
 // 日付/週ロジックは shared/utils/date.ts の共通関数を使う（auto-import・重複実装を避ける）。
 const currentWeekStart = ref(getMondayOf(new Date()))
 const weekCalendarOpen = ref(false)
