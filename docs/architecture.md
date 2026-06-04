@@ -182,6 +182,8 @@ export default defineEventHandler(async (event) => {
 ブラウザ → Cookie（JWT）→ Nuxt Server → serverSupabaseClient（JWT を転送）→ Supabase（RLS 適用）
 ```
 
+> **例外（service role 経由のエンドポイント）**: ユーザー管理系（`/api/users` 系）や `assignments` PUT は `serverSupabaseServiceRole` で **RLS を迂回**するため、`assertAdminRole`（`server/utils/auth.ts`）でサーバー側にも明示的な admin ゲートを置く（RLS の `is_admin()` と二重防御）。「二重実装しない」が当てはまるのは JWT＝`serverSupabaseClient` 経由で RLS が効くエンドポイント。
+
 ---
 
 ## 認証フロー
