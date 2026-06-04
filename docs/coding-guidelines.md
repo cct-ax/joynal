@@ -64,33 +64,33 @@ const handleError = (error: unknown): string => {
 
 ### 型定義の置き場所
 
-Nuxt 4 の公式ディレクトリ構成に従い、型定義はスコープによって分ける。
+型定義は **すべて `shared/types/`** に集約し、`#shared/types/*` でインポートする（app・server 両方から参照できる唯一の場所）。
 
 ```
-app/types/
-├── database.types.ts   # Supabase 自動生成（編集禁止）
-└── schemas.ts          # Zod スキーマ（フロント専用）
-
 shared/types/
 ├── models.ts           # DB テーブル型のエイリアス
-└── api.ts              # API リクエスト・レスポンスの型・共有定数
+├── api.ts              # API リクエスト・レスポンスの型・共有定数
+├── schemas.ts          # Zod スキーマ（フォーム＋サーバー境界の query/body）
+├── database.types.ts   # Supabase 自動生成（編集禁止）
+└── components.ts        # コンポーネントの defineExpose 型
 ```
 
-| ファイル | 場所 | 理由 |
-|---------|------|------|
-| `database.types.ts` | `app/types/` | `@nuxtjs/supabase` が `~/` エイリアスで参照するため |
-| `models.ts` | `shared/types/` | app・server 両方で参照される |
-| `api.ts` | `shared/types/` | app・server 両方で参照される |
-| `schemas.ts` | `app/types/` | フロントのフォームバリデーション専用 |
+| ファイル | 役割 |
+|---------|------|
+| `models.ts` | DB テーブル型のエイリアス |
+| `api.ts` | API リクエスト・レスポンス型・共有定数 |
+| `schemas.ts` | Zod スキーマ（フォーム＋サーバー API の query/body 検証） |
+| `database.types.ts` | Supabase 自動生成（編集禁止）。`nuxt.config` の `supabase.types` も `#shared/types/database.types.ts` を指す |
+| `components.ts` | コンポーネントの defineExpose 型 |
 
 ### `database.types.ts` は編集しない
 
-自動生成ファイルのため直接書き換えない。`pnpm supabase:types` で再生成する。
+自動生成ファイルのため直接書き換えない。Supabase CLI の `gen types`（出力先 `shared/types/database.types.ts`）で再生成する。
 DB の型を使いたい場合は `models.ts` でエイリアスを定義してそこからインポートする。
 
 ```typescript
-// shared/types/models.ts
-import type { Tables, TablesInsert, TablesUpdate } from '~/types/database.types'
+// shared/types/models.ts（同じフォルダなので相対 import）
+import type { Tables, TablesInsert, TablesUpdate } from './database.types'
 
 export type DailyReport = Tables<'daily_reports'>
 export type DailyReportInsert = TablesInsert<'daily_reports'>
@@ -131,7 +131,7 @@ export type CommentUpsertBody = {
 フォームのバリデーションルールは `schemas.ts` に集約する。型は `z.infer` / `z.output` で導出し、手動で定義しない。
 
 ```typescript
-// app/types/schemas.ts
+// shared/types/schemas.ts
 import { z } from 'zod'
 
 export const reportSchema = z.object({
@@ -153,7 +153,7 @@ export type CommentSchema = z.output<typeof commentSchema>
 
 ```typescript
 // コンポーネント側
-import { reportSchema, type ReportSchema } from '~/types/schemas'
+import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 ```
 
 ### `type` と `interface` の使い分け
@@ -259,7 +259,7 @@ const hasReportToday = computed(() =>
 | 種別 | 形式 | 例 |
 |------|------|-----|
 | ページ | kebab-case | `report.vue`, `reset-password.vue` |
-| コンポーネント | PascalCase | `ReportInputModal.vue`, `ReportCard.vue` |
+| コンポーネント | PascalCase | `ReportInputModal.vue`, `ReportRow.vue` |
 | composable | camelCase（use プレフィックス） | `useCurrentUser.ts` |
 | Server API | kebab-case | `index.get.ts`, `[id]/index.put.ts` |
 | 型定義 | camelCase | `database.types.ts` |
@@ -280,7 +280,7 @@ const hasReportToday = computed(() =>
 
 ```
 ReportInputModal   // 日報 + 入力 + モーダル
-ReportCard         // 日報 + カード
+ReportRow          // 日報 + 行
 CommentInputModal  // コメント + 入力 + モーダル
 UserAddModal       // ユーザー + 追加 + モーダル
 ```
@@ -330,7 +330,7 @@ try {
   // 成功処理
 } catch (error) {
   // トースト等でユーザーに通知
-  toast.add({ title: '日報の取得に失敗しました', color: 'red' })
+  toast.add({ title: '日報の取得に失敗しました', color: 'error' })
 }
 ```
 
@@ -416,3 +416,157 @@ docs: API設計書にコメントエンドポイントを追加
 | 1ファイルに複数コンポーネントを定義する | 見通しが悪くなる |
 | `main` に直接 push する | レビューなしで本番に反映されてしまう |
 | シークレット（パスワード・APIキー）をコードに書く | `.env` に書き、コードには書かない |
+
+---
+
+## モーダル設計パターン
+
+モーダル（`UModal` / `ConfirmDialog` 等）の open/close 制御は、用途に応じて 3 つのパターンを使い分けます。汎用 composable で抽象化せず、用途ごとに素直に書くのが「お手本」です。
+
+### パターン 1: 単一ロケーション制御
+
+1 ファイル内で開閉が完結する場合は、素の `ref(false)` で書く。
+
+```vue
+<script setup lang="ts">
+const pwModalOpen = ref(false)
+</script>
+
+<template>
+  <UButton @click="pwModalOpen = true">パスワード変更</UButton>
+  <PasswordChangeModal v-model:open="pwModalOpen" />
+</template>
+```
+
+**使用例**: `AppHeader.vue` の `pwModalOpen`、`ReportInputModal.vue` の `confirmDeleteOpen`、`WeekNavigator.vue` の `pickerOpen`
+
+### パターン 2: 対象データを持って開く
+
+「どの行を編集するか」の情報と一緒にモーダルを開く場合、`selectedXxx: Ref<T | null>` を主とし、open は computed で派生させる。
+
+```vue
+<script setup lang="ts">
+const selectedReport = ref<DailyReport | null>(null)
+const selectedDate = ref<string | null>(null)
+
+// 開閉は selectedDate の有無で派生
+const isModalOpen = computed({
+  get: () => selectedDate.value !== null,
+  set: (v: boolean) => {
+    if (!v) {
+      // 閉じる時に同時に対象データもクリア
+      selectedReport.value = null
+      selectedDate.value = null
+    }
+  }
+})
+
+const openEdit = (report: DailyReport): void => {
+  selectedReport.value = report
+  selectedDate.value = report.date
+}
+</script>
+
+<template>
+  <ReportInputModal
+    v-model:open="isModalOpen"
+    :date="selectedDate"
+    :report="selectedReport"
+  />
+</template>
+```
+
+**使用例**: `report.vue` の `selectedReport` / `selectedDate` / `isModalOpen`
+
+### パターン 3: 削除確認は `ConfirmDialog` を再利用
+
+破壊的操作の確認は独自実装せず、`ConfirmDialog` を使う。
+
+```vue
+<script setup lang="ts">
+const confirmDeleteOpen = ref(false)
+const deleteLoading = ref(false)
+
+const onDelete = async (): Promise<void> => {
+  deleteLoading.value = true
+  try {
+    await $fetch(`/api/reports/${id}`, { method: 'DELETE' })
+    confirmDeleteOpen.value = false
+  } finally {
+    deleteLoading.value = false
+  }
+}
+</script>
+
+<template>
+  <UButton @click="confirmDeleteOpen = true">削除</UButton>
+  <ConfirmDialog
+    v-model:open="confirmDeleteOpen"
+    title="日報を削除"
+    message="この日報を削除します。よろしいですか？"
+    :loading="deleteLoading"
+    @confirm="onDelete"
+  />
+</template>
+```
+
+### やらないこと
+
+- `useModalState` のような汎用 composable で `ref(false)` を抽象化する → 読みやすさが下がる、3 パターンで構造が異なる
+- モーダル内に「確認モード」を組み込む（design プロトの React 版にあるパターン）→ `ConfirmDialog` を独立コンポーネントとして使う方がテスト容易
+
+---
+
+## エラー処理パターン
+
+データ取得も認証も `$fetch('/api/...')` 経由なので、エラー通知は `useApiError` に統一する。コンポーネントから `supabase.auth.*` を直接呼ばない（認証も `server/api/auth/*` 経由）。
+
+### `useApiError`（$fetch 全般）
+
+```vue
+<script setup lang="ts">
+const apiError = useApiError()
+
+const submit = async (): Promise<void> => {
+  try {
+    await $fetch('/api/reports', { method: 'POST', body })
+  } catch (error: unknown) {
+    apiError.notify(error, {
+      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+      fallback: '保存に失敗しました'
+    })
+  }
+}
+</script>
+```
+
+- `statusMessages`: 特定 statusCode → 固定メッセージ
+- 400 の場合は自動的にサーバーの `data.message` を優先表示
+- 上記にマッチしなければ `fallback`
+
+### 認証も同じ（`server/api/auth/*` + `useApiError`）
+
+ログイン等も `$fetch('/api/auth/login')` を `useApiError` でラップする（`login.vue` 実装どおり）。成功後はセッション Cookie を反映させるため `navigateTo('/report', { external: true })` でフルリロードする。
+
+```vue
+<script setup lang="ts">
+const apiError = useApiError()
+
+const onSubmit = async (event: FormSubmitEvent<LoginSchema>): Promise<void> => {
+  try {
+    await $fetch('/api/auth/login', { method: 'POST', body: event.data })
+    await navigateTo('/report', { external: true })
+  } catch (error: unknown) {
+    apiError.notify(error, {
+      statusMessages: { 401: 'メールアドレスまたはパスワードが正しくありません' },
+      fallback: 'ログインに失敗しました'
+    })
+  }
+}
+</script>
+```
+
+### やらないこと
+
+- `(error as { statusCode: number }).statusCode` のように `as` で型キャスト → `useApiError` または `~/utils/fetchError` の type guard を使う
+- コンポーネントから `useSupabaseClient()` / `supabase.auth.*` を直接呼ぶ → 認証も含め `server/api/` 経由にする

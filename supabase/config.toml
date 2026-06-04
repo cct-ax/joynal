@@ -1,0 +1,33 @@
+# Supabase Auth 設定（source-of-truth）。
+# - ローカル（supabase start）に適用される。
+# - 本番反映は `supabase config push`（リモートの auth 設定を config.toml の内容で上書きする。
+#   省略キーは CLI 既定値が入るため、既存の site_url / SMTP / 外部プロバイダ等を意図せず
+#   戻さないよう、push 前に内容をレビューすること）。
+# - CLI を使わない場合は、本ファイルを正とし同じ内容をダッシュボードに手入力してもよい。
+project_id = "joynal"
+
+[auth.email]
+otp_length = 6     # パスワードリセット等の確認コード桁数
+otp_expiry = 900   # 確認コードの有効期限（秒）= 15分。短めにして総当たり耐性を上げる
+
+# パスワードリセット（recovery）メール: 日本語＋6桁コード表示（リンクは使わない＝OTP方式）
+[auth.email.template.recovery]
+subject = "【Joynal】パスワード設定コード"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.rate_limit]
+email_sent = 30    # 1時間あたりのメール送信上限
+
+# メール送信元（SMTP）。コメントアウトの間は Supabase の共有メーラー
+# （Supabase Auth <noreply@mail.app.supabase.io>・差出人変更不可・送信レート低め）が使われる。
+# 独自の差出人(sender)に変える／レート制限を緩めるには、プロバイダ（Resend/SendGrid/SES 等）と
+# 送信ドメインの検証(SPF/DKIM)を用意した上で、下記を有効化する。pass は secret/env で渡すこと。
+# 手順は README.md「メール送信元（SMTP）の設定」を参照。
+# [auth.email.smtp]
+# enabled = true
+# host = "smtp.resend.com"            # プロバイダの SMTP ホスト
+# port = 587
+# user = "resend"                     # プロバイダのユーザー名
+# pass = "env(SUPABASE_AUTH_SMTP_PASS)"  # ← APIキー等。リポジトリに直書きしない
+# admin_email = "noreply@joynal.example.com"  # 差出人アドレス（要ドメイン検証）
+# sender_name = "Joynal"              # 差出人の表示名

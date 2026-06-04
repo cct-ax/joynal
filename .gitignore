@@ -10,6 +10,9 @@ dist
 node_modules
 package-lock.json
 
+# Test outputs
+coverage/
+
 # Logs
 logs
 *.log
@@ -19,6 +22,10 @@ logs
 .fleet
 .idea
 
+#cloudflare
+.wrangler
+wrangler.toml
+
 # Local env files
 .env
 .env.*
@@ -27,3 +34,14 @@ logs
 # Project-specific
 docs/PLAN.md
 docs/test-users.md
+
+# Serena
+.serena
+
+# playwright
+playwright-report
+test-results
+.playwright-cli
+
+# graphify knowledge graph outputs (regenerable from source)
+graphify-out/

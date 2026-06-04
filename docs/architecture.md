@@ -35,7 +35,7 @@
 | レイヤー | 技術 | バージョン | 備考 |
 |---------|------|-----------|------|
 | フロントエンド | Nuxt 4 + Vue 3 | 4.x | `app/` ディレクトリ構成 |
-| UI コンポーネント | Nuxt UI | 3.x | Tailwind CSS ベース |
+| UI コンポーネント | Nuxt UI | 4.x | Tailwind CSS ベース・semantic カラートークン |
 | ユーティリティ | VueUse | latest | `useLocalStorage` 等 |
 | サーバーランタイム | Nitro (Cloudflare Pages) | Nuxt 内蔵 | `server/api/` を実行 |
 | 認証 | Supabase Auth + `@nuxtjs/supabase` | latest | JWT ベース |
@@ -52,14 +52,35 @@ joynal/
 ├── app/                          # フロントエンド（Nuxt app ディレクトリ）
 │   ├── app.vue                   # ルートコンポーネント
 │   ├── assets/css/main.css       # グローバルスタイル
-│   ├── components/               # 再利用コンポーネント
-│   │   ├── ReportInputModal.vue  # 日報入力・編集モーダル（MS2）
-│   │   ├── ReportCard.vue        # 日報カード（インライン展開）（MS3）
-│   │   ├── CommentInputModal.vue # 週次コメント入力モーダル（MS3）
-│   │   ├── UserAddModal.vue      # ユーザー追加モーダル（MS4）
-│   │   └── UserEditModal.vue     # ユーザー編集モーダル（MS4）
+│   ├── components/               # ドメイン別フォルダで整理（pathPrefix:false で名前は据え置き）
+│   │   ├── admin/                # 管理UI
+│   │   │   ├── UserTable.vue     # ユーザー一覧テーブル
+│   │   │   ├── UserFormModal.vue # ユーザー招待・編集モーダル（追加/編集兼用）
+│   │   │   └── AssignmentRow.vue # メンター/OJT 割り当て1行
+│   │   ├── common/               # 共通部品
+│   │   │   ├── AppHeader.vue / AppFooter.vue / AuthCard.vue
+│   │   │   ├── PasswordChangeModal.vue
+│   │   │   └── ConfirmDialog.vue / EmptyState.vue / RoleBadge.vue
+│   │   └── report/               # 日報UI
+│   │       ├── TraineeSelector.vue   # 担当新人セレクタ（mentor/ojt/admin）
+│   │       ├── WeekNavigator.vue / WeekPickerModal.vue  # 週ナビ・週ジャンプ
+│   │       ├── ReportRow.vue          # 日報1日分の行（クリックで詳細展開）
+│   │       ├── ReportRowDetail.vue    # 展開時の詳細パネル
+│   │       ├── ReportInputModal.vue   # 日報入力・編集モーダル（新人）
+│   │       ├── CommentArea.vue        # 週次コメント表示
+│   │       ├── CommentInputModal.vue  # 週次コメント入力（mentor/ojt）
+│   │       └── MoodStars.vue          # 気分★表示・入力
 │   ├── composables/
-│   │   └── useCurrentUser.ts     # ログインユーザーの profile・role を返す
+│   │   ├── useCurrentUser.ts        # profile・role を返す（keyed useAsyncData）
+│   │   ├── useAssignedTrainees.ts   # 担当新人一覧＋選択状態
+│   │   ├── useWeeklyReports.ts      # 週次日報の取得
+│   │   ├── useWeeklyComments.ts     # 週次コメントの取得・振り分け
+│   │   ├── useWeekNavigation.ts     # 週の状態管理
+│   │   ├── useAdminUsers.ts         # 管理画面のユーザー一覧取得・操作
+│   │   ├── useMentorAssignments.ts  # 割り当て編集行のビューモデル生成
+│   │   ├── useLazyOpen.ts           # モーダルの遅延マウント・mounted ゲート
+│   │   └── useApiError.ts           # $fetch エラーのトースト化
+│   ├── utils/                    # app 専用: time / calendarDate / role / fetchError / passwordReset / asyncDataCache
 │   ├── layouts/
 │   │   └── default.vue           # 全ページ共通ヘッダー・ナビ
 │   ├── middleware/
@@ -67,36 +88,53 @@ joynal/
 │   ├── pages/
 │   │   ├── index.vue             # / → /report リダイレクト
 │   │   ├── login.vue             # ログイン画面
-│   │   ├── reset-password.vue    # パスワードリセット
+│   │   ├── reset-password.vue    # パスワードリセット（OTPコード送信〜新パスワード設定・1画面）
 │   │   ├── confirm.vue           # 認証コールバック
 │   │   ├── report.vue            # 日報画面（全ロール共通）
 │   │   └── admin.vue             # 管理画面（管理者のみ）
-│   ├── error.vue                 # 404 / 500 エラー画面
-│   └── types/
-│       └── database.types.ts     # Supabase から自動生成した型定義
+│   └── error.vue                 # 404 / 500 エラー画面
+│
+├── shared/                       # app・server 共用層（#shared/* でインポート）
+│   ├── types/                    # 全型をここに集約
+│   │   ├── models.ts             # DB テーブル型エイリアス
+│   │   ├── api.ts                # API リクエスト/レスポンス型・共有定数
+│   │   ├── schemas.ts            # Zod スキーマ（フォーム＋境界バリデーション）
+│   │   ├── database.types.ts     # Supabase 自動生成（編集禁止）
+│   │   └── components.ts         # コンポーネント defineExpose 型
+│   └── utils/                    # app・server 共通の純粋ロジック（date.ts: 日付/週/曜日）
 │
 ├── server/                       # Nuxt Server API（サーバーサイドのみ実行）
-│   └── api/
-│       ├── reports/
-│       │   ├── index.get.ts      # GET  /api/reports      週の日報一覧
-│       │   ├── index.post.ts     # POST /api/reports      日報作成
-│       │   └── [id]/
-│       │       ├── index.put.ts  # PUT  /api/reports/:id  日報更新
-│       │       └── index.delete.ts # DELETE /api/reports/:id 日報削除
-│       ├── comments/
-│       │   ├── index.get.ts      # GET  /api/comments     週次コメント取得
-│       │   └── index.put.ts      # PUT  /api/comments     週次コメント保存
-│       ├── assignments/
-│       │   ├── me.get.ts         # GET  /api/assignments/me 担当新人一覧（管理者は全割り当て情報）
-│       │   └── index.put.ts      # PUT  /api/assignments  メンター割り当て更新（管理者のみ）
-│       └── users/
-│           ├── index.get.ts      # GET  /api/users        ユーザー一覧（管理者のみ）
-│           ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
-│           └── [id]/
-│               └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── login.post.ts             # POST /api/auth/login        ログイン
+│   │   │   ├── logout.post.ts            # POST /api/auth/logout       ログアウト
+│   │   │   ├── reset-password.post.ts    # POST /api/auth/reset-password     OTPコード送信
+│   │   │   ├── reset-password-otp.post.ts # POST /api/auth/reset-password-otp コード検証＋新PW設定
+│   │   │   └── update-password.post.ts   # POST /api/auth/update-password    ログイン中のPW変更
+│   │   ├── reports/
+│   │   │   ├── index.get.ts      # GET  /api/reports      週の日報一覧
+│   │   │   ├── index.post.ts     # POST /api/reports      日報作成
+│   │   │   └── [id]/
+│   │   │       ├── index.put.ts  # PUT  /api/reports/:id  日報更新
+│   │   │       └── index.delete.ts # DELETE /api/reports/:id 日報削除
+│   │   ├── comments/
+│   │   │   ├── index.get.ts      # GET  /api/comments     週次コメント取得
+│   │   │   └── index.put.ts      # PUT  /api/comments     週次コメント保存
+│   │   ├── assignments/
+│   │   │   ├── me.get.ts         # GET  /api/assignments/me 担当新人一覧（管理者は全割り当て情報）
+│   │   │   └── index.put.ts      # PUT  /api/assignments  メンター割り当て更新（管理者のみ）
+│   │   └── users/
+│   │       ├── me.get.ts         # GET  /api/users/me     ログインユーザー自身の profile（email 除く）
+│   │       ├── index.get.ts      # GET  /api/users        ユーザー一覧（管理者のみ）
+│   │       ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
+│   │       └── [id]/
+│   │           └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
+│   └── utils/                    # server 専用: auth / supabaseError(throwSupabaseError) / validate / year
 │
 ├── supabase/
-│   └── migrations/               # DB マイグレーション SQL
+│   ├── migrations/               # DB マイグレーション SQL
+│   ├── config.toml               # Auth 設定（メールテンプレ・OTP・レート制限）
+│   └── templates/                # メール本文 HTML（recovery.html）
 │
 ├── docs/                         # 設計ドキュメント
 └── nuxt.config.ts
@@ -122,15 +160,16 @@ joynal/
 ```typescript
 // server/api/reports/index.get.ts
 export default defineEventHandler(async (event) => {
-  const client = serverSupabaseClient(event)   // ユーザーの JWT を引き継ぐ
-  const query = getQuery(event)                // クエリパラメータ取得
+  await serverUserId(event)                          // 認証ゲート（未認証は 401）
+  const { weekStart, userId } = parseQuery(event, reportsQuerySchema)  // Zod で検証
 
+  const client = await serverSupabaseClient(event)   // ユーザーの JWT を引き継ぐ（await 必須）
   const { data, error } = await client
     .from('daily_reports')
     .select('*')
-    .eq('user_id', /* ユーザーID */)
+    .gte('date', weekStart)
 
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throw createError({ statusCode: 500, message: 'サーバーエラーが発生しました' })
   return data
 })
 ```
@@ -284,8 +323,12 @@ GitHub (main ブランチ)
       ├── ビルド: pnpm run build
       ├── Nitro preset: cloudflare-pages
       └── 環境変数:
-          ├── NUXT_PUBLIC_SUPABASE_URL
-          └── NUXT_PUBLIC_SUPABASE_KEY
+          ├── NUXT_PUBLIC_SUPABASE_URL    # Supabase プロジェクト URL
+          ├── NUXT_PUBLIC_SUPABASE_KEY    # anon（publishable）key
+          └── NUXT_SUPABASE_SECRET_KEY    # service_role（secret）key。ユーザー管理・招待・無効化で
+                                          # service role 経由のアクセスに使う（@nuxtjs/supabase v2 はこの名前で読む）
 ```
+
+> 環境変数は Cloudflare Pages の **Production / Preview スコープごとに別管理**。ブランチデプロイは Preview スコープを参照し、追加後は再デプロイが必要。`NUXT_SUPABASE_SECRET_KEY` 未設定だとユーザー管理系 API（`/api/users` など）が 500 になる。
 
 > **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。
