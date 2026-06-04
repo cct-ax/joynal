@@ -33,6 +33,8 @@ wrangler.toml
 
 # Project-specific
 docs/test-users.md
+# PLAN.md は PL のローカル計画ドキュメント（ref には追跡されるが main/develop には上げない）
+docs/PLAN.md
 
 # Serena
 .serena
