@@ -1,8 +1,14 @@
 name: CI
 
 on:
+  push:
   pull_request:
-    branches: [main]
+
+# 同一 ref の古い実行は新しい実行で打ち切る（連打 push 時の無駄削減）。
+# push と PR は ref が異なるためペアの二重実行は残るが、連続実行の無駄は抑えられる。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Lint と型チェック。pnpm のバージョンは固定せず packageManager(pnpm@11.5.0) に従わせる。
@@ -27,8 +33,9 @@ jobs:
       - name: Type check
         run: pnpm exec nuxt typecheck
 
-  # ユニット・統合テスト（Vitest）。lint-and-typecheck と並列で実行される。
+  # ユニット・統合テスト（Vitest）。lint-and-typecheck 通過後に build/security と並列で実行される。
   test:
+    needs: lint-and-typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +57,7 @@ jobs:
   # @nuxtjs/supabase は URL/KEY 未設定だと warn を出すだけだが、
   # ビルドを密閉化するためダミーの public 値を渡しておく（ビルド時に実 Supabase へは接続しない）。
   build:
+    needs: lint-and-typecheck
     runs-on: ubuntu-latest
     env:
       NUXT_PUBLIC_SUPABASE_URL: http://localhost:54321
@@ -72,6 +80,7 @@ jobs:
 
   # 依存の既知脆弱性チェック。
   security:
+    needs: lint-and-typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
