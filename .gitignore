@@ -32,7 +32,6 @@ wrangler.toml
 !.env.example
 
 # Project-specific
-docs/PLAN.md
 docs/test-users.md
 
 # Serena

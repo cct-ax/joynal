@@ -1,35 +1,44 @@
-import type { Profile } from '#shared/types/models'
-import type { UserRole } from '#shared/types/api'
+import type { CurrentUserProfile, UserRole } from '#shared/types/api'
+import { getFetchStatus } from '~/utils/fetchError'
+import { reuseAsyncData } from '~/utils/asyncDataCache'
+import { isUserRole } from '~/utils/role'
 
+/**
+ * ログインユーザーのプロフィールとロールを返す composable。
+ * /api/users/me を共有キー 'current-user' でキャッシュし、複数コンポーネントから
+ * 呼んでも取得リクエストを 1 回に集約する。
+ * @returns profile（プロフィール情報）、pending（ローディング中）、profileMissing（招待未経由の 404）、
+ *          role（ユーザーロール）、isAdmin / isMentor / isOjt / isTrainee（ロール判定フラグ）
+ */
 export const useCurrentUser = () => {
   const user = useSupabaseUser()
+  const requestFetch = useRequestFetch()
 
-  const profile = ref<Profile | null>(null)
-  const pending = ref(true)
-
-  watch(
-    user,
-    async (currentUser) => {
-      if (!currentUser?.id) {
-        profile.value = null
-        pending.value = false
-        return
-      }
-      try {
-        profile.value = await $fetch<Profile>('/api/users/me')
-      } catch {
-        profile.value = null
-      }
-      pending.value = false
-    },
-    { immediate: true }
+  // 共有キー 'current-user' の useAsyncData で重複排除する。複数コンポーネント
+  // （AppHeader / レイアウト / ページ）から呼んでも /api/users/me の取得は 1 回に集約される。
+  // SSR でも取得できるよう useRequestFetch でリクエストの Cookie を転送する。
+  // useSupabaseUser() は getClaims() の JWT claims（ユーザー ID は `sub`）。未ログイン時は取得しない。
+  const { data: profile, pending, error } = useAsyncData<CurrentUserProfile | null>(
+    'current-user',
+    async () => (user.value?.sub ? await requestFetch<CurrentUserProfile>('/api/users/me') : null),
+    // watch は user オブジェクトでなく安定した sub(ユーザーID)。@nuxtjs/supabase は page:start ごとに
+    // getClaims() で user を“新しいオブジェクト”として再セットするため、[user] を watch するとタブ切替の
+    // 度に /api/users/me を再取得してしまう。sub を watch すれば実際のログイン/ログアウト時のみ再取得する。
+    // getCachedData は再マウント('initial')でキャッシュ再利用＋purge 無効化（admin-users 等と同方針）。
+    { watch: [() => user.value?.sub], getCachedData: reuseAsyncData }
   )
 
-  const role = computed(() => profile.value?.role as UserRole | null)
+  // 404 = auth ユーザーに profiles 行が無い（招待フロー未経由）。UI で明示する。
+  const profileMissing = computed(() => getFetchStatus(error.value) === 404)
+
+  const role = computed<UserRole | null>(() => {
+    const raw = profile.value?.role
+    return isUserRole(raw) ? raw : null
+  })
   const isAdmin = computed(() => role.value === 'admin')
   const isMentor = computed(() => role.value === 'mentor')
   const isOjt = computed(() => role.value === 'ojt')
   const isTrainee = computed(() => role.value === 'trainee')
 
-  return { profile, pending, role, isAdmin, isMentor, isOjt, isTrainee }
+  return { profile, pending, profileMissing, role, isAdmin, isMentor, isOjt, isTrainee }
 }

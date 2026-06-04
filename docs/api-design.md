@@ -1,8 +1,19 @@
 # API設計書
 
+本書は API の**方針・共通仕様の概要**をまとめたもの。
+各エンドポイントの詳細（リクエスト/レスポンス/エラー）は、コードから自動生成される**インタラクティブな OpenAPI ドキュメント**を一次情報とする。
+
+> **API ドキュメントの見方（基本は Scalar）**
+> - `pnpm dev` 起動後 → **http://localhost:3000/_scalar**（Scalar UI・叩いて試せる）
+> - 生の OpenAPI spec が要るとき → `/_openapi.json`（Swagger UI 版も同 spec で `/_swagger` にあり）
+> - **dev 限定**（本番では非公開）。spec は各 `server/api` ハンドラの `defineRouteMeta` から自動生成される。
+
+---
+
 ## 基本方針
 
 - すべてのエンドポイントは `/api/` プレフィックスを持つ
+- フロントは Supabase を直接呼ばず、必ず `server/api/*` 経由。`serverSupabaseClient` がユーザーの JWT を転送し、Supabase RLS が自動適用される
 - 認証は Cookie の JWT を自動で引き継ぐ（`@nuxtjs/supabase` が処理）
 - レスポンスは常に JSON
 - エラー時は HTTP ステータスコード + `{ message: string }` を返す
@@ -27,10 +38,10 @@ null  // 204 No Content
 ### エラー時
 
 ```json
-{
-  "message": "エラーの説明"
-}
+{ "message": "エラーの説明" }
 ```
+
+一部のエラーは機械判別用の `code` を伴う（例: `EMPLOYEE_ID_TAKEN`、`SAME_PASSWORD`）。どのエンドポイントで返るかは OpenAPI を参照。
 
 ### 共通エラーコード
 
@@ -40,508 +51,55 @@ null  // 204 No Content
 | 401 | Unauthorized | 未ログイン（`@nuxtjs/supabase` が自動処理） |
 | 403 | Forbidden | RLS によるアクセス拒否（担当外の日報など） |
 | 404 | Not Found | 対象リソースが存在しない |
+| 409 | Conflict | 重複（同じ日付の日報、メール／社員ID の重複など） |
+| 422 | Unprocessable Entity | 新パスワードが現在と同一（`SAME_PASSWORD`）など |
 | 500 | Internal Server Error | DB エラーなど予期しないエラー |
 
 ---
 
-## エンドポイント一覧
+## ユーザーロールとアクセス権
+
+権限は **Supabase RLS で強制**する（フロントのガードだけに依存しない）。各エンドポイントの「対象ロール」概要は以下のとおり。
+
+| ロール | 日報 | 週次コメント | 担当割り当て | ユーザー管理 |
+|--------|------|------------|------------|------------|
+| `trainee`（新人） | 自分の日報を作成/更新/削除・閲覧 | 自分宛を閲覧 | — | 自分のプロフィールのみ |
+| `mentor` / `ojt` | 担当新人の日報を閲覧 | 担当新人へコメント（作成/編集）・閲覧 | 自分の担当を閲覧 | 自分のプロフィールのみ |
+| `admin`（管理者） | 全員の日報を閲覧 | 全員のコメントを閲覧 | 全割り当てを閲覧・編集 | ユーザー一覧/招待/更新 |
 
 ---
 
-### 日報 `/api/reports`
-
-#### `GET /api/reports` — 週の日報一覧取得
-
-**対象ロール**: 全員（新人は自分の、メンター・OJTは担当新人の、管理者は全員の）
-
-**クエリパラメータ**
-
-| パラメータ | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `weekStart` | `string` (YYYY-MM-DD) | ○ | 取得対象週の月曜日 |
-| `userId` | `string` (UUID) | △ | 取得対象のユーザーID。新人は省略（自分のみ）、メンター・OJT・管理者は必須 |
-
-**レスポンス** `200 OK`
-
-```json
-[
-  {
-    "id": "uuid",
-    "user_id": "uuid",
-    "date": "2026-05-19",
-    "check_in": "09:00:00",
-    "check_out": "18:00:00",
-    "content": "やったことの本文",
-    "mood": 4,
-    "created_at": "2026-05-19T09:00:00Z",
-    "updated_at": "2026-05-19T09:00:00Z"
-  }
-]
-```
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | `weekStart` が未指定または不正な日付形式 |
-| 403 | `userId` が担当外の新人（RLS による） |
-
----
-
-#### `POST /api/reports` — 日報作成
-
-**対象ロール**: 新人のみ
-
-**リクエストボディ**
-
-```json
-{
-  "date": "2026-05-19",
-  "check_in": "09:00",
-  "check_out": "18:00",
-  "content": "やったことの本文",
-  "mood": 4
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `date` | `string` (YYYY-MM-DD) | ○ | 日報の日付 |
-| `check_in` | `string` (HH:MM) | ○ | 出勤時間 |
-| `check_out` | `string` (HH:MM) | ○ | 退勤時間 |
-| `content` | `string` | ○ | やったこと |
-| `mood` | `number` (1〜5) | × | 気分 |
-
-**レスポンス** `201 Created`
-
-```json
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "date": "2026-05-19",
-  "check_in": "09:00:00",
-  "check_out": "18:00:00",
-  "content": "やったことの本文",
-  "mood": 4,
-  "created_at": "2026-05-19T09:00:00Z",
-  "updated_at": "2026-05-19T09:00:00Z"
-}
-```
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | 必須項目不足 / `check_out <= check_in` / 不正な日付形式 |
-| 403 | 新人以外のロールが呼び出した（RLS による） |
-| 409 | 同じ日付の日報が既に存在する |
-
----
-
-#### `PUT /api/reports/:id` — 日報更新
-
-**対象ロール**: 新人のみ（自分の日報のみ）
-
-**リクエストボディ** （変更したいフィールドのみ。`date` は変更不可）
-
-```json
-{
-  "check_in": "09:30",
-  "check_out": "18:30",
-  "content": "更新後の本文",
-  "mood": 3
-}
-```
-
-**レスポンス** `200 OK` — 更新後のレコード（`POST` と同じ形式）
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | `check_out <= check_in` / 不正な値 |
-| 403 | 他ユーザーの日報を更新しようとした（RLS による） |
-| 404 | 対象の日報が存在しない |
-
----
-
-#### `DELETE /api/reports/:id` — 日報削除
-
-**対象ロール**: 新人のみ（自分の日報のみ）
-
-**リクエストボディ**: なし
-
-**レスポンス** `204 No Content`
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 403 | 他ユーザーの日報を削除しようとした（RLS による） |
-| 404 | 対象の日報が存在しない |
-
----
-
-### コメント `/api/comments`
-
-#### `GET /api/comments` — 週次コメント取得
-
-**対象ロール**: 全員（新人は自分宛の、メンター・OJTは担当新人宛の、管理者は全員の）
-
-**クエリパラメータ**
-
-| パラメータ | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `weekStart` | `string` (YYYY-MM-DD) | ○ | 対象週の月曜日 |
-| `traineeId` | `string` (UUID) | ○ | 対象新人のユーザーID |
-
-**レスポンス** `200 OK`
-
-```json
-[
-  {
-    "id": "uuid",
-    "week_start": "2026-05-19",
-    "trainee_id": "uuid",
-    "commenter_id": "uuid",
-    "commenter": {
-      "name": "田中 太郎",
-      "role": "mentor"
-    },
-    "content": "今週もよく頑張りました。",
-    "created_at": "2026-05-23T18:00:00Z",
-    "updated_at": "2026-05-23T18:00:00Z"
-  }
-]
-```
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | `weekStart` または `traineeId` が未指定 |
-| 403 | 担当外の新人のコメントを取得しようとした（RLS による） |
-
----
-
-#### `PUT /api/comments` — 週次コメント保存（upsert）
-
-**対象ロール**: メンター・OJTのみ
-
-> 同じ `(weekStart, traineeId, commenterId)` の組み合わせが既に存在する場合は上書き（UPDATE）。存在しない場合は新規作成（INSERT）。
-
-**リクエストボディ**
-
-```json
-{
-  "weekStart": "2026-05-19",
-  "traineeId": "uuid",
-  "content": "今週のコメント本文"
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `weekStart` | `string` (YYYY-MM-DD) | ○ | 対象週の月曜日 |
-| `traineeId` | `string` (UUID) | ○ | コメント対象の新人ID |
-| `content` | `string` | ○ | コメント本文 |
-
-**レスポンス** `200 OK` — 保存後のレコード（`commenter` フィールドなしの単一オブジェクト）
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | 必須項目不足 |
-| 403 | 担当外の新人へのコメント / メンター・OJT以外のロール（RLS による） |
-
----
-
-### アサイン `/api/assignments`
-
-#### `GET /api/assignments/me` — 担当新人一覧取得
-
-**対象ロール**: メンター・OJT（自分の担当新人）、管理者（全新人の割り当て情報）
-
-**クエリパラメータ**
-
-| パラメータ | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `year` | `number` | × | 年度（省略時は現在の年度） |
-
-**レスポンス** `200 OK`
-
-メンター・OJT の場合（担当新人のみ）:
-
-```json
-[
-  {
-    "trainee_id": "uuid",
-    "year": 2026,
-    "trainee": {
-      "name": "山田 花子",
-      "employee_id": "E001"
-    }
-  }
-]
-```
-
-管理者の場合（全割り当て情報）:
-
-```json
-[
-  {
-    "trainee_id": "uuid",
-    "mentor_id": "uuid",
-    "ojt_id": "uuid",
-    "year": 2026,
-    "trainee": { "name": "山田 花子" },
-    "mentor": { "name": "田中 一郎" },
-    "ojt": { "name": "佐藤 美咲" }
-  }
-]
-```
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 403 | 新人ロールが呼び出した |
-
----
-
-#### `PUT /api/assignments` — メンター割り当て更新（upsert）
-
-**対象ロール**: 管理者のみ
-
-> `(trainee_id, year)` の組み合わせが既に存在する場合は上書き（UPDATE）。存在しない場合は新規作成（INSERT）。`year` は省略時に現在年度を自動セットする。
-
-**リクエストボディ**
-
-```json
-{
-  "traineeId": "uuid",
-  "mentorId": "uuid",
-  "ojtId": "uuid",
-  "year": 2026
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `traineeId` | `string` (UUID) | ○ | 対象の新人ID |
-| `mentorId` | `string` (UUID) \| `null` | ○ | メンターID（未割り当ての場合は null） |
-| `ojtId` | `string` (UUID) \| `null` | ○ | OJT担当者ID（未割り当ての場合は null） |
-| `year` | `number` | × | 年度（省略時は現在の年度） |
-
-**レスポンス** `200 OK` — 保存後のレコード
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | `traineeId` が未指定 |
-| 403 | 管理者以外のロールが呼び出した（RLS による） |
-| 404 | `traineeId` / `mentorId` / `ojtId` が存在しない |
-
----
-
-### ユーザー管理 `/api/users`
-
-#### `GET /api/users/me` — ログインユーザー自身のプロフィール取得
-
-**対象ロール**: 全員（ログイン済み）
-
-> `useCurrentUser` composable が内部で呼び出す。`email` は PII 保護のため返さない（DB 側でもカラム権限で `authenticated` から除外）。
-
-**レスポンス** `200 OK`
-
-```json
-{
-  "id": "uuid",
-  "employee_id": "E001",
-  "name": "山田 太郎",
-  "role": "trainee",
-  "is_active": true,
-  "created_at": "2026-04-01T00:00:00Z",
-  "updated_at": "2026-04-01T00:00:00Z"
-}
-```
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 401 | 未ログイン |
-| 404 | プロフィールが存在しない（招待のみ作成されるため、行が無いユーザー） |
-
----
-
-#### `GET /api/users` — ユーザー一覧取得
-
-**対象ロール**: 管理者のみ
-
-**レスポンス** `200 OK`
-
-```json
-[
-  {
-    "id": "uuid",
-    "employee_id": "E001",
-    "name": "山田 太郎",
-    "email": "yamada@example.com",
-    "role": "trainee",
-    "is_active": true,
-    "created_at": "2026-04-01T00:00:00Z",
-    "updated_at": "2026-04-01T00:00:00Z"
-  }
-]
-```
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 403 | 管理者以外のロールが呼び出した |
-
----
-
-#### `POST /api/users` — ユーザー招待
-
-**対象ロール**: 管理者のみ
-
-> service role で Supabase Auth にユーザーを作成し、`profiles` テーブルにレコードを挿入する。`employee_id` は**管理者が手入力**する（自動採番はしない）。
-> 作成後、初期パスワード設定のため recovery OTP（確認コード）メールを送付する（リンクは使わず `/reset-password` でコード入力）。メール送信に失敗してもユーザー作成自体は成功扱いとする（本人が「パスワードをお忘れの方」から再送できる）。
-
-**リクエストボディ**
-
-```json
-{
-  "employee_id": "E001",
-  "name": "新しい 社員",
-  "email": "new@example.com",
-  "role": "trainee"
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `employee_id` | `string` | ○ | 社員ID（自由形式・最大50文字・一意） |
-| `name` | `string` | ○ | 表示名 |
-| `email` | `string` | ○ | メールアドレス（Supabase Auth に登録） |
-| `role` | `string` | ○ | `trainee` / `mentor` / `ojt` / `admin` |
-
-**レスポンス** `201 Created` — 作成後の profiles レコード
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | 必須項目不足 / 不正な role |
-| 403 | 管理者以外のロールが呼び出した |
-| 409 | 同じメールアドレスが既に存在する |
-| 409 | 同じ社員IDが既に存在する（`{ code: "EMPLOYEE_ID_TAKEN" }`） |
-
----
-
-#### `PUT /api/users/:id` — ユーザー更新
-
-**対象ロール**: 管理者のみ
-
-**リクエストボディ** （変更したいフィールドのみ）
-
-```json
-{
-  "employee_id": "E002",
-  "name": "更新後の名前",
-  "email": "updated@example.com",
-  "role": "mentor",
-  "is_active": false
-}
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `employee_id` | `string` | × | 社員ID（自由形式・最大50文字・一意） |
-| `name` | `string` | × | 表示名 |
-| `email` | `string` | × | メールアドレス |
-| `role` | `string` | × | `trainee` / `mentor` / `ojt` / `admin` |
-| `is_active` | `boolean` | × | 無効化フラグ |
-
-**レスポンス** `200 OK` — 更新後の profiles レコード
-
-> `is_active: false` に更新した場合、Supabase Auth 側でもユーザーを ban してログイン不可にする。
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | 不正な role |
-| 403 | 管理者以外のロールが呼び出した |
-| 404 | 対象ユーザーが存在しない |
-| 409 | 同じメール / 社員IDが既に存在する |
-
----
-
-### 認証 `/api/auth`
-
-> 認証も `server/api/auth/*` 経由で行い、ブラウザから `supabase.auth.*` を直接呼ばない。
-> 成功時のステータスはいずれも `204 No Content`（ボディなし）。セッションは `@supabase/ssr` の Cookie アダプタが Set-Cookie で管理する。
-
-#### `POST /api/auth/login` — ログイン
-
-**リクエストボディ**: `{ "email": string, "password": string }`
-**レスポンス**: `204 No Content`
-**エラー**: `401`（メール/パスワード不一致）
-
-#### `POST /api/auth/logout` — ログアウト
-
-**リクエストボディ**: なし
-**レスポンス**: `204 No Content`
-
-#### `POST /api/auth/reset-password` — リセット用コード送信
-
-メールアドレス宛に recovery OTP（確認コード）を送る。**未登録メールにはコードを送らず 404** を返す（存在の有無を区別する仕様）。
-
-**リクエストボディ**: `{ "email": string }`
-**レスポンス**: `204 No Content`
-**エラー**: `404`（未登録メール）
-
-#### `POST /api/auth/reset-password-otp` — コード検証＋新パスワード設定
-
-`verifyOtp(type=recovery)` → `updateUser(password)` を実行し、最後に全セッションを失効（`signOut`）させる。リンク方式ではなく、同一ブラウザにコードを手入力する。
-
-**リクエストボディ**
-
-```json
-{ "email": "user@example.com", "token": "123456", "password": "newpassword" }
-```
-
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|:---:|------|
-| `email` | `string` | ○ | 対象メールアドレス |
-| `token` | `string` | ○ | 確認コード（桁数は `otp_length` 設定依存・6〜8桁） |
-| `password` | `string` | ○ | 新パスワード（8文字以上） |
-
-**レスポンス**: `204 No Content`
-
-**エラー**
-
-| ステータス | 条件 |
-|----------|------|
-| 400 | コードが不正・期限切れ / 更新失敗 |
-| 422 | 新パスワードが現在と同一（`{ code: "SAME_PASSWORD" }`） |
-
-#### `POST /api/auth/update-password` — ログイン中のパスワード変更
-
-ヘッダーの「パスワード変更」から呼び出す。新パスワードのみ受け取る（現在/確認用はフォーム UX 用でサーバーには送らない）。
-
-**リクエストボディ**: `{ "password": string }`（8文字以上）
-**レスポンス**: `204 No Content`
+## エンドポイント一覧（索引）
+
+詳細（パラメータ・ボディ・レスポンス・エラー）は OpenAPI（`/_scalar`）を参照。
+
+| タグ | メソッド | パス | 概要 | 対象ロール |
+|------|---------|------|------|----------|
+| reports | GET | `/api/reports` | 週の日報一覧取得 | 全ロール（範囲は RLS） |
+| reports | POST | `/api/reports` | 日報作成 | 新人 |
+| reports | PUT | `/api/reports/:id` | 日報更新 | 新人（自分のみ） |
+| reports | DELETE | `/api/reports/:id` | 日報削除 | 新人（自分のみ） |
+| comments | GET | `/api/comments` | 週次コメント取得 | 全ロール（範囲は RLS） |
+| comments | PUT | `/api/comments` | 週次コメント保存（upsert） | メンター・OJT |
+| assignments | GET | `/api/assignments/me` | 担当新人一覧取得 | メンター・OJT・管理者 |
+| assignments | PUT | `/api/assignments` | メンター割り当て更新（upsert） | 管理者 |
+| users | GET | `/api/users/me` | 自分のプロフィール取得（email 除外） | 全ログインユーザー |
+| users | GET | `/api/users` | ユーザー一覧取得 | 管理者 |
+| users | POST | `/api/users` | ユーザー招待 | 管理者 |
+| users | PUT | `/api/users/:id` | ユーザー更新 | 管理者 |
+| auth | POST | `/api/auth/login` | ログイン | 全員 |
+| auth | POST | `/api/auth/logout` | ログアウト | 全員 |
+| auth | POST | `/api/auth/reset-password` | リセット用コード送信 | 未認証可 |
+| auth | POST | `/api/auth/reset-password-otp` | コード検証＋新パスワード設定 | 未認証可 |
+| auth | POST | `/api/auth/update-password` | ログイン中のパスワード変更 | 全ログインユーザー |
+
+> 認証系の成功レスポンスはいずれも `204 No Content`（ボディなし）。セッションは `@supabase/ssr` の Cookie アダプタが Set-Cookie で管理する。
 
 ---
 
 ## フロントエンドからの呼び出し例
+
+app 側の使い方ガイド（OpenAPI には無い情報）。
 
 ```typescript
 // 日報一覧取得

@@ -1,0 +1,56 @@
+# Gitleaks 設定（gitleaks/gitleaks-action@v2 が自動検出するルートの gitleaks.toml）。
+# 目的: 実シークレットの混入を検出して CI を fail させつつ、リポジトリ固有の
+#       「公開前提のダミー値」による誤検知を抑止する。
+#
+# 方針:
+# - useDefault = true で gitleaks 組み込みのデフォルトルール一式を継承する
+#   （AWS/GCP/Stripe/Slack/汎用 API キー/高エントロピー文字列など）。
+# - allowlist で本リポジトリに意図的に存在する公開ダミー値・サンプルだけを除外する。
+#   実シークレットの除外はしない（漏れたら検出させる）。
+
+title = "Joynal Gitleaks configuration"
+
+[extend]
+# gitleaks バイナリ組み込みのデフォルトルールを継承する。
+# 最新の内容: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+useDefault = true
+
+[allowlist]
+description = "公開前提のダミー値・サンプルのみを除外する（実シークレットは除外しない）"
+
+# --- パス単位の除外 ---------------------------------------------------------
+# ここに挙げるファイルは「秘匿しない前提」のもの。誤検知を生むため丸ごと除外する。
+paths = [
+  # サンプル env。プレースホルダのみを置く規約。実値は .env(gitignore 済) に入れる。
+  '''\.env\.example$''',
+  # ロックファイル。ハッシュ列が高エントロピー検出に引っかかるが秘匿情報ではない。
+  '''pnpm-lock\.yaml$''',
+  # Supabase 自動生成の型定義。秘匿情報を含まない。
+  '''shared/types/database\.types\.ts$''',
+]
+
+# --- 値単位の除外（regexes） -------------------------------------------------
+# Supabase をローカル(`supabase start`)で起動した際に CLI が出力する
+# anon / service_role キーは「全環境共通の固定値」で公式に公開されている
+# （本番の鍵ではない）。テスト・E2E・ドキュメントに登場しても秘匿情報ではないため除外する。
+# 参照: https://supabase.com/docs/guides/cli/local-development
+regexes = [
+  # ローカル Supabase デフォルト anon キー（公開固定値）
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24i.*''',
+  # ローカル Supabase デフォルト service_role キー（公開固定値）
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSI.*''',
+  # ローカル Supabase JWT 署名シークレット（公開固定値・config.toml 既定）
+  '''super-secret-jwt-token-with-at-least-32-characters-long''',
+  # vitest.config.ts で固定するテスト用ダミー anon キー
+  '''test-anon-key''',
+]
+
+# --- ストップワード ----------------------------------------------------------
+# これらの語を含む一致は明らかにサンプル/プレースホルダ扱いとして除外する。
+stopwords = [
+  "example",
+  "placeholder",
+  "your-",
+  "changeme",
+  "dummy",
+]

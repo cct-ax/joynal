@@ -59,6 +59,8 @@ graph TD
     UseAdminUsers["useAdminUsers\nユーザー一覧取得・操作"]
     UseMentorAssignments["useMentorAssignments\n割り当て編集行のVM"]
     UseLazyOpen["useLazyOpen\nモーダル遅延マウント"]
+    UseModalForm["useModalForm\n入力モーダルの lifecycle 共通化"]
+    UsePageLoading["usePageLoading\nページの pending 集約"]
     UseApiError["useApiError\n$fetch エラーのトースト化"]
   end
 
