@@ -3,81 +3,88 @@
  * フォーム実装のサンプルコンポーネント
  *
  * このファイルはメンバーが写経・参考にするためのサンプルです。
- * UForm + zod + useToast の基本的な使い方を示しています。
+ * UForm + zod + useToast の基本的な使い方を、実際の日報フォームを題材に示しています。
  *
- * 実際の日報フォームを実装する際は、このパターンを参考にしてください。
+ * 実際の日報入力モーダル（ReportInputModal.vue）などを実装する際は、
+ * このパターンを参考にしてください。
  */
-import { z } from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
+// ① Zod スキーマは app/types/schemas.ts に集約する規約。
+//    コンポーネント内でinline定義せず、import して使う。
+import { reportSchema, type ReportSchema } from '~/types/schemas'
 
-// ① zod でバリデーションルールを定義する
-const schema = z.object({
-  title: z.string().min(1, 'タイトルは必須です'),
-  content: z.string().min(1, '内容は必須です').max(500, '500文字以内で入力してください'),
-  date: z.string().min(1, '日付は必須です')
-})
+// ② フォーム送信完了・キャンセルは emit で親（モーダルを開いた側）へ通知する
+const emit = defineEmits<{ cancel: [], saved: [] }>()
 
-// ② スキーマから TypeScript の型を作る
-type Schema = z.output<typeof schema>
-
-// ③ フォームの状態を reactive で管理する
-const emit = defineEmits<{ cancel: [] }>()
-
-const state = reactive<Partial<Schema>>({
-  title: undefined,
+// ③ フォームの状態を reactive で管理する（初期値は undefined）
+const state = reactive<Partial<ReportSchema>>({
+  date: undefined,
+  check_in: undefined,
+  check_out: undefined,
   content: undefined,
-  date: undefined
+  mood: undefined
 })
+
+// mood（気分）は任意項目。USelect 用の選択肢
+const MOOD_OPTIONS = [
+  { label: '5（とても良い）', value: 5 },
+  { label: '4', value: 4 },
+  { label: '3（ふつう）', value: 3 },
+  { label: '2', value: 2 },
+  { label: '1（よくない）', value: 1 }
+]
 
 const toast = useToast()
 const loading = ref(false)
 
-// ④ 送信時の処理（バリデーションが通った後に呼ばれる）
-// 実装時は _event を event に変えて event.data を $fetch のボディに渡すこと:
-//   await $fetch('/api/reports', { method: 'POST', body: event.data })
-const onSubmit = async (_event: FormSubmitEvent<Schema>) => {
+// ④ 送信時の処理（スキーマのバリデーションが通った後に呼ばれる）
+//    event.data はバリデーション済みの値。$fetch は必ず try/catch で囲む。
+const onSubmit = async (event: FormSubmitEvent<ReportSchema>): Promise<void> => {
   loading.value = true
 
-  // 実装例（_event を event に変えること）:
-  // try {
-  //   await $fetch('/api/reports', { method: 'POST', body: event.data })
-  // } catch {
-  //   toast.add({ title: 'エラーが発生しました', color: 'error' })
-  //   loading.value = false
-  //   return
-  // }
+  try {
+    await $fetch('/api/reports', { method: 'POST', body: event.data })
+  } catch (error: unknown) {
+    // サーバーは日本語のエラーメッセージを返す。必要なら status で分岐する。
+    // 例: 同じ日付の日報がすでにある場合（409）は専用メッセージを出す。
+    const isConflict
+      = typeof error === 'object'
+        && error !== null
+        && 'statusCode' in error
+        && (error as { statusCode: number }).statusCode === 409
+    toast.add({
+      title: isConflict ? '同じ日付の日報がすでに存在します' : 'エラーが発生しました',
+      color: 'error'
+    })
+    loading.value = false
+    return
+  }
 
   toast.add({ title: '保存しました', color: 'success' })
 
   // フォームをリセット
-  state.title = undefined
-  state.content = undefined
   state.date = undefined
+  state.check_in = undefined
+  state.check_out = undefined
+  state.content = undefined
+  state.mood = undefined
 
   loading.value = false
+
+  // 親へ完了を通知（親はモーダルを閉じて一覧を再取得する想定）
+  emit('saved')
 }
 </script>
 
 <template>
   <!-- ⑤ UForm に schema と state を渡す。@submit でバリデーション通過後の処理を呼ぶ -->
   <UForm
-    :schema="schema"
+    :schema="reportSchema"
     :state="state"
     class="space-y-4"
     @submit="onSubmit"
   >
     <!-- ⑥ UFormField の name はスキーマのキーと一致させる（エラー表示が自動で紐づく） -->
-    <UFormField
-      name="title"
-      label="タイトル"
-      required
-    >
-      <UInput
-        v-model="state.title"
-        placeholder="タイトルを入力"
-      />
-    </UFormField>
-
     <UFormField
       name="date"
       label="日付"
@@ -90,14 +97,48 @@ const onSubmit = async (_event: FormSubmitEvent<Schema>) => {
     </UFormField>
 
     <UFormField
+      name="check_in"
+      label="出勤時間"
+      required
+    >
+      <UInput
+        v-model="state.check_in"
+        type="time"
+      />
+    </UFormField>
+
+    <UFormField
+      name="check_out"
+      label="退勤時間"
+      required
+    >
+      <UInput
+        v-model="state.check_out"
+        type="time"
+      />
+    </UFormField>
+
+    <UFormField
       name="content"
-      label="内容"
+      label="やったこと"
       required
     >
       <UTextarea
         v-model="state.content"
-        placeholder="内容を入力してください"
+        placeholder="今日やったことを入力してください"
         :rows="5"
+      />
+    </UFormField>
+
+    <!-- mood は任意項目なので required を付けない -->
+    <UFormField
+      name="mood"
+      label="気分（任意）"
+    >
+      <USelect
+        v-model="state.mood"
+        :items="MOOD_OPTIONS"
+        placeholder="選択してください"
       />
     </UFormField>
 

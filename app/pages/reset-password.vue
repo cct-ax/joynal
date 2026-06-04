@@ -28,36 +28,84 @@ const sendResetEmail = async () => {
 </script>
 
 <template>
-  <div>
-    <h1>パスワードリセット</h1>
+  <div class="relative flex min-h-screen items-center justify-center bg-muted px-5 py-8 text-default">
+    <UColorModeButton
+      color="neutral"
+      variant="outline"
+      size="sm"
+      square
+      class="fixed end-4 top-4 z-10 cursor-pointer"
+    />
 
-    <form @submit.prevent="sendResetEmail">
-      <div>
-        <label for="email">メールアドレス</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-        >
+    <UCard
+      class="w-full max-w-sm shadow-sm"
+      :ui="{
+        body: 'p-7'
+      }"
+    >
+      <div class="mb-5">
+        <h1 class="text-xl font-bold text-highlighted">
+          パスワードリセット
+        </h1>
+        <p class="mt-2 text-sm text-muted">
+          登録済みのメールアドレスを入力してください。
+        </p>
       </div>
 
-      <p v-if="successMessage">
-        {{ successMessage }}
-      </p>
-      <p v-if="errorMessage">
-        {{ errorMessage }}
-      </p>
-
-      <button
-        type="submit"
-        :disabled="loading"
+      <UForm
+        class="space-y-4"
+        @submit="sendResetEmail"
       >
-        {{ loading ? '送信中...' : 'リセットメールを送信' }}
-      </button>
-    </form>
+        <UFormField
+          label="メールアドレス"
+          name="email"
+          required
+        >
+          <UInput
+            id="email"
+            v-model="email"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="mail@example.com"
+            class="w-full"
+            :ui="{ base: 'w-full' }"
+          />
+        </UFormField>
 
-    <NuxtLink to="/login">ログインに戻る</NuxtLink>
+        <p
+          v-if="successMessage"
+          class="text-sm text-success"
+        >
+          {{ successMessage }}
+        </p>
+        <p
+          v-if="errorMessage"
+          class="text-sm text-error"
+        >
+          {{ errorMessage }}
+        </p>
+
+        <UButton
+          type="submit"
+          color="primary"
+          block
+          :loading="loading"
+          :disabled="loading"
+          class="cursor-pointer"
+        >
+          {{ loading ? '送信中...' : 'リセットメールを送信' }}
+        </UButton>
+      </UForm>
+
+      <div class="mt-5">
+        <NuxtLink
+          to="/login"
+          class="text-sm text-primary transition hover:underline"
+        >
+          ← ログイン画面に戻る
+        </NuxtLink>
+      </div>
+    </UCard>
   </div>
 </template>
