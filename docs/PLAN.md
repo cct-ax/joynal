@@ -534,6 +534,14 @@
   - 変更: `app/pages/report.vue`・`app/pages/admin.vue`
 - [ ] **R-3 assertAdminRole 抽出**（前提: 1-11a users ハンドラ完了）— users 系ハンドラの重複した admin gate（role 取得→403）を server util へ集約
   - 新規/変更: `server/utils/auth.ts`（`assertAdminRole` 追加）・`server/api/users/index.get.ts`・`index.post.ts`・`server/api/users/[id]/index.put.ts` ＋ util 単体テスト
+- [ ] **R-4 useLazyOpen 抽出**（前提: 2-1c・3-1-a/3-3-a・4-2-a の各モーダル/ページ設置完了）— モーダル等の遅延マウント latch（`open` が一度 true になったらマウントを維持）を各ホストの inline `watch` から共通 composable へ集約。`v-if` で Lazy コンポーネントのチャンク取得を初回オープンまで遅延
+  - 新規: `app/composables/useLazyOpen.ts`
+  - 変更: `app/components/common/AppHeader.vue`・`app/pages/admin.vue`・`app/pages/report.vue`
+- [ ] **R-5 asyncDataCache 抽出**（前提: keyed `useAsyncData` 系 composable 完了）— `getCachedData`/`reuseAsyncData` のキャッシュ設定（タブ切替の重複取得・purge 対策）を共通 util へ集約
+  - 新規: `app/utils/asyncDataCache.ts`
+  - 変更: `app/composables/useCurrentUser.ts`・`app/composables/useAdminUsers.ts`・`app/composables/useAssignedTrainees.ts`・`app/composables/useMentorAssignments.ts`
+- [ ] **R-6 option 正規化共通化**（前提: 3-6-a・4-1-a 完了）— `PersonOption`/`TraineeOption` の `{ id, name }` 正規化と型を統一
+  - 変更: `app/composables/useMentorAssignments.ts`・`app/composables/useAssignedTrainees.ts`・`shared/types/api.ts`
 
 ---
 
