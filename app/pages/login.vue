@@ -87,7 +87,6 @@ const signIn = async (): Promise<void> => {
               autocomplete="email"
               placeholder="mail@example.com"
               class="w-full"
-              :ui="{ base: 'w-full' }"
             />
           </UFormField>
 
@@ -104,7 +103,6 @@ const signIn = async (): Promise<void> => {
               autocomplete="current-password"
               placeholder="••••••••"
               class="w-full"
-              :ui="{ base: 'w-full' }"
             />
           </UFormField>
 

@@ -144,7 +144,6 @@ defineExpose({ requestCode, submitNewPassword })
               autocapitalize="none"
               placeholder="mail@example.com"
               class="flex-1"
-              :ui="{ base: 'w-full' }"
             />
             <UButton
               type="button"
@@ -183,7 +182,6 @@ defineExpose({ requestCode, submitNewPassword })
             maxlength="8"
             placeholder="メールに記載のコード"
             class="w-full"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
 
@@ -199,7 +197,6 @@ defineExpose({ requestCode, submitNewPassword })
             autocomplete="new-password"
             placeholder="••••••••"
             class="w-full"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
 
@@ -215,7 +212,6 @@ defineExpose({ requestCode, submitNewPassword })
             autocomplete="new-password"
             placeholder="••••••••"
             class="w-full"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
 

@@ -168,7 +168,6 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
             label-key="label"
             placeholder="新人を選択してください"
             class="w-full sm:max-w-xs"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
       </UCard>
