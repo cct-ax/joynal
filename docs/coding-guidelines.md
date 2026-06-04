@@ -282,7 +282,7 @@ const hasReportToday = computed(() =>
 ReportInputModal   // 日報 + 入力 + モーダル
 ReportRow          // 日報 + 行
 CommentInputModal  // コメント + 入力 + モーダル
-UserAddModal       // ユーザー + 追加 + モーダル
+UserFormModal      // ユーザー + フォーム + モーダル（追加・編集兼用）
 ```
 
 ---
@@ -292,6 +292,7 @@ UserAddModal       // ユーザー + 追加 + モーダル
 - **200〜400行** が目安。800行を超えたら分割を検討する
 - 1ファイルに1つの責務（コンポーネント、composable、APIハンドラー）
 - 複数のコンポーネントで使うロジックは `composables/` に切り出す
+- 共通化は**先回りせず、重複が出てから集約する**（rule of three）。例: 入力モーダルの lifecycle → `useModalForm`、ページの pending → `usePageLoading`
 
 ---
 
@@ -421,7 +422,7 @@ docs: API設計書にコメントエンドポイントを追加
 
 ## モーダル設計パターン
 
-モーダル（`UModal` / `ConfirmDialog` 等）の open/close 制御は、用途に応じて 3 つのパターンを使い分けます。汎用 composable で抽象化せず、用途ごとに素直に書くのが「お手本」です。
+モーダル（`UModal` / `ConfirmDialog` 等）の open/close 制御は、用途に応じて 3 つのパターンを使い分けます。**まずは用途ごとに素直に書く**のが「お手本」です（汎用 composable で先回り抽象化しない）。同じ入力モーダルの lifecycle（open 時の state リセット＋submit の loading/エラー処理）が複数揃ってきたら、共通化リファクタで `useModalForm` に集約する（先に実装 → 重複が出てから集約＝rule of three。PLAN.md「共通化リファクタ」R-1 参照）。下記の開閉制御パターン 1〜3 自体は集約後も初期実装の手本として有効。
 
 ### パターン 1: 単一ロケーション制御
 
@@ -512,7 +513,7 @@ const onDelete = async (): Promise<void> => {
 
 ### やらないこと
 
-- `useModalState` のような汎用 composable で `ref(false)` を抽象化する → 読みやすさが下がる、3 パターンで構造が異なる
+- **先回りで** `useModalState` のような汎用 composable に `ref(false)`（開閉制御）を抽象化する → 読みやすさが下がる、開閉制御は 3 パターンで構造が異なる。※ 重複した入力フォーム lifecycle が揃ってからの `useModalForm`（submit 共通化）への集約は別（推奨）
 - モーダル内に「確認モード」を組み込む（design プロトの React 版にあるパターン）→ `ConfirmDialog` を独立コンポーネントとして使う方がテスト容易
 
 ---

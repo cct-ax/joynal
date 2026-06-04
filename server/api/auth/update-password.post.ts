@@ -1,31 +1,44 @@
-import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
-import type { UpdatePasswordResponse } from '#shared/types/api'
+import { serverSupabaseClient } from '#supabase/server'
 import { updatePasswordBodySchema } from '#shared/types/schemas'
 
-export default defineEventHandler<Promise<UpdatePasswordResponse>>(async (event) => {
+defineRouteMeta({
+  openAPI: {
+    tags: ['auth'],
+    summary: 'ログイン中のパスワード変更',
+    description: 'ヘッダーの「パスワード変更」から呼ぶ。新パスワードのみ受け取る（現在 / 確認用はフォーム UX 用でサーバーには送らない）。',
+    requestBody: {
+      required: true,
+      content: { 'application/json': { schema: {
+        type: 'object',
+        required: ['password'],
+        properties: { password: { type: 'string', description: '新パスワード（8文字以上）' } }
+      } } }
+    },
+    responses: {
+      204: { description: '成功（ボディなし）' },
+      400: { description: 'パスワード変更失敗 / バリデーションエラー' },
+      401: { description: '未ログイン' },
+      500: { description: 'サーバーエラー' }
+    }
+  }
+})
+
+/**
+ * POST /api/auth/update-password
+ * ログイン中ユーザーのパスワードを更新する。
+ */
+export default defineEventHandler(async (event) => {
+  await serverUserId(event)
+
+  const { password } = await parseBody(event, updatePasswordBodySchema)
+
   const client = await serverSupabaseClient(event)
-  const user = await serverSupabaseUser(event)
-
-  if (!user) {
-    throw createError({ statusCode: 401, message: '認証が必要です' })
-  }
-
-  const body = await readBody<unknown>(event)
-  const result = updatePasswordBodySchema.safeParse(body)
-
-  if (!result.success) {
-    throw createError({
-      statusCode: 400,
-      message: '新しいパスワードは8文字以上で入力してください'
-    })
-  }
-
-  const { error } = await client.auth.updateUser({ password: result.data.password })
+  const { error } = await client.auth.updateUser({ password })
 
   if (error) {
-    console.error('[api/auth/update-password POST]', error)
     throw createError({ statusCode: 400, message: 'パスワードの変更に失敗しました' })
   }
 
-  return { success: true }
+  setResponseStatus(event, 204)
+  return null
 })

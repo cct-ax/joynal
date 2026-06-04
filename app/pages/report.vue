@@ -2,7 +2,7 @@
 import { getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date'
 import type { Profile, DailyReport } from '#shared/types/models'
 import type { UserRole } from '#shared/types/api'
-import type { ReportWeekday, WeekDayItem } from '~/types/report'
+import type { ReportWeekday, WeekDayItem } from '#shared/types/report'
 
 // --- ロール & 対象新人 ---
 // TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）

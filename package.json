@@ -2,7 +2,7 @@
   "name": "joynal",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -11,55 +11,40 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@iconify/vue": "^5.0.0",
-    "@internationalized/date": "^3.12.1",
+    "@internationalized/date": "3.12.1",
     "@nuxt/ui": "^4.6.1",
     "@nuxtjs/supabase": "^2.0.5",
-    "@vee-validate/zod": "^4.15.1",
     "@vueuse/core": "^14.2.1",
     "@vueuse/nuxt": "^14.2.1",
     "nuxt": "4.4.2",
     "tailwindcss": "^4.3.0",
-    "vee-validate": "^4.15.1",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.4.1",
+    "@nuxt/fonts": "^0.14.0",
     "@nuxt/test-utils": "^4.0.2",
+    "@playwright/test": "^1.60.0",
+    "@supabase/supabase-js": "2.104.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "@vue/test-utils": "^2.4.10",
     "eslint": "^10.2.1",
     "happy-dom": "^20.9.0",
-    "prettier": "^3.5.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5",
-    "vue-tsc": "^3.2.7"
-  },
-  "pnpm": {
-    "overrides": {
-      "cac@^6.7.14": "6.7.14",
-      "commander@^13.1.0": "13.1.0"
-    },
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "esbuild",
-      "unrs-resolver"
-    ]
+    "vue-tsc": "^3.2.7",
+    "wrangler": "^4.95.0"
   },
   "engines": {
     "node": ">=22.0.0"
-  },
-  "prettier": {
-    "semi": false,
-    "singleQuote": true,
-    "tabWidth": 2,
-    "trailingComma": "none",
-    "printWidth": 100
   }
 }

@@ -1,6 +1,38 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+/*
+ * アプリ全体のフォント。
+ * @nuxt/fonts が `--font-*` を自動解決し Geist / Geist Mono を取得・self-host する。
+ * docs/design プロト（Geist 指定）に準拠。font-sans=本文、font-mono=社員ID 等の識別子。
+ */
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ページロードの控えめな立ち上がり（fade + 8px slide-up）。delay でスタッガー可能。 */
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* モーション軽減設定を尊重する。 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
+  }
+}
+
+/* ライト/ダークでの primary トーン調整。 */
 :root {
   --ui-primary: var(--ui-color-primary-600);
 }

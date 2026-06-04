@@ -3,8 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import type { UpdatePasswordResponse } from '#shared/types/api'
 import {
   passwordChangeSchema,
-  type PasswordChangeSchema,
-  type UpdatePasswordBody
+  type PasswordChangeSchema
 } from '#shared/types/schemas'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -38,7 +37,7 @@ watch(open, (isOpen): void => {
 
 const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<void> => {
   loading.value = true
-  const body: UpdatePasswordBody = { password: event.data.next }
+  const body = { password: event.data.next }
 
   try {
     await $fetch<UpdatePasswordResponse>('/api/auth/update-password', {

@@ -5,14 +5,13 @@ on:
     branches: [main]
 
 jobs:
+  # Lint と型チェック。pnpm のバージョンは固定せず packageManager(pnpm@11.5.0) に従わせる。
   lint-and-typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
 
       - uses: actions/setup-node@v4
         with:
@@ -27,3 +26,67 @@ jobs:
 
       - name: Type check
         run: pnpm exec nuxt typecheck
+
+  # ユニット・統合テスト（Vitest）。lint-and-typecheck と並列で実行される。
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Test
+        run: pnpm test
+
+  # 本番ビルド（Nitro / Cloudflare Pages プリセット）。
+  # @nuxtjs/supabase は URL/KEY 未設定だと warn を出すだけだが、
+  # ビルドを密閉化するためダミーの public 値を渡しておく（ビルド時に実 Supabase へは接続しない）。
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NUXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NUXT_PUBLIC_SUPABASE_KEY: build-time-dummy-anon-key
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+  # 依存の既知脆弱性チェック。
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # 依存ツリーに high 以上の既知脆弱性があれば fail する。
+      # （devalue の high は pnpm-workspace.yaml の overrides で patched 版へ底上げ済み）
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
