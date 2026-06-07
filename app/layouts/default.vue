@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const supabase = useSupabaseClient()
 const user = useSupabaseUser()
-const router = useRouter()
+const apiError = useApiError()
 const passwordModalOpen = ref(false)
 
 const { profile, isAdmin } = useCurrentUser()
@@ -14,9 +13,16 @@ const openPasswordModal = () => {
   passwordModalOpen.value = true
 }
 
-const signOut = async () => {
-  await supabase.auth.signOut()
-  await router.push('/login')
+const signOut = async (): Promise<void> => {
+  try {
+    // サーバー側でセッション Cookie を破棄する（フロントから Supabase を直接呼ばない）。
+    await $fetch('/api/auth/logout', { method: 'POST' })
+  } catch (error: unknown) {
+    apiError.notify(error, { fallback: 'ログアウトに失敗しました' })
+    return
+  }
+  // フルリロード（external）でクライアントの認証状態も確実にクリアしてから /login へ。
+  await navigateTo('/login', { external: true })
 }
 
 const userMenuItems = computed<DropdownMenuItem[]>(() => {
@@ -93,7 +99,7 @@ const userMenuItems = computed<DropdownMenuItem[]>(() => {
         class="shrink-0"
       >
         <div class="flex items-center gap-2">
-          <span class="max-w-[11rem] truncate text-sm text-muted">
+          <span class="max-w-44 truncate text-sm text-muted">
             {{ displayName }}
           </span>
           <UColorModeButton

@@ -22,43 +22,20 @@ const traineeSelectItems = computed(() =>
 //   管理者: $fetch('/api/users') → role === 'trainee' のみフィルタ
 
 // --- 週ナビゲーション ---
-const getMonday = (sourceDate: Date): Date => {
-  const dayOfWeek = sourceDate.getDay()
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(sourceDate)
-  monday.setDate(sourceDate.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
-}
-
-const getThisMonday = (): Date => getMonday(new Date())
-
-const currentWeekStart = ref(getThisMonday())
+// TODO(R-8/R-9 #83/#84): 週ナビ→WeekNavigator＋useWeekNavigation・週ジャンプ→WeekPickerModal へ抽出予定。
+// 日付/週ロジックは shared/utils/date.ts の共通関数を使う（auto-import・重複実装を避ける）。
+const currentWeekStart = ref(getMondayOf(new Date()))
 const weekCalendarOpen = ref(false)
 const DAY_LABELS: readonly ReportWeekday[] = ['月', '火', '水', '木', '金']
 const DEFAULT_DAY_LABEL: ReportWeekday = '月'
 const MAX_MOOD = 5
 
-const weekDays = computed(() =>
-  Array.from({ length: 5 }, (_, index) => {
-    const date = new Date(currentWeekStart.value)
-    date.setDate(date.getDate() + index)
-    return date
-  })
-)
+const weekDays = computed(() => getWeekDays(currentWeekStart.value))
 
-const weekLabel = computed(() => {
-  const weekStart = currentWeekStart.value
-  const weekEnd = weekDays.value.at(-1)!
-  const formatMonthDay = (date: Date) =>
-    `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
-  return `${weekStart.getFullYear()}/${formatMonthDay(weekStart)}（月）〜 ${formatMonthDay(weekEnd)}（金）`
-})
+const weekLabel = computed(() => formatWeekLabel(currentWeekStart.value))
 
 const prevWeek = () => {
-  const date = new Date(currentWeekStart.value)
-  date.setDate(date.getDate() - 7)
-  currentWeekStart.value = date
+  currentWeekStart.value = addDays(currentWeekStart.value, -7)
 }
 
 const nextWeek = () => {
@@ -66,60 +43,40 @@ const nextWeek = () => {
     return
   }
 
-  const date = new Date(currentWeekStart.value)
-  date.setDate(date.getDate() + 7)
-  currentWeekStart.value = date
+  currentWeekStart.value = addDays(currentWeekStart.value, 7)
 }
 
 const goToThisWeek = () => {
-  currentWeekStart.value = getThisMonday()
+  currentWeekStart.value = getMondayOf(new Date())
 }
-
-const formatDate = (date: Date) =>
-  `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, '0')}`
-
-const toDateString = (date: Date) => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const getFriday = (weekStart: Date): Date => {
-  const friday = new Date(weekStart)
-  friday.setDate(friday.getDate() + 4)
-  return friday
-}
-
-const getThisWeekFriday = (): Date => getFriday(getThisMonday())
 
 const calendarValue = computed<DateValue | undefined>({
-  get: () => parseDate(toDateString(currentWeekStart.value)),
+  get: () => parseDate(formatYmd(currentWeekStart.value)),
   set: (value) => {
     if (!value) {
       return
     }
 
-    const selectedWeekStart = getMonday(value.toDate(getLocalTimeZone()))
-    const thisMonday = getThisMonday()
-    const selectedWeekKey = toDateString(selectedWeekStart)
-    const thisWeekKey = toDateString(thisMonday)
+    const selectedWeekStart = getMondayOf(value.toDate(getLocalTimeZone()))
+    const thisMonday = getMondayOf(new Date())
+    const selectedWeekKey = formatYmd(selectedWeekStart)
+    const thisWeekKey = formatYmd(thisMonday)
     currentWeekStart.value = selectedWeekKey > thisWeekKey ? thisMonday : selectedWeekStart
     weekCalendarOpen.value = false
   }
 })
 
-const maxCalendarValue = computed(() => parseDate(toDateString(getThisWeekFriday())))
+const maxCalendarValue = computed(() => parseDate(formatYmd(addDays(getMondayOf(new Date()), 4))))
 
 const isCalendarDateInSelectedWorkWeek = (date: DateValue): boolean => {
-  const dateKey = toDateString(date.toDate(getLocalTimeZone()))
-  const weekStartKey = toDateString(currentWeekStart.value)
-  const weekEndKey = toDateString(getFriday(currentWeekStart.value))
+  const dateKey = formatYmd(date.toDate(getLocalTimeZone()))
+  const weekStartKey = formatYmd(currentWeekStart.value)
+  const weekEndKey = formatYmd(addDays(currentWeekStart.value, 4))
   return dateKey >= weekStartKey && dateKey <= weekEndKey
 }
 
 const isCalendarDateSelectedWeekStart = (date: DateValue): boolean =>
-  toDateString(date.toDate(getLocalTimeZone())) === toDateString(currentWeekStart.value)
+  formatYmd(date.toDate(getLocalTimeZone())) === formatYmd(currentWeekStart.value)
 
 const getCalendarDayClass = (date: DateValue): string => {
   if (isCalendarDateSelectedWeekStart(date)) {
@@ -142,25 +99,25 @@ const getCalendarWeekDayClass = (day: string): string => {
 }
 
 const canGoNextWeek = computed(
-  () => toDateString(currentWeekStart.value) < toDateString(getThisMonday())
+  () => formatYmd(currentWeekStart.value) < formatYmd(getMondayOf(new Date()))
 )
 
 const isCurrentWeek = computed(
-  () => toDateString(currentWeekStart.value) === toDateString(getThisMonday())
+  () => formatYmd(currentWeekStart.value) === formatYmd(getMondayOf(new Date()))
 )
 
 // --- 日報データ ---
 // key: 'YYYY-MM-DD', value: daily_report レコード
 const reports = ref<Record<string, DailyReport>>({})
 // TODO: currentWeekStart と対象ユーザーID をもとに日報を取得して reports に格納する
-//   $fetch('/api/reports', { query: { weekStart: toDateString(currentWeekStart.value), userId: selectedTraineeId.value ?? undefined } })
+//   $fetch('/api/reports', { query: { weekStart: formatYmd(currentWeekStart.value), userId: selectedTraineeId.value ?? undefined } })
 //   取得した配列を Record<string, DailyReport> に変換: Object.fromEntries(data.map(r => [r.date, r]))
 
 // --- コメントデータ ---
 const mentorComment = ref<string | null>(null)
 const ojtComment = ref<string | null>(null)
 // TODO: currentWeekStart と selectedTraineeId をもとにコメントを取得する
-//   $fetch('/api/comments', { query: { weekStart: toDateString(currentWeekStart.value), traineeId: selectedTraineeId.value } })
+//   $fetch('/api/comments', { query: { weekStart: formatYmd(currentWeekStart.value), traineeId: selectedTraineeId.value } })
 
 // --- モーダル ---
 // TODO: 日報入力・編集モーダルの open/close 制御と選択中の日付状態を実装する（新人用）
@@ -170,9 +127,9 @@ const showTraineeSelector = computed(() => role.value && role.value !== 'trainee
 const showEmptyAdminMessage = computed(() => role.value === 'admin' && !selectedTraineeId.value)
 
 const weekDayItems = computed<WeekDayItem[]>(() => {
-  const todayKey = toDateString(new Date())
+  const todayKey = formatYmd(new Date())
   return weekDays.value.map((date, index) => {
-    const dateKey = toDateString(date)
+    const dateKey = formatYmd(date)
     return {
       date,
       dateKey,
@@ -212,7 +169,6 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
             label-key="label"
             placeholder="新人を選択してください"
             class="w-full sm:max-w-xs"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
       </UCard>
@@ -246,7 +202,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 type="button"
                 color="primary"
                 variant="outline"
-                class="h-9 w-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
+                class="size-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
                 aria-label="前の週"
                 @click="prevWeek"
               >
@@ -288,10 +244,10 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       variant="subtle"
                       size="sm"
                       :ui="{
-                        root: 'min-w-[17.5rem]',
+                        root: 'min-w-70',
                         body: 'pt-3',
                         headCell: 'font-semibold',
-                        cellTrigger: 'data-[selected]:bg-transparent data-[selected]:text-inherit data-[selected]:ring-0'
+                        cellTrigger: 'data-selected:bg-transparent data-selected:text-inherit data-selected:ring-0'
                       }"
                     >
                       <template #week-day="{ day }">
@@ -313,7 +269,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                 type="button"
                 color="primary"
                 variant="outline"
-                class="h-9 w-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
+                class="size-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
                 :disabled="!canGoNextWeek"
                 aria-label="次の週"
                 @click="nextWeek"
@@ -372,11 +328,11 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                         class="text-[13px] font-semibold"
                         :class="item.isToday ? 'text-primary' : 'text-highlighted'"
                       >
-                        {{ formatDate(item.date) }}（{{ item.weekday }}）
+                        {{ formatMonthDay(item.date) }}（{{ item.weekday }}）
                       </span>
                       <span
                         v-if="item.isToday"
-                        class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                        class="size-1.5 shrink-0 rounded-full bg-primary"
                       />
                       <span
                         v-if="item.report"
@@ -473,11 +429,11 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                     class="text-sm font-medium"
                     :class="item.isToday ? 'text-primary' : 'text-highlighted'"
                   >
-                    {{ formatDate(item.date) }}（{{ item.weekday }}）
+                    {{ formatMonthDay(item.date) }}（{{ item.weekday }}）
                   </span>
                   <span
                     v-if="item.isToday"
-                    class="h-1.5 w-1.5 rounded-full bg-primary"
+                    class="size-1.5 rounded-full bg-primary"
                   />
                 </div>
 
