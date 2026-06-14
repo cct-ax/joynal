@@ -2,17 +2,16 @@
 import { MOOD_VALUES, isMoodValue, type MoodValue } from '#shared/types/api'
 
 type MoodStarsSize = 'sm' | 'md'
+const MOOD_LABEL = '気分'
 
 const props = withDefaults(defineProps<{
   modelValue?: number | null
   readonly?: boolean
   size?: MoodStarsSize
-  label?: string
 }>(), {
   modelValue: undefined,
   readonly: false,
-  size: 'md',
-  label: '気分'
+  size: 'md'
 })
 
 const emit = defineEmits<{
@@ -34,17 +33,17 @@ const iconSizeClass = computed(() => props.size === 'sm' ? 'size-3.5' : 'size-5'
 
 const readonlyLabel = computed(() => {
   if (!selectedValue.value) {
-    return `${props.label}: 未選択`
+    return `${MOOD_LABEL}: 未選択`
   }
 
-  return `${props.label}: ${selectedValue.value} / ${MOOD_VALUES.length}`
+  return `${MOOD_LABEL}: ${selectedValue.value} / ${MOOD_VALUES.length}`
 })
 
 const isActive = (value: MoodValue): boolean =>
   displayValue.value !== undefined && value <= displayValue.value
 
 const getButtonLabel = (value: MoodValue): string => {
-  const base = `${props.label}: ${value} / ${MOOD_VALUES.length}`
+  const base = `${MOOD_LABEL}: ${value} / ${MOOD_VALUES.length}`
   return selectedValue.value === value ? `${base} 選択中。もう一度押すと解除` : base
 }
 
@@ -62,7 +61,7 @@ const selectMood = (value: MoodValue) => {
     class="inline-flex items-center"
     :class="gapClass"
     :role="props.readonly ? 'img' : 'group'"
-    :aria-label="props.readonly ? readonlyLabel : props.label"
+    :aria-label="props.readonly ? readonlyLabel : MOOD_LABEL"
   >
     <template v-if="props.readonly">
       <UIcon
