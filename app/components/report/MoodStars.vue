@@ -23,6 +23,11 @@ const selectedValue = computed<MoodValue | undefined>(() =>
   isMoodValue(props.modelValue) ? props.modelValue : undefined
 )
 
+const hoveredValue = ref<MoodValue | null>(null)
+const displayValue = computed<MoodValue | undefined>(() =>
+  hoveredValue.value ?? selectedValue.value
+)
+
 const gapClass = computed(() => props.size === 'sm' ? 'gap-0.5' : 'gap-1')
 const buttonSizeClass = computed(() => props.size === 'sm' ? 'size-5' : 'size-8')
 const iconSizeClass = computed(() => props.size === 'sm' ? 'size-3.5' : 'size-5')
@@ -36,7 +41,7 @@ const readonlyLabel = computed(() => {
 })
 
 const isActive = (value: MoodValue): boolean =>
-  selectedValue.value !== undefined && value <= selectedValue.value
+  displayValue.value !== undefined && value <= displayValue.value
 
 const getButtonLabel = (value: MoodValue): string => {
   const base = `${props.label}: ${value} / ${MOOD_VALUES.length}`
@@ -79,11 +84,13 @@ const selectMood = (value: MoodValue) => {
       class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       :class="[
         buttonSizeClass,
-        isActive(value) ? 'text-warning' : 'text-dimmed hover:text-warning'
+        isActive(value) ? 'text-warning' : 'text-dimmed'
       ]"
       :aria-label="getButtonLabel(value)"
       :aria-pressed="selectedValue === value"
       @click="selectMood(value)"
+      @mouseenter="hoveredValue = value"
+      @mouseleave="hoveredValue = null"
     >
       <UIcon
         name="i-lucide-star"
