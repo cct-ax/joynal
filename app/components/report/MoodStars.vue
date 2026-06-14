@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: MoodValue | undefined]
+  'update:modelValue': [value: MoodValue | null]
 }>()
 
 const selectedValue = computed<MoodValue | undefined>(() =>
@@ -52,7 +52,7 @@ const selectMood = (value: MoodValue) => {
     return
   }
 
-  emit('update:modelValue', selectedValue.value === value ? undefined : value)
+  emit('update:modelValue', selectedValue.value === value ? null : value)
 }
 </script>
 
