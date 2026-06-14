@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import { MOOD_VALUES, isMoodValue, type MoodValue } from '#shared/types/api'
 
-type MoodStarsSize = 'sm' | 'md'
+type MoodStarsSize = 'xs' | 'sm' | 'md'
 const MOOD_LABEL = '気分'
+const GAP_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
+  xs: 'gap-0.5',
+  sm: 'gap-0.5',
+  md: 'gap-1'
+}
+const BUTTON_SIZE_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
+  xs: 'size-4',
+  sm: 'size-5',
+  md: 'size-8'
+}
+const ICON_SIZE_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
+  xs: 'size-3',
+  sm: 'size-3.5',
+  md: 'size-5'
+}
 
 const props = withDefaults(defineProps<{
   modelValue?: number | null
@@ -27,9 +42,9 @@ const displayValue = computed<MoodValue | undefined>(() =>
   hoveredValue.value ?? selectedValue.value
 )
 
-const gapClass = computed(() => props.size === 'sm' ? 'gap-0.5' : 'gap-1')
-const buttonSizeClass = computed(() => props.size === 'sm' ? 'size-5' : 'size-8')
-const iconSizeClass = computed(() => props.size === 'sm' ? 'size-3.5' : 'size-5')
+const gapClass = computed(() => GAP_CLASS_BY_SIZE[props.size])
+const buttonSizeClass = computed(() => BUTTON_SIZE_CLASS_BY_SIZE[props.size])
+const iconSizeClass = computed(() => ICON_SIZE_CLASS_BY_SIZE[props.size])
 
 const readonlyLabel = computed(() => {
   if (!selectedValue.value) {
