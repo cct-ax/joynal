@@ -85,7 +85,7 @@ const selectMood = (value: MoodValue) => {
         name="i-lucide-star"
         :class="[
           iconSizeClass,
-          isActive(value) ? 'fill-current text-warning' : 'fill-transparent text-dimmed'
+          isActive(value) ? 'fill-current text-amber-400' : 'fill-transparent text-dimmed'
         ]"
       />
     </template>
@@ -98,7 +98,7 @@ const selectMood = (value: MoodValue) => {
       class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       :class="[
         buttonSizeClass,
-        isActive(value) ? 'text-warning' : 'text-dimmed'
+        isActive(value) ? 'text-amber-400' : 'text-dimmed'
       ]"
       :aria-label="getButtonLabel(value)"
       :aria-pressed="selectedValue === value"
