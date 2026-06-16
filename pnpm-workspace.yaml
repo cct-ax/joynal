@@ -8,6 +8,10 @@ allowBuilds:
 overrides:
   cac: "^6.7.14"
   commander: "^13.1.0"
+  # shell-quote <=1.8.3 is GHSA-w7jw-789q-3m8p (critical). launch-editor pulls it transitively.
+  shell-quote: "^1.8.4"
+  # esbuild <0.28.1 is GHSA-gv7w-rqvm-qjhr (high). Vite/fontless pull it transitively.
+  esbuild: "^0.28.1"
   # devalue <5.8.1 は GHSA-77vg-94rm-hx3p（sparse array deserialization の DoS, high）。
   # nuxt/nitro 経由の推移的依存。patched 版へ底上げして pnpm audit --audit-level=high を green に保つ。
   devalue: "^5.8.1"
