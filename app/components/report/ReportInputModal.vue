@@ -6,6 +6,15 @@ import type { DailyReport } from '#shared/types/models'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
 const FORM_ID = 'report-input-form'
+const TIME_OPTION_INTERVAL_MINUTES = 30
+
+const padTimePart = (value: number): string => String(value).padStart(2, '0')
+const TIME_OPTIONS = Array.from({ length: 24 * 60 / TIME_OPTION_INTERVAL_MINUTES }, (_, index) => {
+  const totalMinutes = index * TIME_OPTION_INTERVAL_MINUTES
+  const hour = Math.floor(totalMinutes / 60)
+  const minute = totalMinutes % 60
+  return `${padTimePart(hour)}:${padTimePart(minute)}`
+})
 
 const open = defineModel<boolean>('open', { required: true })
 const props = withDefaults(defineProps<{
@@ -16,6 +25,8 @@ const props = withDefaults(defineProps<{
 })
 
 const form = useTemplateRef('form')
+const checkInPickerOpen = ref(false)
+const checkOutPickerOpen = ref(false)
 const state = reactive<Partial<ReportSchema>>({
   date: '',
   check_in: '',
@@ -55,6 +66,16 @@ const moodValue = computed<MoodValue | null>({
     state.mood = value ?? undefined
   }
 })
+
+const selectCheckInTime = (time: string): void => {
+  state.check_in = time
+  checkInPickerOpen.value = false
+}
+
+const selectCheckOutTime = (time: string): void => {
+  state.check_out = time
+  checkOutPickerOpen.value = false
+}
 
 const submit = async (data: ReportSchema): Promise<void> => {
   await Promise.resolve(data)
@@ -105,47 +126,112 @@ defineExpose({ submit })
           name="date"
           required
         >
-          <UInput
+          <div
             id="report-date"
-            :model-value="state.date ?? ''"
-            icon="i-lucide-calendar-days"
-            readonly
-            class="w-full"
-            :ui="{ base: 'w-full' }"
-          />
+            class="flex min-h-9 w-full cursor-not-allowed select-none items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted ring ring-inset ring-muted"
+            aria-readonly="true"
+          >
+            <UIcon
+              name="i-lucide-calendar-days"
+              class="size-4 shrink-0 text-dimmed"
+            />
+            <span>{{ state.date ?? '' }}</span>
+          </div>
         </UFormField>
 
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField
-            label="出勤"
+            label="出勤時間"
             name="check_in"
             required
           >
-            <UInputTime
-              id="report-check-in"
-              v-model="checkInValue"
-              icon="i-lucide-clock"
-              granularity="minute"
-              :hour-cycle="24"
-              class="w-full"
-              :ui="{ base: 'w-full' }"
-            />
+            <div class="flex w-full">
+              <UInputTime
+                id="report-check-in"
+                v-model="checkInValue"
+                granularity="minute"
+                :hour-cycle="24"
+                class="min-w-0 flex-1"
+                :ui="{ base: 'w-full rounded-e-none' }"
+              />
+              <UPopover
+                v-model:open="checkInPickerOpen"
+                :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
+              >
+                <UButton
+                  type="button"
+                  icon="i-lucide-clock"
+                  color="neutral"
+                  variant="outline"
+                  class="-ms-px shrink-0 cursor-pointer rounded-s-none"
+                  aria-label="出勤時間を選択"
+                />
+
+                <template #content>
+                  <div class="max-h-64 w-36 overflow-y-auto p-1">
+                    <UButton
+                      v-for="time in TIME_OPTIONS"
+                      :key="`check-in-${time}`"
+                      type="button"
+                      color="neutral"
+                      :variant="state.check_in === time ? 'soft' : 'ghost'"
+                      block
+                      class="cursor-pointer justify-center"
+                      @click="selectCheckInTime(time)"
+                    >
+                      {{ time }}
+                    </UButton>
+                  </div>
+                </template>
+              </UPopover>
+            </div>
           </UFormField>
 
           <UFormField
-            label="退勤"
+            label="退勤時間"
             name="check_out"
             required
           >
-            <UInputTime
-              id="report-check-out"
-              v-model="checkOutValue"
-              icon="i-lucide-clock"
-              granularity="minute"
-              :hour-cycle="24"
-              class="w-full"
-              :ui="{ base: 'w-full' }"
-            />
+            <div class="flex w-full">
+              <UInputTime
+                id="report-check-out"
+                v-model="checkOutValue"
+                granularity="minute"
+                :hour-cycle="24"
+                class="min-w-0 flex-1"
+                :ui="{ base: 'w-full rounded-e-none' }"
+              />
+              <UPopover
+                v-model:open="checkOutPickerOpen"
+                :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
+              >
+                <UButton
+                  type="button"
+                  icon="i-lucide-clock"
+                  color="neutral"
+                  variant="outline"
+                  class="-ms-px shrink-0 cursor-pointer rounded-s-none"
+                  aria-label="退勤時間を選択"
+                />
+
+                <template #content>
+                  <div class="max-h-64 w-36 overflow-y-auto p-1">
+                    <UButton
+                      v-for="time in TIME_OPTIONS"
+                      :key="`check-out-${time}`"
+                      type="button"
+                      color="neutral"
+                      :variant="state.check_out === time ? 'soft' : 'ghost'"
+                      block
+                      class="cursor-pointer justify-center"
+                      @click="selectCheckOutTime(time)"
+                    >
+                      {{ time }}
+                    </UButton>
+                  </div>
+                </template>
+              </UPopover>
+            </div>
           </UFormField>
         </div>
 
@@ -160,7 +246,7 @@ defineExpose({ submit })
             :rows="7"
             :maxrows="12"
             autoresize
-            placeholder="Joy / Good / Next"
+            placeholder="本日の業務内容を記入してください"
             class="w-full"
             :ui="{ base: 'w-full resize-none' }"
           />

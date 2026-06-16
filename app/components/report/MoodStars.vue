@@ -57,6 +57,24 @@ const readonlyLabel = computed(() => {
 const isActive = (value: MoodValue): boolean =>
   displayValue.value !== undefined && value <= displayValue.value
 
+const isSelected = (value: MoodValue): boolean =>
+  selectedValue.value !== undefined && value <= selectedValue.value
+
+const isPreview = (value: MoodValue): boolean =>
+  hoveredValue.value !== null && value <= hoveredValue.value
+
+const getIconStateClass = (value: MoodValue): string => {
+  if (isSelected(value)) {
+    return 'mood-star-icon--selected'
+  }
+
+  if (isPreview(value)) {
+    return 'mood-star-icon--preview'
+  }
+
+  return ''
+}
+
 const getButtonLabel = (value: MoodValue): string => {
   const base = `${MOOD_LABEL}: ${value} / ${MOOD_VALUES.length}`
   return selectedValue.value === value ? `${base} 選択中。もう一度押すと解除` : base
@@ -83,9 +101,12 @@ const selectMood = (value: MoodValue) => {
         v-for="value in MOOD_VALUES"
         :key="value"
         name="i-lucide-star"
+        mode="svg"
         :class="[
           iconSizeClass,
-          isActive(value) ? 'fill-current text-amber-400' : 'fill-transparent text-dimmed'
+          'mood-star-icon',
+          getIconStateClass(value),
+          isSelected(value) ? 'text-amber-400' : 'text-dimmed'
         ]"
       />
     </template>
@@ -108,12 +129,28 @@ const selectMood = (value: MoodValue) => {
     >
       <UIcon
         name="i-lucide-star"
+        mode="svg"
         aria-hidden="true"
         :class="[
           iconSizeClass,
-          isActive(value) ? 'fill-current' : 'fill-transparent'
+          'mood-star-icon shrink-0',
+          getIconStateClass(value)
         ]"
       />
     </button>
   </div>
 </template>
+
+<style>
+.mood-star-icon--selected,
+.mood-star-icon--selected svg,
+.mood-star-icon--selected path {
+  fill: currentColor !important;
+}
+
+.mood-star-icon--preview,
+.mood-star-icon--preview svg,
+.mood-star-icon--preview path {
+  fill: white !important;
+}
+</style>
