@@ -60,16 +60,9 @@ const isActive = (value: MoodValue): boolean =>
 const isSelected = (value: MoodValue): boolean =>
   selectedValue.value !== undefined && value <= selectedValue.value
 
-const isPreview = (value: MoodValue): boolean =>
-  hoveredValue.value !== null && value <= hoveredValue.value
-
 const getIconStateClass = (value: MoodValue): string => {
   if (isSelected(value)) {
     return 'mood-star-icon--selected'
-  }
-
-  if (isPreview(value)) {
-    return 'mood-star-icon--preview'
   }
 
   return ''
@@ -146,11 +139,5 @@ const selectMood = (value: MoodValue) => {
 .mood-star-icon--selected svg,
 .mood-star-icon--selected path {
   fill: currentColor !important;
-}
-
-.mood-star-icon--preview,
-.mood-star-icon--preview svg,
-.mood-star-icon--preview path {
-  fill: white !important;
 }
 </style>
