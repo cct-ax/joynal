@@ -149,7 +149,6 @@ defineExpose({ submit })
           >
             <div class="flex w-full">
               <UInputTime
-                id="report-check-in"
                 v-model="checkInValue"
                 granularity="minute"
                 :hour-cycle="24"
@@ -196,7 +195,6 @@ defineExpose({ submit })
           >
             <div class="flex w-full">
               <UInputTime
-                id="report-check-out"
                 v-model="checkOutValue"
                 granularity="minute"
                 :hour-cycle="24"
@@ -243,7 +241,6 @@ defineExpose({ submit })
           required
         >
           <UTextarea
-            id="report-content"
             v-model="state.content"
             :rows="7"
             :maxrows="12"
