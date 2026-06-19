@@ -147,45 +147,54 @@ defineExpose({ submit })
             name="check_in"
             required
           >
-            <div class="flex w-full">
-              <UInputTime
-                v-model="checkInValue"
-                granularity="minute"
-                :hour-cycle="24"
-                class="min-w-0 flex-1"
-                :ui="{ base: 'w-full rounded-e-none' }"
-              />
-              <UPopover
-                v-model:open="checkInPickerOpen"
-                :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
-              >
-                <UButton
-                  type="button"
-                  icon="i-lucide-clock"
-                  color="neutral"
-                  variant="outline"
-                  class="-ms-px shrink-0 cursor-pointer rounded-s-none"
-                  aria-label="出勤時間を選択"
-                />
+            <UPopover
+              v-model:open="checkInPickerOpen"
+              :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
+              :ui="{ content: 'w-(--reka-popover-trigger-width)' }"
+            >
+              <template #anchor>
+                <div
+                  class="flex w-full"
+                  @click="checkInPickerOpen = true"
+                >
+                  <UInputTime
+                    v-model="checkInValue"
+                    granularity="minute"
+                    :hour-cycle="24"
+                    class="min-w-0 flex-1"
+                    :ui="{ base: 'w-full rounded-e-none' }"
+                  />
+                  <UButton
+                    type="button"
+                    icon="i-lucide-clock"
+                    color="neutral"
+                    variant="outline"
+                    class="-ms-px shrink-0 cursor-pointer rounded-s-none"
+                    aria-label="出勤時間を選択"
+                    aria-haspopup="dialog"
+                    :aria-expanded="checkInPickerOpen"
+                    @click.stop="checkInPickerOpen = !checkInPickerOpen"
+                  />
+                </div>
+              </template>
 
-                <template #content>
-                  <div class="max-h-64 w-36 overflow-y-auto p-1">
-                    <UButton
-                      v-for="time in TIME_OPTIONS"
-                      :key="`check-in-${time}`"
-                      type="button"
-                      color="neutral"
-                      :variant="state.check_in === time ? 'soft' : 'ghost'"
-                      block
-                      class="cursor-pointer justify-center"
-                      @click="selectCheckInTime(time)"
-                    >
-                      {{ time }}
-                    </UButton>
-                  </div>
-                </template>
-              </UPopover>
-            </div>
+              <template #content>
+                <div class="max-h-64 overflow-y-auto p-1">
+                  <UButton
+                    v-for="time in TIME_OPTIONS"
+                    :key="`check-in-${time}`"
+                    type="button"
+                    color="neutral"
+                    :variant="state.check_in === time ? 'soft' : 'ghost'"
+                    block
+                    class="cursor-pointer justify-center"
+                    @click="selectCheckInTime(time)"
+                  >
+                    {{ time }}
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
           </UFormField>
 
           <UFormField
@@ -193,45 +202,54 @@ defineExpose({ submit })
             name="check_out"
             required
           >
-            <div class="flex w-full">
-              <UInputTime
-                v-model="checkOutValue"
-                granularity="minute"
-                :hour-cycle="24"
-                class="min-w-0 flex-1"
-                :ui="{ base: 'w-full rounded-e-none' }"
-              />
-              <UPopover
-                v-model:open="checkOutPickerOpen"
-                :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
-              >
-                <UButton
-                  type="button"
-                  icon="i-lucide-clock"
-                  color="neutral"
-                  variant="outline"
-                  class="-ms-px shrink-0 cursor-pointer rounded-s-none"
-                  aria-label="退勤時間を選択"
-                />
+            <UPopover
+              v-model:open="checkOutPickerOpen"
+              :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
+              :ui="{ content: 'w-(--reka-popover-trigger-width)' }"
+            >
+              <template #anchor>
+                <div
+                  class="flex w-full"
+                  @click="checkOutPickerOpen = true"
+                >
+                  <UInputTime
+                    v-model="checkOutValue"
+                    granularity="minute"
+                    :hour-cycle="24"
+                    class="min-w-0 flex-1"
+                    :ui="{ base: 'w-full rounded-e-none' }"
+                  />
+                  <UButton
+                    type="button"
+                    icon="i-lucide-clock"
+                    color="neutral"
+                    variant="outline"
+                    class="-ms-px shrink-0 cursor-pointer rounded-s-none"
+                    aria-label="退勤時間を選択"
+                    aria-haspopup="dialog"
+                    :aria-expanded="checkOutPickerOpen"
+                    @click.stop="checkOutPickerOpen = !checkOutPickerOpen"
+                  />
+                </div>
+              </template>
 
-                <template #content>
-                  <div class="max-h-64 w-36 overflow-y-auto p-1">
-                    <UButton
-                      v-for="time in TIME_OPTIONS"
-                      :key="`check-out-${time}`"
-                      type="button"
-                      color="neutral"
-                      :variant="state.check_out === time ? 'soft' : 'ghost'"
-                      block
-                      class="cursor-pointer justify-center"
-                      @click="selectCheckOutTime(time)"
-                    >
-                      {{ time }}
-                    </UButton>
-                  </div>
-                </template>
-              </UPopover>
-            </div>
+              <template #content>
+                <div class="max-h-64 overflow-y-auto p-1">
+                  <UButton
+                    v-for="time in TIME_OPTIONS"
+                    :key="`check-out-${time}`"
+                    type="button"
+                    color="neutral"
+                    :variant="state.check_out === time ? 'soft' : 'ghost'"
+                    block
+                    class="cursor-pointer justify-center"
+                    @click="selectCheckOutTime(time)"
+                  >
+                    {{ time }}
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
           </UFormField>
         </div>
 
