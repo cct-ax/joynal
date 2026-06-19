@@ -6,7 +6,7 @@ import type { DailyReport } from '#shared/types/models'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
 const FORM_ID = 'report-input-form'
-const TIME_OPTION_INTERVAL_MINUTES = 30
+const TIME_OPTION_INTERVAL_MINUTES = 15
 
 const padTimePart = (value: number): string => String(value).padStart(2, '0')
 const TIME_OPTIONS = Array.from({ length: 24 * 60 / TIME_OPTION_INTERVAL_MINUTES }, (_, index) => {
