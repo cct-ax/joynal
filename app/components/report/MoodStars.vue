@@ -60,14 +60,6 @@ const isActive = (value: MoodValue): boolean =>
 const isSelected = (value: MoodValue): boolean =>
   selectedValue.value !== undefined && value <= selectedValue.value
 
-const getIconStateClass = (value: MoodValue): string => {
-  if (isSelected(value)) {
-    return 'mood-star-icon--selected'
-  }
-
-  return ''
-}
-
 const getButtonLabel = (value: MoodValue): string => {
   const base = `${MOOD_LABEL}: ${value} / ${MOOD_VALUES.length}`
   return selectedValue.value === value ? `${base} 選択中。もう一度押すと解除` : base
@@ -93,12 +85,9 @@ const selectMood = (value: MoodValue) => {
       <UIcon
         v-for="value in MOOD_VALUES"
         :key="value"
-        name="i-lucide-star"
-        mode="svg"
+        :name="isSelected(value) ? 'i-mdi-star' : 'i-mdi-star-outline'"
         :class="[
           iconSizeClass,
-          'mood-star-icon',
-          getIconStateClass(value),
           isSelected(value) ? 'text-amber-400' : 'text-dimmed'
         ]"
       />
@@ -121,23 +110,13 @@ const selectMood = (value: MoodValue) => {
       @mouseleave="hoveredValue = null"
     >
       <UIcon
-        name="i-lucide-star"
-        mode="svg"
+        :name="isSelected(value) ? 'i-mdi-star' : 'i-mdi-star-outline'"
         aria-hidden="true"
         :class="[
           iconSizeClass,
-          'mood-star-icon shrink-0',
-          getIconStateClass(value)
+          'shrink-0'
         ]"
       />
     </button>
   </div>
 </template>
-
-<style>
-.mood-star-icon--selected,
-.mood-star-icon--selected svg,
-.mood-star-icon--selected path {
-  fill: currentColor !important;
-}
-</style>
