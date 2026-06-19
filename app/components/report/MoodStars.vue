@@ -42,7 +42,7 @@ const displayValue = computed<MoodValue | undefined>(() =>
   hoveredValue.value ?? selectedValue.value
 )
 
-const gapClass = computed(() => GAP_CLASS_BY_SIZE[props.size])
+const containerGapClass = computed(() => props.readonly ? GAP_CLASS_BY_SIZE[props.size] : undefined)
 const buttonSizeClass = computed(() => BUTTON_SIZE_CLASS_BY_SIZE[props.size])
 const iconSizeClass = computed(() => ICON_SIZE_CLASS_BY_SIZE[props.size])
 
@@ -77,7 +77,7 @@ const selectMood = (value: MoodValue) => {
 <template>
   <div
     class="inline-flex items-center"
-    :class="gapClass"
+    :class="containerGapClass"
     :role="props.readonly ? 'img' : 'group'"
     :aria-label="props.readonly ? readonlyLabel : MOOD_LABEL"
   >
