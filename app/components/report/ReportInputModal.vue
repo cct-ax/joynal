@@ -37,6 +37,11 @@ const state = reactive<Partial<ReportSchema>>({
 
 const title = computed(() => props.report ? '日報を編集' : '日報を入力')
 
+const displayDate = computed(() => {
+  const date = parseYmd(state.date ?? '')
+  return date ? formatDateWithWeekday(date) : ''
+})
+
 const syncState = (): void => {
   state.date = props.report?.date ?? props.date ?? ''
   state.check_in = toHm(props.report?.check_in)
@@ -121,23 +126,20 @@ defineExpose({ submit })
         class="space-y-4"
         @submit="onSubmit"
       >
-        <UFormField
-          label="日付"
-          name="date"
-          required
-        >
+        <div class="space-y-1.5">
+          <p class="text-sm font-medium text-highlighted">
+            日付
+          </p>
           <div
-            id="report-date"
             class="flex min-h-9 w-full cursor-not-allowed select-none items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted ring ring-inset ring-muted"
-            aria-readonly="true"
           >
             <UIcon
               name="i-lucide-calendar-days"
               class="size-4 shrink-0 text-dimmed"
             />
-            <span>{{ state.date ?? '' }}</span>
+            <span>{{ displayDate }}</span>
           </div>
-        </UFormField>
+        </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField
