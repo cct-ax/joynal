@@ -1,4 +1,12 @@
+---
+description: ページ / コンポーネント / composable / API の依存関係図とファイル役割一覧。
+---
+
 # コンポーネント構成図
+
+このページで分かること: 画面を構成するページ・コンポーネント・composable・サーバー API の依存関係と、各ファイルの役割。
+
+> 関連: [アーキテクチャ](./architecture.md) ・ [画面 UI 仕様](./design-spec.md) ・ [用語集](./glossary.md)
 
 > コンポーネントは `app/components/` 配下をドメイン別フォルダ（`admin/` `common/` `report/`）で整理している。
 > `pathPrefix: false` を設定しているため、コンポーネント名はフォルダ名を含まず据え置き（`<UserTable>` のように使う）。

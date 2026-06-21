@@ -15,7 +15,7 @@ const DOC_ORDER = [
   'db-design',
   'rls-design',
   'coding-guidelines',
-  'PLAN'
+  'glossary'
 ]
 
 type DocCard = { title: string, path: string, description: string, stem: string }

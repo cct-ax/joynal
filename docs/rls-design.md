@@ -1,4 +1,12 @@
+---
+description: 全テーブルの RLS アクセスマトリクスとポリシー SQL・セキュリティ修正の経緯。
+---
+
 # RLS（Row Level Security）設計書
+
+このページで分かること: 誰がどのテーブルの行を読み書きできるか（アクセスマトリクス）、それを実現するポリシー SQL、過去のセキュリティ修正の経緯。
+
+> 関連: [DB 設計](./db-design.md) ・ [アーキテクチャ](./architecture.md) ・ [用語集](./glossary.md)
 
 ## 基本方針
 
@@ -120,6 +128,9 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 ### `profiles`テーブル
 
+<details>
+<summary>ポリシー SQL</summary>
+
 ```sql
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -151,9 +162,14 @@ CREATE POLICY "profiles_delete"
   USING (public.is_admin());
 ```
 
+</details>
+
 ---
 
 ### `daily_reports`テーブル
+
+<details>
+<summary>ポリシー SQL</summary>
 
 ```sql
 ALTER TABLE public.daily_reports ENABLE ROW LEVEL SECURITY;
@@ -197,9 +213,14 @@ CREATE POLICY "daily_reports_delete"
   );
 ```
 
+</details>
+
 ---
 
 ### `comments`テーブル
+
+<details>
+<summary>ポリシー SQL</summary>
 
 ```sql
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
@@ -232,9 +253,14 @@ CREATE POLICY "comments_update"
   WITH CHECK (commenter_id = auth.uid());
 ```
 
+</details>
+
 ---
 
 ### `mentor_assignments`テーブル
+
+<details>
+<summary>ポリシー SQL</summary>
 
 ```sql
 ALTER TABLE public.mentor_assignments ENABLE ROW LEVEL SECURITY;
@@ -268,11 +294,16 @@ CREATE POLICY "mentor_assignments_delete"
   USING (public.is_admin());
 ```
 
+</details>
+
 ---
 
 ### `ai_summaries`テーブル
 
 `comments` と同型。`audience` で self（本人）と mentor（担当・管理者）を分岐する。書き込みは `serverSupabaseClient`（ユーザー JWT）経由＝RLS 適用。
+
+<details>
+<summary>ポリシー SQL</summary>
 
 ```sql
 ALTER TABLE public.ai_summaries ENABLE ROW LEVEL SECURITY;
@@ -333,11 +364,16 @@ CREATE POLICY "ai_summaries_update"
   );
 ```
 
+</details>
+
 ---
 
 ### `ai_usage`テーブル
 
 レート制限の記録用。本人のみ作成・更新でき、admin は監視のため閲覧できる（`serverSupabaseClient` のユーザー JWT 経由＝RLS 適用）。
+
+<details>
+<summary>ポリシー SQL</summary>
 
 ```sql
 ALTER TABLE public.ai_usage ENABLE ROW LEVEL SECURITY;
@@ -358,6 +394,8 @@ CREATE POLICY "ai_usage_update"
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 ```
+
+</details>
 
 ---
 

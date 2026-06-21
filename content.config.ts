@@ -17,7 +17,8 @@ export default defineContentConfig({
       source: {
         cwd: fileURLToPath(new URL('./docs', import.meta.url)),
         include: '**/*.md',
-        exclude: ['test-users.md'],
+        // test-users.md は gitignore、PLAN.md は GitHub Issue ミラーの内部進捗（サイトには出さない）。
+        exclude: ['test-users.md', 'PLAN.md'],
         prefix: '/docs'
       }
     })

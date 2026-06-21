@@ -20,7 +20,7 @@ const DOC_ORDER = [
   'db-design',
   'rls-design',
   'coding-guidelines',
-  'PLAN'
+  'glossary'
 ]
 
 type DocLink = { title: string, path: string, stem: string }
