@@ -3,6 +3,7 @@ import { assertAdminRole, serverUserId } from '../utils/auth'
 import { parseBody, parseQuery, parseRouteParam } from '../utils/validate'
 import { resolveYear } from '../utils/year'
 import { throwSupabaseError } from '../utils/supabaseError'
+import { aiChat } from '../utils/aiChat'
 
 /**
  * server ハンドラのユニットテスト用グローバル提供。
@@ -27,3 +28,4 @@ vi.stubGlobal('parseQuery', parseQuery)
 vi.stubGlobal('parseRouteParam', parseRouteParam)
 vi.stubGlobal('resolveYear', resolveYear)
 vi.stubGlobal('throwSupabaseError', throwSupabaseError)
+vi.stubGlobal('aiChat', aiChat)
