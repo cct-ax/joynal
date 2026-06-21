@@ -149,7 +149,8 @@ async function* readSseDataPayloads(body: ReadableStream<Uint8Array>): AsyncGene
     const tail = buffer.trimEnd()
     if (tail.startsWith('data:')) yield tail.slice(5).trim()
   } finally {
-    reader.releaseLock()
+    // 早期離脱（クライアント切断で消費側が break）時は上流接続も明示キャンセルする
+    await reader.cancel().catch(() => {})
   }
 }
 

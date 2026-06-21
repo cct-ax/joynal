@@ -130,6 +130,19 @@ describe('useWeeklySummary', () => {
     expect(summary.value).toBeNull()
   })
 
+  it('done も error も来ずに途切れたら error トースト・summary は変わらない', async () => {
+    requestFetchMock.mockResolvedValue({ summary: null, latestReportUpdatedAt: null })
+    fetchMock.mockResolvedValue(sseStream([
+      'event: delta\ndata: {"text":"途中まで"}\n\n'
+    ]))
+    const { summary, generate } = await mountSummary()
+
+    await generate()
+
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+    expect(summary.value).toBeNull()
+  })
+
   it('POST 自体が reject（事前チェック失敗）でも error トースト', async () => {
     requestFetchMock.mockResolvedValue({ summary: null, latestReportUpdatedAt: null })
     fetchMock.mockRejectedValue({ statusCode: 429 })

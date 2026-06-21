@@ -43,7 +43,10 @@ const emit = defineEmits<{ generate: [] }>()
       v-if="generating && streamingContent"
       class="text-sm text-highlighted whitespace-pre-wrap"
     >
-      {{ streamingContent }}<span class="ml-0.5 animate-pulse text-muted">▌</span>
+      {{ streamingContent }}<span
+        aria-hidden="true"
+        class="ml-0.5 animate-pulse text-muted"
+      >▌</span>
     </p>
     <template v-else-if="summary">
       <UAlert

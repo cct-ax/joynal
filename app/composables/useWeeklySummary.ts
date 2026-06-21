@@ -147,6 +147,12 @@ export const useWeeklySummary = (
         }
         // 生成直後は最新の日報で要約済み＝鮮度OK にするため latest を生成基準に合わせる。
         data.value = { summary: result, latestReportUpdatedAt: meta.sourceUpdatedAt }
+      } else if (streamingContent.value.trim()) {
+        // done も error も来ずにストリームが途切れた（接続断など）。部分結果は保存せず通知する。
+        apiError.notify(
+          { statusCode: 502, data: { message: '生成が完了しませんでした。再度お試しください', code: 'AI_UPSTREAM_ERROR' } },
+          { fallback: '生成が完了しませんでした。再度お試しください' }
+        )
       }
     } catch (error: unknown) {
       apiError.notify(error, { fallback: 'サマリーの生成に失敗しました' })

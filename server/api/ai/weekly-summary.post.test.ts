@@ -10,7 +10,11 @@ const rateLimitMock = vi.fn()
 const pushMock = vi.fn()
 const closeMock = vi.fn()
 const sendMock = vi.fn(() => 'SSE_RESPONSE')
-const createEventStreamMock = vi.fn(() => ({ push: pushMock, close: closeMock, send: sendMock }))
+let capturedOnClosed: (() => void) | undefined
+const onClosedMock = vi.fn((cb: () => void) => {
+  capturedOnClosed = cb
+})
+const createEventStreamMock = vi.fn(() => ({ push: pushMock, close: closeMock, send: sendMock, onClosed: onClosedMock }))
 const eventStub = {} as Parameters<typeof handler>[0]
 const requesterId = '00000000-0000-4000-8000-0000000000aa'
 const otherUserId = '00000000-0000-4000-8000-0000000000bb'
@@ -23,9 +27,9 @@ async function* genFrom(parts: string[]): AsyncGenerator<string> {
 }
 
 /** 反復開始時に throw する差分ストリーム（上流失敗の模擬）。 */
+// eslint-disable-next-line require-yield -- 反復開始で必ず throw するため yield しない
 async function* genThrow(): AsyncGenerator<string> {
   throw Object.assign(new Error('upstream'), { statusCode: 502 })
-  yield '' // 到達しない（AsyncGenerator にするため）
 }
 
 const mockStream = (parts: string[] | AsyncGenerator<string>) => {
@@ -45,6 +49,7 @@ const mockClient = (result: QueryResult) => {
 describe('POST /api/ai/weekly-summary (SSE)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    capturedOnClosed = undefined
     vi.stubGlobal('readBody', readBodyMock)
     vi.stubGlobal('aiChatStream', aiChatStreamMock)
     vi.stubGlobal('assertWithinDailyLimit', rateLimitMock)
@@ -110,7 +115,7 @@ describe('POST /api/ai/weekly-summary (SSE)', () => {
       expect.objectContaining({ content: '週次サマリー本文', model: 'gemini-2.5-flash', provider: 'gemini' }),
       expect.anything()
     )
-    expect(closeMock).toHaveBeenCalled()
+    await vi.waitFor(() => expect(closeMock).toHaveBeenCalled())
   })
 
   it('対象が他人なら audience=mentor で done を送る', async () => {
@@ -145,6 +150,31 @@ describe('POST /api/ai/weekly-summary (SSE)', () => {
     await vi.waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith({ event: 'error', data: expect.stringContaining('AI_UPSTREAM_ERROR') })
     )
-    expect(closeMock).toHaveBeenCalled()
+    await vi.waitFor(() => expect(closeMock).toHaveBeenCalled())
+  })
+
+  it('生成中にクライアントが切断したら打ち切り、upsert も done も行わない', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    async function* gated(): AsyncGenerator<string> {
+      yield '部分'
+      await gate // 2 つ目を出す前で待機
+      yield 'のこり'
+    }
+    mockStream(gated())
+    const { query } = mockClient({ data: oneReport, error: null })
+
+    await handler(eventStub)
+    // 最初の delta が流れたら切断を通知 → 残りを解放
+    await vi.waitFor(() => expect(pushMock).toHaveBeenCalledWith({ event: 'delta', data: '{"text":"部分"}' }))
+    capturedOnClosed?.()
+    release()
+
+    await vi.waitFor(() => expect(closeMock).toHaveBeenCalled())
+    expect(query.upsert).not.toHaveBeenCalled()
+    expect(pushMock).not.toHaveBeenCalledWith({ event: 'delta', data: '{"text":"のこり"}' })
+    expect(pushMock).not.toHaveBeenCalledWith(expect.objectContaining({ event: 'done' }))
   })
 })

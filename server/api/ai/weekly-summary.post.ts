@@ -81,17 +81,35 @@ export default defineEventHandler(async (event) => {
     )
   })
 
+  // クライアント切断を検知したら生成を打ち切る（無駄な AI 消費・閉じたストリームへの push を避ける）
+  let clientGone = false
+  stream.onClosed(() => {
+    clientGone = true
+  })
+
+  // 閉じたストリームへの push / close は無視する（unhandled rejection 防止）
+  const safePush = async (message: { event: string, data: string }): Promise<void> => {
+    try {
+      await stream.push(message)
+    } catch {
+      clientGone = true
+    }
+  }
   const pushError = (payload: WeeklySummaryErrorData): Promise<void> =>
-    stream.push({ event: 'error', data: JSON.stringify(payload) })
+    safePush({ event: 'error', data: JSON.stringify(payload) })
 
   // 生成タスク（return stream.send() 後も SSE が開いている間バックグラウンドで走り続ける）
   const pump = async (): Promise<void> => {
     let accumulated = ''
     try {
       for await (const delta of deltas) {
+        if (clientGone) break
         accumulated += delta
-        await stream.push({ event: 'delta', data: JSON.stringify({ text: delta }) })
+        await safePush({ event: 'delta', data: JSON.stringify({ text: delta }) })
       }
+
+      // 切断時は途中までの生成を保存しない（部分結果を残さない）
+      if (clientGone) return
 
       const content = accumulated.trim()
       if (!content) {
@@ -113,12 +131,16 @@ export default defineEventHandler(async (event) => {
       }
 
       const done: WeeklySummaryDoneData = { audience, sourceUpdatedAt }
-      await stream.push({ event: 'done', data: JSON.stringify(done) })
+      await safePush({ event: 'done', data: JSON.stringify(done) })
     } catch (error) {
       console.error('[weekly-summary] stream failed:', error)
       await pushError({ message: 'AI 応答の取得に失敗しました。時間をおいて再度お試しください', code: 'AI_UPSTREAM_ERROR' })
     } finally {
-      await stream.close()
+      try {
+        await stream.close()
+      } catch {
+        // 既に閉じている（クライアント切断）場合は無視
+      }
     }
   }
 
