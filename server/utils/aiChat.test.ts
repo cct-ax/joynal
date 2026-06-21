@@ -21,6 +21,12 @@ const openaiConfig: ResolvedAiConfig = {
   apiKey: 'sk-oai-test',
   maxTokens: 512
 }
+const geminiConfig: ResolvedAiConfig = {
+  provider: 'gemini',
+  model: 'gemini-2.5-flash',
+  apiKey: 'gm-test',
+  maxTokens: 1024
+}
 
 describe('extractAnthropicText', () => {
   it('content の text ブロックを連結して返す', () => {
@@ -84,6 +90,25 @@ describe('callAiProvider', () => {
       body: expect.objectContaining({
         model: 'gpt-4o-mini',
         max_tokens: 200,
+        messages: [
+          { role: 'system', content: 'SYS' },
+          { role: 'user', content: 'USR' }
+        ]
+      })
+    }))
+  })
+
+  it('gemini: OpenAI 互換エンドポイントを Bearer 認証で叩き本文を返す', async () => {
+    fetchMock.mockResolvedValue({ choices: [{ message: { content: 'ジェミニ応答' } }] })
+
+    const text = await callAiProvider(geminiConfig, { system: 'SYS', user: 'USR' })
+
+    expect(text).toBe('ジェミニ応答')
+    expect(fetchMock).toHaveBeenCalledWith('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer gm-test' }),
+      body: expect.objectContaining({
+        model: 'gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'SYS' },
           { role: 'user', content: 'USR' }

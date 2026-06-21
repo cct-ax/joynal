@@ -37,13 +37,16 @@ export default defineNuxtConfig({
 
   // AI 機能（コーチング・週次サマリー）のプロバイダ設定。
   // 値は NUXT_* 環境変数で上書きする（runtimeConfig 直下＝サーバー専用でクライアントに露出しない）。
-  // 既定プロバイダは Anthropic（Claude Haiku 4.5）。OpenAI も同一アダプタ（server/utils/aiChat）で利用可。
+  // 既定プロバイダは Anthropic（Claude Haiku 4.5）。OpenAI・Gemini も同一アダプタ（server/utils/aiChat）で利用可。
+  // Gemini は OpenAI 互換エンドポイント経由（provider='gemini'）。
   runtimeConfig: {
     anthropicApiKey: '', // NUXT_ANTHROPIC_API_KEY
     openaiApiKey: '', // NUXT_OPENAI_API_KEY
-    aiProvider: 'anthropic', // NUXT_AI_PROVIDER（'anthropic' | 'openai'）
+    geminiApiKey: '', // NUXT_GEMINI_API_KEY
+    aiProvider: 'anthropic', // NUXT_AI_PROVIDER（'anthropic' | 'openai' | 'gemini'）
     anthropicModel: 'claude-haiku-4-5-20251001', // NUXT_ANTHROPIC_MODEL
     openaiModel: 'gpt-4o-mini', // NUXT_OPENAI_MODEL
+    geminiModel: 'gemini-2.5-flash', // NUXT_GEMINI_MODEL
     aiMaxTokens: 1024 // NUXT_AI_MAX_TOKENS
   },
 

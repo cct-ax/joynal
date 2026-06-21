@@ -3,8 +3,9 @@ import type { H3Event } from 'h3'
 /**
  * プロバイダ非依存の AI チャットアダプタ。
  *
- * Anthropic（Messages API）と OpenAI（Chat Completions）の両対応を、SDK を使わず
- * 素の `$fetch`（ofetch）で実装する（Cloudflare Workers 互換のため）。
+ * Anthropic（Messages API）と OpenAI 互換（OpenAI / Google Gemini の Chat Completions）に
+ * 対応する。SDK を使わず素の `$fetch`（ofetch）で実装する（Cloudflare Workers 互換のため）。
+ * Gemini は OpenAI 互換エンドポイントを使うため OpenAI と同じ処理パスで扱う。
  *
  * テスト容易性のため「設定解決（runtimeConfig 依存）」と「HTTP 呼び出し（純粋）」を分離する:
  * - `callAiProvider(config, req)` … config を引数で受けるため $fetch モックのみで完全にテスト可能
@@ -13,7 +14,7 @@ import type { H3Event } from 'h3'
  */
 
 /** AI プロバイダの種類。runtimeConfig 既定 ＋ 非本番のリクエスト上書きで選択する。 */
-export type AiProvider = 'anthropic' | 'openai'
+export type AiProvider = 'anthropic' | 'openai' | 'gemini'
 
 /** 解決済み AI 設定（resolveAiConfig が runtimeConfig から組み立てる）。 */
 export type ResolvedAiConfig = {
@@ -41,6 +42,12 @@ const AI_UPSTREAM_ERROR = {
   statusCode: 502,
   statusMessage: 'Bad Gateway',
   data: { message: 'AI 応答の取得に失敗しました。時間をおいて再度お試しください', code: 'AI_UPSTREAM_ERROR' }
+}
+
+/** OpenAI 互換 Chat Completions のエンドポイント（Gemini は OpenAI 互換層を使う）。 */
+const OPENAI_COMPAT_URL: Record<'openai' | 'gemini', string> = {
+  openai: 'https://api.openai.com/v1/chat/completions',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
 }
 
 /** unknown から安全にプロパティを 1 つ取り出す（型ガードを 1 箇所に集約）。 */
@@ -101,7 +108,8 @@ export const callAiProvider = async (config: ResolvedAiConfig, req: AiChatReques
         }
       })
     } else {
-      res = await $fetch('https://api.openai.com/v1/chat/completions', {
+      // OpenAI と Gemini は OpenAI 互換フォーマット（URL のみ異なる）
+      res = await $fetch(OPENAI_COMPAT_URL[config.provider], {
         method: 'POST',
         headers: { Authorization: `Bearer ${config.apiKey}` },
         body: {
@@ -127,7 +135,8 @@ export const callAiProvider = async (config: ResolvedAiConfig, req: AiChatReques
   return text
 }
 
-const normalizeProvider = (v: unknown): AiProvider => (v === 'openai' ? 'openai' : 'anthropic')
+const normalizeProvider = (v: unknown): AiProvider =>
+  v === 'openai' ? 'openai' : v === 'gemini' ? 'gemini' : 'anthropic'
 
 /**
  * runtimeConfig から AI 設定を解決する。
@@ -144,8 +153,12 @@ export const resolveAiConfig = (
     ? overrides.provider
     : normalizeProvider(config.aiProvider)
 
-  const apiKey = provider === 'anthropic' ? config.anthropicApiKey : config.openaiApiKey
-  const defaultModel = provider === 'anthropic' ? config.anthropicModel : config.openaiModel
+  const apiKey = provider === 'anthropic'
+    ? config.anthropicApiKey
+    : provider === 'gemini' ? config.geminiApiKey : config.openaiApiKey
+  const defaultModel = provider === 'anthropic'
+    ? config.anthropicModel
+    : provider === 'gemini' ? config.geminiModel : config.openaiModel
   const model = allowOverride && overrides?.model ? overrides.model : defaultModel
 
   return { provider, model, apiKey, maxTokens: config.aiMaxTokens }

@@ -348,9 +348,10 @@ GitHub (main ブランチ)
           │                               # service role 経由のアクセスに使う（@nuxtjs/supabase v2 はこの名前で読む）
           ├── NUXT_ANTHROPIC_API_KEY      # AI（Claude）。コーチング・週次サマリーで使用
           ├── NUXT_OPENAI_API_KEY         # AI（OpenAI）。プロバイダ切替時に使用
-          └── NUXT_AI_PROVIDER / NUXT_ANTHROPIC_MODEL / NUXT_OPENAI_MODEL / NUXT_AI_MAX_TOKENS  # AI 既定（provider/model/トークン上限）
+          ├── NUXT_GEMINI_API_KEY         # AI（Google Gemini）。OpenAI 互換エンドポイント経由
+          └── NUXT_AI_PROVIDER / NUXT_ANTHROPIC_MODEL / NUXT_OPENAI_MODEL / NUXT_GEMINI_MODEL / NUXT_AI_MAX_TOKENS  # AI 既定（provider/model/トークン上限）
 ```
 
 > 環境変数は Cloudflare Pages の **Production / Preview スコープごとに別管理**。ブランチデプロイは Preview スコープを参照し、追加後は再デプロイが必要。`NUXT_SUPABASE_SECRET_KEY` 未設定だとユーザー管理系 API（`/api/users` など）が 500 になる。
 
-> **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。外部 AI プロバイダ（Claude / OpenAI）への送信は SDK を使わず素の `$fetch` で行う（Workers 互換のため）。
+> **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。外部 AI プロバイダ（Claude / OpenAI / Gemini）への送信は SDK を使わず素の `$fetch` で行う（Workers 互換のため。Gemini は OpenAI 互換エンドポイントを使用）。

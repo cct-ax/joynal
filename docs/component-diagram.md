@@ -95,6 +95,7 @@ graph TD
   subgraph AiProvider["AI プロバイダ（外部・素の $fetch）"]
     Claude["Claude（Anthropic Messages）"]
     OpenAI["OpenAI（Chat Completions）"]
+    Gemini["Gemini（OpenAI 互換）"]
   end
 
   AppVue --> DefaultLayout
