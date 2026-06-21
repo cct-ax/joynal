@@ -12,7 +12,7 @@ description: API 共通仕様・エラー形式・エンドポイント索引（
 各エンドポイントの詳細（リクエスト/レスポンス/エラー）は、コードから自動生成される**インタラクティブな OpenAPI ドキュメント**を一次情報とする。
 
 > **API ドキュメントの見方（基本は Scalar）**
-> - `pnpm dev` 起動後 → **http://localhost:3000/_docs/scalar**（Scalar UI・叩いて試せる）
+> - `pnpm dev` 起動後 → **http://localhost:3000/_docs/scalar**　（Scalar UI・叩いて試せる）
 > - 生の OpenAPI spec が要るとき → `/_docs/openapi.json`（Swagger UI 版も同 spec で `/_docs/swagger` にあり）
 > - **dev 限定**（本番では非公開）。spec は各 `server/api` ハンドラの `defineRouteMeta` から自動生成される。
 
