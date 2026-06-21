@@ -1,6 +1,9 @@
 import type { H3Event } from 'h3'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '#shared/types/database.types'
 import { serverSupabaseClient } from '#supabase/server'
+
+/** serverSupabaseClient<Database> の戻り型（@supabase/supabase-js を直接 import しない）。 */
+type ServerSupabaseClient = Awaited<ReturnType<typeof serverSupabaseClient<Database>>>
 
 /**
  * AI 呼び出しの per-user 日次ソフトレート上限。
@@ -21,7 +24,7 @@ export const resolveDailyLimit = (event: H3Event): number => {
  * 上限到達は 429（AI_RATE_LIMIT）。client を引数で受けるため単体テスト可能。
  */
 export const checkAndIncrementUsage = async (
-  client: SupabaseClient,
+  client: ServerSupabaseClient,
   userId: string,
   limit: number,
   today: string
@@ -51,7 +54,7 @@ export const checkAndIncrementUsage = async (
 
 /** 認証済みユーザーの当日 AI 利用をチェック＆記録する（ハンドラから auto-import で呼ぶ合成関数）。 */
 export const assertWithinDailyLimit = async (event: H3Event, userId: string): Promise<void> => {
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseClient<Database>(event)
   const today = new Date().toISOString().slice(0, 10)
   await checkAndIncrementUsage(client, userId, resolveDailyLimit(event), today)
 }
