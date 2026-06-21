@@ -47,7 +47,8 @@ export default defineNuxtConfig({
     anthropicModel: 'claude-haiku-4-5-20251001', // NUXT_ANTHROPIC_MODEL
     openaiModel: 'gpt-4o-mini', // NUXT_OPENAI_MODEL
     geminiModel: 'gemini-2.5-flash', // NUXT_GEMINI_MODEL
-    aiMaxTokens: 1024 // NUXT_AI_MAX_TOKENS
+    aiMaxTokens: 1024, // NUXT_AI_MAX_TOKENS
+    aiDailyLimit: 50 // NUXT_AI_DAILY_LIMIT（1ユーザー1日あたりの AI 呼び出し上限）
   },
 
   routeRules: {

@@ -41,9 +41,12 @@ defineRouteMeta({
  */
 export default defineEventHandler<Promise<AiCoachResponse>>(async (event) => {
   // 認証ゲート（未認証は 401）。コーチングは個人の入力支援なので追加の認可は不要。
-  await serverUserId(event)
+  const requesterId = await serverUserId(event)
 
   const { content, mood } = await parseBody(event, aiCoachBodySchema)
+
+  // 当日の AI 利用上限を確認＆記録（超過は 429）。AI を呼ぶ直前に行う。
+  await assertWithinDailyLimit(event, requesterId)
 
   const { text } = await aiChat(event, {
     system: COACH_SYSTEM_PROMPT,

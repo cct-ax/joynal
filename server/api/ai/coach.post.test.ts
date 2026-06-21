@@ -5,6 +5,7 @@ import handler from './coach.post'
 
 const aiChatMock = vi.fn()
 const readBodyMock = vi.fn()
+const rateLimitMock = vi.fn()
 const eventStub = {} as Parameters<typeof handler>[0]
 const userId = '00000000-0000-4000-8000-0000000000aa'
 
@@ -13,6 +14,7 @@ describe('POST /api/ai/coach', () => {
     vi.clearAllMocks()
     vi.stubGlobal('readBody', readBodyMock)
     vi.stubGlobal('aiChat', aiChatMock)
+    vi.stubGlobal('assertWithinDailyLimit', rateLimitMock)
     vi.mocked(serverSupabaseUser).mockResolvedValue({ sub: userId } as never)
     readBodyMock.mockResolvedValue({ content: 'APIを実装した', mood: 4 })
   })
@@ -59,5 +61,11 @@ describe('POST /api/ai/coach', () => {
       data: { code: 'AI_UPSTREAM_ERROR' }
     }))
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 502 })
+  })
+
+  it('日次上限を超えると 429（AI を呼ばない）', async () => {
+    rateLimitMock.mockRejectedValueOnce(Object.assign(new Error('limit'), { statusCode: 429 }))
+    await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 429 })
+    expect(aiChatMock).not.toHaveBeenCalled()
   })
 })

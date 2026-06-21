@@ -64,6 +64,9 @@ export default defineEventHandler<Promise<WeeklySummaryData>>(async (event) => {
   // 生成時点のその週の日報 max(updated_at)（鮮度判定の基準）
   const sourceUpdatedAt = reports.map(r => r.updated_at).reduce((max, u) => (u > max ? u : max))
 
+  // 当日の AI 利用上限を確認＆記録（超過は 429）。日報が無い場合(422)は手前で弾くので消費しない。
+  await assertWithinDailyLimit(event, requesterId)
+
   const { text, model, provider } = await aiChat(event, {
     system: systemPromptFor(audience),
     user: buildWeeklySummaryUserMessage(

@@ -6,6 +6,7 @@ import handler from './weekly-summary.post'
 
 const readBodyMock = vi.fn()
 const aiChatMock = vi.fn()
+const rateLimitMock = vi.fn()
 const eventStub = {} as Parameters<typeof handler>[0]
 const requesterId = '00000000-0000-4000-8000-0000000000aa'
 const otherUserId = '00000000-0000-4000-8000-0000000000bb'
@@ -23,6 +24,7 @@ describe('POST /api/ai/weekly-summary', () => {
     vi.clearAllMocks()
     vi.stubGlobal('readBody', readBodyMock)
     vi.stubGlobal('aiChat', aiChatMock)
+    vi.stubGlobal('assertWithinDailyLimit', rateLimitMock)
     vi.mocked(serverSupabaseUser).mockResolvedValue({ sub: requesterId } as never)
     readBodyMock.mockResolvedValue({ userId: requesterId, weekStart: '2026-05-18' })
     aiChatMock.mockResolvedValue({ text: '週次サマリー本文', model: 'gemini-2.5-flash', provider: 'gemini' })
@@ -89,5 +91,12 @@ describe('POST /api/ai/weekly-summary', () => {
   it('RLS 拒否(42501)は 403', async () => {
     mockClient({ data: null, error: { code: '42501' } })
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('日次上限を超えると 429（AI を呼ばない）', async () => {
+    rateLimitMock.mockRejectedValueOnce(Object.assign(new Error('limit'), { statusCode: 429 }))
+    mockClient({ data: oneReport, error: null })
+    await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 429 })
+    expect(aiChatMock).not.toHaveBeenCalled()
   })
 })

@@ -142,7 +142,7 @@ joynal/
 │   │       ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
 │   │       └── [id]/
 │   │           └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
-│   └── utils/                    # server 専用: auth / supabaseError(throwSupabaseError) / validate / year / aiChat(プロバイダ非依存 AI アダプタ) / aiCoach(コーチング) / aiWeeklySummary(週次サマリー)
+│   └── utils/                    # server 専用: auth / supabaseError / validate / year / aiChat(プロバイダ非依存 AI アダプタ) / aiCoach(コーチング) / aiWeeklySummary(週次サマリー) / aiRateLimit(日次レート上限)
 │
 ├── supabase/
 │   ├── migrations/               # DB マイグレーション SQL
@@ -349,7 +349,7 @@ GitHub (main ブランチ)
           ├── NUXT_ANTHROPIC_API_KEY      # AI（Claude）。コーチング・週次サマリーで使用
           ├── NUXT_OPENAI_API_KEY         # AI（OpenAI）。プロバイダ切替時に使用
           ├── NUXT_GEMINI_API_KEY         # AI（Google Gemini）。OpenAI 互換エンドポイント経由
-          └── NUXT_AI_PROVIDER / NUXT_ANTHROPIC_MODEL / NUXT_OPENAI_MODEL / NUXT_GEMINI_MODEL / NUXT_AI_MAX_TOKENS  # AI 既定（provider/model/トークン上限）
+          └── NUXT_AI_PROVIDER / NUXT_*_MODEL / NUXT_AI_MAX_TOKENS / NUXT_AI_DAILY_LIMIT  # AI 既定（provider/model/トークン上限/日次レート上限）
 ```
 
 > 環境変数は Cloudflare Pages の **Production / Preview スコープごとに別管理**。ブランチデプロイは Preview スコープを参照し、追加後は再デプロイが必要。`NUXT_SUPABASE_SECRET_KEY` 未設定だとユーザー管理系 API（`/api/users` など）が 500 になる。

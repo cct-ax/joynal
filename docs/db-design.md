@@ -69,6 +69,14 @@ erDiagram
         timestamptz updated_at
     }
 
+    ai_usage {
+        uuid user_id FK
+        date usage_date
+        integer count
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
     profiles ||--o{ daily_reports : "writes"
     profiles ||--o{ comments : "writes (commenter_id)"
     profiles ||--o{ comments : "receives (trainee_id)"
@@ -76,6 +84,7 @@ erDiagram
     profiles ||--o{ mentor_assignments : "assigned as mentor"
     profiles ||--o{ mentor_assignments : "assigned as ojt"
     profiles ||--o{ ai_summaries : "subject (user_id)"
+    profiles ||--o{ ai_usage : "tracked (user_id)"
 ```
 
 ---
@@ -255,6 +264,34 @@ CREATE TABLE public.ai_summaries (
 
 ---
 
+### `ai_usage`
+
+AI 呼び出しの per-user 日次カウント（ソフトレート上限・コスト/無料枠保護）。coach / weekly-summary が AI を呼ぶ前に当日の `count` を確認し、上限内なら +1 する。
+
+| カラム | 型 | 制約 | 説明 |
+|--------|-----|------|------|
+| `user_id` | `uuid` | NOT NULL, REFERENCES profiles(id) ON DELETE CASCADE | 対象ユーザー |
+| `usage_date` | `date` | NOT NULL | 利用日 |
+| `count` | `integer` | NOT NULL, DEFAULT 0 | その日の AI 呼び出し回数 |
+| `created_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
+| `updated_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
+
+**制約**:
+- `PRIMARY KEY(user_id, usage_date)` — 1ユーザー・1日で1行（upsert）
+
+```sql
+CREATE TABLE public.ai_usage (
+  user_id    uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  usage_date date        NOT NULL,
+  count      integer     NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, usage_date)
+);
+```
+
+---
+
 ## 共通トリガー（`updated_at`自動更新）
 
 全テーブルに適用する。
@@ -286,6 +323,10 @@ CREATE TRIGGER set_updated_at
 
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.ai_summaries
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON public.ai_usage
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 ```
 

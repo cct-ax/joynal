@@ -89,7 +89,7 @@ graph TD
 
   subgraph Supabase["Supabase（外部サービス）"]
     SupabaseAuth["Auth（JWT・セッション）"]
-    SupabaseDB["PostgreSQL + RLS\nprofiles / daily_reports\ncomments / mentor_assignments / ai_summaries"]
+    SupabaseDB["PostgreSQL + RLS\nprofiles / daily_reports / comments\nmentor_assignments / ai_summaries / ai_usage"]
   end
 
   subgraph AiProvider["AI プロバイダ（外部・素の $fetch）"]
@@ -209,7 +209,7 @@ graph TD
 | `useWeeklySummary.ts` | AI 週次サマリー取得（GET・keyed useAsyncData）・生成（POST）。`summary` / `stale` / `generating` / `generate` を提供 |
 | `useApiError.ts` | `$fetch` エラーを statusCode/code 別メッセージでトースト通知 |
 
-> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts` / `aiChat.ts`（プロバイダ非依存 AI アダプタ）/ `aiCoach.ts`（コーチング）/ `aiWeeklySummary.ts`（週次サマリーのプロンプト・audience 導出））。
+> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts` / `aiChat.ts`（プロバイダ非依存 AI アダプタ）/ `aiCoach.ts`（コーチング）/ `aiWeeklySummary.ts`（週次サマリー）/ `aiRateLimit.ts`（日次レート上限））。
 
 ### 型定義
 

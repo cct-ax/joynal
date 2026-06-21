@@ -76,6 +76,17 @@
 
 > サマリーは upsert（INSERT/UPDATE）運用のため DELETE は不要。`audience` で self（本人の振り返り）と mentor（観察）を分離する。
 
+### `ai_usage`テーブル
+
+| 操作 | 新人 | メンター | OJT | 管理者 |
+|------|:----:|:-------:|:---:|:------:|
+| SELECT | 自分のみ | 自分のみ | 自分のみ | 全員分○ |
+| INSERT | 自分のみ | 自分のみ | 自分のみ | 自分のみ |
+| UPDATE | 自分のみ | 自分のみ | 自分のみ | 自分のみ |
+| DELETE | × | × | × | × |
+
+> レート制限の記録用。本人のみ作成・更新でき、admin は監視のため全件閲覧できる。
+
 ---
 
 ## ヘルパー関数
@@ -320,6 +331,32 @@ CREATE POLICY "ai_summaries_update"
       AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('mentor', 'ojt')
     )
   );
+```
+
+---
+
+### `ai_usage`テーブル
+
+レート制限の記録用。本人のみ作成・更新でき、admin は監視のため閲覧できる（`serverSupabaseClient` のユーザー JWT 経由＝RLS 適用）。
+
+```sql
+ALTER TABLE public.ai_usage ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "ai_usage_select"
+  ON public.ai_usage FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid() OR public.is_admin());
+
+CREATE POLICY "ai_usage_insert"
+  ON public.ai_usage FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "ai_usage_update"
+  ON public.ai_usage FOR UPDATE
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 ```
 
 ---
