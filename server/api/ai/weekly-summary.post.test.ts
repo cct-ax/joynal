@@ -25,7 +25,7 @@ describe('POST /api/ai/weekly-summary', () => {
     vi.stubGlobal('aiChat', aiChatMock)
     vi.mocked(serverSupabaseUser).mockResolvedValue({ sub: requesterId } as never)
     readBodyMock.mockResolvedValue({ userId: requesterId, weekStart: '2026-05-18' })
-    aiChatMock.mockResolvedValue('週次サマリー本文')
+    aiChatMock.mockResolvedValue({ text: '週次サマリー本文', model: 'gemini-2.5-flash', provider: 'gemini' })
   })
 
   it('未認証は 401（AI を呼ばない）', async () => {
@@ -54,7 +54,10 @@ describe('POST /api/ai/weekly-summary', () => {
 
     expect(aiChatMock).toHaveBeenCalledOnce()
     expect(from).toHaveBeenCalledWith('ai_summaries')
-    expect(query.upsert).toHaveBeenCalled()
+    expect(query.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gemini-2.5-flash', provider: 'gemini' }),
+      expect.anything()
+    )
     expect(result).toEqual({
       content: '週次サマリー本文',
       audience: 'self',
@@ -72,7 +75,7 @@ describe('POST /api/ai/weekly-summary', () => {
   })
 
   it('AI 応答が空なら 502', async () => {
-    aiChatMock.mockResolvedValue('   ')
+    aiChatMock.mockResolvedValue({ text: '   ', model: 'gemini-2.5-flash', provider: 'gemini' })
     mockClient({ data: oneReport, error: null })
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 502 })
   })

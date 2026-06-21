@@ -30,7 +30,7 @@ describe('POST /api/ai/coach', () => {
   })
 
   it('正常系: aiChat を呼び {questions, feedback} を返す', async () => {
-    aiChatMock.mockResolvedValue('{"questions":["なぜそう感じた？","次はどうする？"],"feedback":"よい一歩です"}')
+    aiChatMock.mockResolvedValue({ text: '{"questions":["なぜそう感じた？","次はどうする？"],"feedback":"よい一歩です"}', model: 'claude-haiku-4-5-20251001', provider: 'anthropic' })
 
     const result = await handler(eventStub)
 
@@ -40,7 +40,7 @@ describe('POST /api/ai/coach', () => {
 
   it('ドラフトが空でも呼べる（スターター質問）', async () => {
     readBodyMock.mockResolvedValue({})
-    aiChatMock.mockResolvedValue('{"questions":["今日の目標は？"],"feedback":""}')
+    aiChatMock.mockResolvedValue({ text: '{"questions":["今日の目標は？"],"feedback":""}', model: 'claude-haiku-4-5-20251001', provider: 'anthropic' })
 
     const result = await handler(eventStub)
 
@@ -49,7 +49,7 @@ describe('POST /api/ai/coach', () => {
   })
 
   it('AI 応答が解釈不能なら 502', async () => {
-    aiChatMock.mockResolvedValue('意味不明なテキスト')
+    aiChatMock.mockResolvedValue({ text: '意味不明なテキスト', model: 'claude-haiku-4-5-20251001', provider: 'anthropic' })
     await expect(handler(eventStub)).rejects.toMatchObject({ statusCode: 502 })
   })
 

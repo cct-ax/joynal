@@ -64,7 +64,7 @@ export default defineEventHandler<Promise<WeeklySummaryData>>(async (event) => {
   // 生成時点のその週の日報 max(updated_at)（鮮度判定の基準）
   const sourceUpdatedAt = reports.map(r => r.updated_at).reduce((max, u) => (u > max ? u : max))
 
-  const text = await aiChat(event, {
+  const { text, model, provider } = await aiChat(event, {
     system: systemPromptFor(audience),
     user: buildWeeklySummaryUserMessage(
       reports.map(r => ({ date: r.date, content: r.content, mood: r.mood }))
@@ -83,7 +83,7 @@ export default defineEventHandler<Promise<WeeklySummaryData>>(async (event) => {
   const { error: upsertError } = await client
     .from('ai_summaries')
     .upsert(
-      { user_id: userId, week_start: weekStart, audience, content, source_updated_at: sourceUpdatedAt },
+      { user_id: userId, week_start: weekStart, audience, content, source_updated_at: sourceUpdatedAt, model, provider },
       { onConflict: 'user_id,week_start,audience' }
     )
 

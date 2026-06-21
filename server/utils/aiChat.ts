@@ -56,6 +56,15 @@ export const getProp = (obj: unknown, key: string): unknown =>
     ? (obj as Record<string, unknown>)[key]
     : undefined
 
+/** 上流エラーを機密・冗長データを避けて要約する（ログ用。生レスポンスや本文は出さない）。 */
+const summarizeError = (error: unknown): string => {
+  const status = getProp(error, 'status') ?? getProp(error, 'statusCode')
+  const message = getProp(error, 'message')
+  const statusStr = typeof status === 'number' ? String(status) : 'n/a'
+  const messageStr = typeof message === 'string' ? message : 'unknown error'
+  return `status=${statusStr} message=${messageStr}`
+}
+
 /** Anthropic Messages API レスポンスから本文テキストを安全に取り出す。取れなければ null。 */
 export const extractAnthropicText = (res: unknown): string | null => {
   const content = getProp(res, 'content')
@@ -123,13 +132,13 @@ export const callAiProvider = async (config: ResolvedAiConfig, req: AiChatReques
       })
     }
   } catch (error) {
-    console.error('[aiChat] upstream request failed', error)
+    console.error('[aiChat] upstream request failed:', summarizeError(error))
     throw createError(AI_UPSTREAM_ERROR)
   }
 
   const text = config.provider === 'anthropic' ? extractAnthropicText(res) : extractOpenAiText(res)
   if (text === null) {
-    console.error('[aiChat] unexpected response shape', res)
+    console.error(`[aiChat] unexpected response shape from ${config.provider}`)
     throw createError(AI_UPSTREAM_ERROR)
   }
   return text
@@ -164,11 +173,15 @@ export const resolveAiConfig = (
   return { provider, model, apiKey, maxTokens: config.aiMaxTokens }
 }
 
+/** aiChat の戻り。本文に加えて、実際に使った model/provider をトレース用に返す。 */
+export type AiChatResult = { text: string, model: string, provider: AiProvider }
+
 /**
  * runtimeConfig を解決して AI プロバイダを 1 回呼ぶ薄い合成関数。
  * ハンドラ（coach / weekly-summary）はこれを auto-import で呼ぶ。
  */
-export const aiChat = async (event: H3Event, params: AiChatParams): Promise<string> => {
+export const aiChat = async (event: H3Event, params: AiChatParams): Promise<AiChatResult> => {
   const config = resolveAiConfig(event, { provider: params.provider, model: params.model })
-  return callAiProvider(config, { system: params.system, user: params.user, maxTokens: params.maxTokens })
+  const text = await callAiProvider(config, { system: params.system, user: params.user, maxTokens: params.maxTokens })
+  return { text, model: config.model, provider: config.provider }
 }

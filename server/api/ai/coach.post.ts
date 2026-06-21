@@ -45,7 +45,7 @@ export default defineEventHandler<Promise<AiCoachResponse>>(async (event) => {
 
   const { content, mood } = await parseBody(event, aiCoachBodySchema)
 
-  const text = await aiChat(event, {
+  const { text } = await aiChat(event, {
     system: COACH_SYSTEM_PROMPT,
     user: buildCoachUserMessage(content, mood)
   })
