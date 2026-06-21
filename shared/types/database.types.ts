@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_summaries: {
+        Row: {
+          audience: string
+          content: string
+          created_at: string
+          id: string
+          model: string | null
+          provider: string | null
+          source_updated_at: string
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          audience: string
+          content: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          provider?: string | null
+          source_updated_at: string
+          updated_at?: string
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          audience?: string
+          content?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          provider?: string | null
+          source_updated_at?: string
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'ai_summaries_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       comments: {
         Row: {
           commenter_id: string

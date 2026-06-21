@@ -145,6 +145,18 @@ export type AiCoachResponse = {
   questions: string[] // 振り返りの深掘り質問（2〜3個）
   feedback: string // 短い励まし（1〜2文・空文字可）
 }
+
+// GET/POST /api/ai/weekly-summary（週次サマリー）
+export type AiAudience = 'self' | 'mentor' // self=本人の振り返り / mentor=観察。サーバーが導出
+export type WeeklySummaryData = {
+  content: string
+  audience: AiAudience
+  sourceUpdatedAt: string // 生成時のその週の日報 max(updated_at)
+}
+export type WeeklySummaryGetResponse = {
+  summary: WeeklySummaryData | null
+  latestReportUpdatedAt: string | null // 鮮度判定用
+}
 ```
 
 ### Zod スキーマは `schemas.ts` に書く

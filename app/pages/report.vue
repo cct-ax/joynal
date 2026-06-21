@@ -54,6 +54,20 @@ const { points: moodPoints, series: moodSeries, status: moodStatus } = useMoodTr
 )
 const moodHasData = computed(() => moodPoints.value.length > 0)
 
+// 週次 AI サマリー（trainee は自分・非 trainee は選択中の新人）。trainee も対象にする。
+const summaryUserId = computed<string | undefined>(() =>
+  isTrainee.value ? (profile.value?.id ?? undefined) : (selectedTraineeId.value ?? undefined)
+)
+const summaryEnabled = computed(() =>
+  isTrainee.value ? Boolean(profile.value?.id) : selectedTraineeId.value !== null
+)
+const {
+  summary: weeklySummary,
+  stale: summaryStale,
+  generating: summaryGenerating,
+  generate: generateSummary
+} = useWeeklySummary(weekStartYmd, summaryUserId, summaryEnabled)
+
 // 詳細展開（mentor/ojt/admin で使う、新人は使わない）
 const expandedDate = ref<string | null>(null)
 const onToggleDetail = (date: Date): void => {
@@ -263,12 +277,17 @@ const onCommentSaved = async (): Promise<void> => {
       />
     </UCard>
 
-    <!-- 週次サマリー（mentor/ojt/admin が新人選択中）。mood 推移グラフ。 -->
+    <!-- 週次サマリー: 非 trainee は mood 推移グラフ＋メンター視点サマリー、trainee は自分の振り返りサマリー -->
     <WeeklySummary
-      v-if="!isTrainee && selectedTraineeId"
+      v-if="isTrainee || selectedTraineeId"
+      :show-chart="!isTrainee"
       :series="moodSeries"
       :has-data="moodHasData"
       :loading="moodStatus === 'pending' || moodStatus === 'idle'"
+      :summary="weeklySummary"
+      :summary-stale="summaryStale"
+      :summary-generating="summaryGenerating"
+      @generate="generateSummary"
     />
 
     <!-- 日報入力・編集モーダル（新人ロールのみが操作起点） -->

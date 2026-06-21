@@ -56,12 +56,26 @@ erDiagram
         timestamptz updated_at
     }
 
+    ai_summaries {
+        uuid id PK
+        uuid user_id FK
+        date week_start
+        text audience
+        text content
+        timestamptz source_updated_at
+        text model
+        text provider
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
     profiles ||--o{ daily_reports : "writes"
     profiles ||--o{ comments : "writes (commenter_id)"
     profiles ||--o{ comments : "receives (trainee_id)"
     profiles ||--o{ mentor_assignments : "assigned as trainee"
     profiles ||--o{ mentor_assignments : "assigned as mentor"
     profiles ||--o{ mentor_assignments : "assigned as ojt"
+    profiles ||--o{ ai_summaries : "subject (user_id)"
 ```
 
 ---
@@ -203,6 +217,44 @@ CREATE TABLE public.mentor_assignments (
 
 ---
 
+### `ai_summaries`
+
+AI 週次サマリーのキャッシュテーブル。`audience` でメンター視点（`mentor`）と新人本人視点（`self`）を分け、1ユーザー・1週・1 audience につき1行を upsert する。`source_updated_at` に生成時点のその週の日報 `max(updated_at)` を保存し、閲覧時に最新の日報と比較して鮮度（再生成要否）を判定する。
+
+| カラム | 型 | 制約 | 説明 |
+|--------|-----|------|------|
+| `id` | `uuid` | PK, DEFAULT gen_random_uuid() | |
+| `user_id` | `uuid` | NOT NULL, REFERENCES profiles(id) ON DELETE CASCADE | サマリー対象のユーザー |
+| `week_start` | `date` | NOT NULL | 対象週の月曜日 |
+| `audience` | `text` | NOT NULL, CHECK IN ('self','mentor') | 語り口（self=本人の振り返り／mentor=観察） |
+| `content` | `text` | NOT NULL | サマリー本文 |
+| `source_updated_at` | `timestamptz` | NOT NULL | 生成時点のその週の日報 max(updated_at)（鮮度判定の基準） |
+| `model` | `text` | NULL | 生成モデル（トレース用・任意） |
+| `provider` | `text` | NULL | プロバイダ（トレース用・任意） |
+| `created_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
+| `updated_at` | `timestamptz` | NOT NULL, DEFAULT now() | |
+
+**制約**:
+- `UNIQUE(user_id, week_start, audience)` — 同一ユーザー・週・audience は1件（upsert）
+
+```sql
+CREATE TABLE public.ai_summaries (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id           uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  week_start        date        NOT NULL,
+  audience          text        NOT NULL CHECK (audience IN ('self', 'mentor')),
+  content           text        NOT NULL,
+  source_updated_at timestamptz NOT NULL,
+  model             text,
+  provider          text,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, week_start, audience)
+);
+```
+
+---
+
 ## 共通トリガー（`updated_at`自動更新）
 
 全テーブルに適用する。
@@ -230,6 +282,10 @@ CREATE TRIGGER set_updated_at
 
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.mentor_assignments
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON public.ai_summaries
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 ```
 

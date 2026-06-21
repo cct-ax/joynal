@@ -83,6 +83,42 @@ export type AiCoachResponse = {
   feedback: string
 }
 
+/**
+ * 週次サマリーの語り口。
+ * 'self'＝新人本人の振り返り、'mentor'＝メンター/OJT/管理者の観察。
+ * 値はクライアントの指定を信用せず、サーバーが「対象 userId == 自分か」で導出する。
+ */
+export type AiAudience = 'self' | 'mentor'
+
+/** GET /api/ai/weekly-summary のクエリ（対象ユーザー＋週） */
+export type WeeklySummaryQuery = {
+  userId: string
+  weekStart: string
+}
+
+/** POST /api/ai/weekly-summary のリクエストボディ（生成/再生成） */
+export type WeeklySummaryBody = {
+  userId: string
+  weekStart: string
+}
+
+/** 週次サマリー1件分（キャッシュ済みの内容＋鮮度判定用の生成時日報 max(updated_at)） */
+export type WeeklySummaryData = {
+  content: string
+  audience: AiAudience
+  sourceUpdatedAt: string
+}
+
+/**
+ * GET /api/ai/weekly-summary のレスポンス。
+ * summary が null なら未生成。latestReportUpdatedAt はその週の日報 max(updated_at)（無ければ null）。
+ * 鮮度（再生成要否）は summary.sourceUpdatedAt < latestReportUpdatedAt で判定する。
+ */
+export type WeeklySummaryGetResponse = {
+  summary: WeeklySummaryData | null
+  latestReportUpdatedAt: string | null
+}
+
 // ----------------------------------------------------------------
 // Comments
 // ----------------------------------------------------------------

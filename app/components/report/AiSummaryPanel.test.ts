@@ -1,0 +1,46 @@
+import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { describe, expect, it } from 'vitest'
+import AiSummaryPanel from './AiSummaryPanel.vue'
+
+const summary = { content: 'サマリー本文', audience: 'self' as const, sourceUpdatedAt: '2026-05-18T00:00:00Z' }
+
+describe('AiSummaryPanel', () => {
+  it('summary があれば本文と「再生成」を表示する', async () => {
+    const wrapper = await mountSuspended(AiSummaryPanel, {
+      props: { summary, stale: false, generating: false }
+    })
+    expect(wrapper.text()).toContain('サマリー本文')
+    expect(wrapper.text()).toContain('再生成')
+    wrapper.unmount()
+  })
+
+  it('summary が null なら未生成メッセージと「生成」を表示する', async () => {
+    const wrapper = await mountSuspended(AiSummaryPanel, {
+      props: { summary: null, stale: false, generating: false }
+    })
+    expect(wrapper.text()).toContain('まだサマリーがありません')
+    expect(wrapper.text()).toContain('生成')
+    wrapper.unmount()
+  })
+
+  it('stale なら更新バッジを表示する', async () => {
+    const wrapper = await mountSuspended(AiSummaryPanel, {
+      props: { summary, stale: true, generating: false }
+    })
+    expect(wrapper.text()).toContain('内容が更新されています')
+    wrapper.unmount()
+  })
+
+  it('ボタンクリックで generate を emit する', async () => {
+    const wrapper = await mountSuspended(AiSummaryPanel, {
+      props: { summary, stale: false, generating: false }
+    })
+    const btn = Array.from(wrapper.element.querySelectorAll('button')).find(
+      b => b.textContent?.includes('再生成')
+    )
+    btn?.click()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.emitted('generate')).toBeTruthy()
+    wrapper.unmount()
+  })
+})

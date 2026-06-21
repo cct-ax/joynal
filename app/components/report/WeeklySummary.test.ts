@@ -9,7 +9,11 @@ const series: MoodChartPoint[] = [
 ]
 
 // unovis を描画させないため MoodTrendChart はスタブする（分岐のみを検証する）。
-const stubs = { MoodTrendChart: { template: '<div data-test="chart" />' } }
+// AiSummaryPanel は別テストで検証するためスタブ（存在のみ確認）。
+const stubs = {
+  MoodTrendChart: { template: '<div data-test="chart" />' },
+  AiSummaryPanel: { template: '<div data-test="ai-panel" />' }
+}
 const EMPTY_MESSAGE = 'この期間に記録された気分がありません'
 
 describe('WeeklySummary', () => {
@@ -39,5 +43,14 @@ describe('WeeklySummary', () => {
     })
     expect(wrapper.find('[data-test="chart"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain(EMPTY_MESSAGE)
+  })
+
+  it('showChart=false なら気分グラフを出さず AI サマリーパネルのみ', async () => {
+    const wrapper = await mountSuspended(WeeklySummary, {
+      props: { showChart: false },
+      global: { stubs }
+    })
+    expect(wrapper.find('[data-test="chart"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="ai-panel"]').exists()).toBe(true)
   })
 })

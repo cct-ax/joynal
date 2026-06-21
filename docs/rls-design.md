@@ -65,6 +65,17 @@
 | UPDATE | × | × | × | ○ |
 | DELETE | × | × | × | ○ |
 
+### `ai_summaries`テーブル
+
+| 操作 | 新人 | メンター | OJT | 管理者 |
+|------|:----:|:-------:|:---:|:------:|
+| SELECT | 自分の self 行のみ | 担当新人の mentor 行のみ | 担当新人の mentor 行のみ | 全員分○ |
+| INSERT | 自分の self 行のみ | 担当新人の mentor 行のみ | 担当新人の mentor 行のみ | ○ |
+| UPDATE | 自分の self 行のみ | 担当新人の mentor 行のみ | 担当新人の mentor 行のみ | ○ |
+| DELETE | × | × | × | × |
+
+> サマリーは upsert（INSERT/UPDATE）運用のため DELETE は不要。`audience` で self（本人の振り返り）と mentor（観察）を分離する。
+
 ---
 
 ## ヘルパー関数
@@ -244,6 +255,71 @@ CREATE POLICY "mentor_assignments_delete"
   ON public.mentor_assignments FOR DELETE
   TO authenticated
   USING (public.is_admin());
+```
+
+---
+
+### `ai_summaries`テーブル
+
+`comments` と同型。`audience` で self（本人）と mentor（担当・管理者）を分岐する。書き込みは `serverSupabaseClient`（ユーザー JWT）経由＝RLS 適用。
+
+```sql
+ALTER TABLE public.ai_summaries ENABLE ROW LEVEL SECURITY;
+
+-- self 行は本人、mentor 行は担当メンター/OJT、admin は全て読める
+CREATE POLICY "ai_summaries_select"
+  ON public.ai_summaries FOR SELECT
+  TO authenticated
+  USING (
+    public.is_admin()
+    OR (audience = 'self' AND user_id = auth.uid())
+    OR (
+      audience = 'mentor'
+      AND public.is_my_trainee(user_id)
+      AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('mentor', 'ojt')
+    )
+  );
+
+-- self 行は本人(trainee)、mentor 行は担当メンター/OJT、admin は全て挿入できる
+CREATE POLICY "ai_summaries_insert"
+  ON public.ai_summaries FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    public.is_admin()
+    OR (
+      audience = 'self'
+      AND user_id = auth.uid()
+      AND (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'trainee'
+    )
+    OR (
+      audience = 'mentor'
+      AND public.is_my_trainee(user_id)
+      AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('mentor', 'ojt')
+    )
+  );
+
+-- upsert の UPDATE 経路。SELECT と同条件
+CREATE POLICY "ai_summaries_update"
+  ON public.ai_summaries FOR UPDATE
+  TO authenticated
+  USING (
+    public.is_admin()
+    OR (audience = 'self' AND user_id = auth.uid())
+    OR (
+      audience = 'mentor'
+      AND public.is_my_trainee(user_id)
+      AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('mentor', 'ojt')
+    )
+  )
+  WITH CHECK (
+    public.is_admin()
+    OR (audience = 'self' AND user_id = auth.uid())
+    OR (
+      audience = 'mentor'
+      AND public.is_my_trainee(user_id)
+      AND (SELECT role FROM public.profiles WHERE id = auth.uid()) IN ('mentor', 'ojt')
+    )
+  );
 ```
 
 ---

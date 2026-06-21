@@ -172,6 +172,15 @@ export const aiCoachBodySchema = z.object({
   mood: moodUnion.optional()
 })
 
+/** GET /api/ai/weekly-summary クエリ（対象ユーザー＋週） */
+export const weeklySummaryQuerySchema = z.object({
+  userId: z.guid(),
+  weekStart: z.string().regex(ymdRegex, 'weekStart は YYYY-MM-DD 形式で指定してください')
+})
+
+/** POST /api/ai/weekly-summary ボディ（生成/再生成）。query と同形。 */
+export const weeklySummaryBodySchema = weeklySummaryQuerySchema
+
 /** GET /api/comments クエリ */
 export const commentsQuerySchema = z.object({
   weekStart: z.string().regex(ymdRegex),

@@ -1,19 +1,33 @@
 <script setup lang="ts">
 /**
- * 週次サマリーエリア（mentor/ojt/admin 向け）。
+ * 週次サマリーエリア。
  *
- * - スライス1: 選択中新人の mood 推移グラフ（直近8週）を表示する。
- * - スライス2: ここに AI 週次サマリー（メンター版）を追加する予定（器を先に用意）。
- * - 表示判定（ロール・新人選択）は呼び出し元（report.vue）が行い、本コンポーネントは
- *   渡された series / hasData / loading の描画に徹する。
+ * - showChart=true（mentor/ojt/admin）: 選択中新人の mood 推移グラフ＋AI 週次サマリー（観察視点）
+ * - showChart=false（新人本人）: AI 週次サマリー（自分の振り返り）のみ（mood グラフは出さない）
+ * 表示判定・データ取得は呼び出し元（report.vue）が行い、本コンポーネントは描画に徹する。
  */
+import type { WeeklySummaryData } from '#shared/types/api'
 import type { MoodChartPoint } from '../../utils/moodChart'
 
-defineProps<{
-  series: MoodChartPoint[]
-  hasData: boolean
+withDefaults(defineProps<{
+  showChart?: boolean
+  series?: MoodChartPoint[]
+  hasData?: boolean
   loading?: boolean
-}>()
+  summary?: WeeklySummaryData | null
+  summaryStale?: boolean
+  summaryGenerating?: boolean
+}>(), {
+  showChart: true,
+  series: () => [],
+  hasData: false,
+  loading: false,
+  summary: null,
+  summaryStale: false,
+  summaryGenerating: false
+})
+
+const emit = defineEmits<{ generate: [] }>()
 </script>
 
 <template>
@@ -24,26 +38,38 @@ defineProps<{
       </h2>
     </template>
 
-    <section aria-label="気分の推移">
-      <h3 class="text-xs font-medium text-muted mb-2">
-        気分の推移（直近8週）
-      </h3>
+    <div class="space-y-6">
+      <section
+        v-if="showChart"
+        aria-label="気分の推移"
+      >
+        <h3 class="text-xs font-medium text-muted mb-2">
+          気分の推移（直近8週）
+        </h3>
 
-      <USkeleton
-        v-if="loading"
-        class="h-[220px] w-full"
-      />
+        <USkeleton
+          v-if="loading"
+          class="h-[220px] w-full"
+        />
 
-      <EmptyState
-        v-else-if="!hasData"
-        icon="i-lucide-line-chart"
-        message="この期間に記録された気分がありません"
-      />
+        <EmptyState
+          v-else-if="!hasData"
+          icon="i-lucide-line-chart"
+          message="この期間に記録された気分がありません"
+        />
 
-      <MoodTrendChart
-        v-else
-        :series="series"
+        <MoodTrendChart
+          v-else
+          :series="series"
+        />
+      </section>
+
+      <AiSummaryPanel
+        :summary="summary"
+        :stale="summaryStale"
+        :generating="summaryGenerating"
+        @generate="emit('generate')"
       />
-    </section>
+    </div>
   </UCard>
 </template>
