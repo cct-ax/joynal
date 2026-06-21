@@ -1,4 +1,5 @@
-import type { PostgrestError } from '@supabase/supabase-js'
+/** Supabase クエリエラーのうち本ユーティリティが参照する最小形（@supabase/supabase-js を直接 import しない）。 */
+export type SupabaseQueryError = { code: string, message: string }
 
 // 文言が固定で使い回せる PG コードのデフォルト
 const PG_DEFAULTS: Record<string, { statusCode: number, message: string }> = {
@@ -15,7 +16,7 @@ type ErrorInput = Parameters<typeof createError>[0]
  * - どちらも無ければ context 付きで console.error し 500
  */
 export const throwSupabaseError = (
-  error: PostgrestError,
+  error: SupabaseQueryError,
   context: string,
   overrides?: Record<string, ErrorInput>
 ): never => {

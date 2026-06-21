@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { JwtPayload } from '@supabase/supabase-js'
 import { serverSupabaseClient, serverSupabaseUser } from '#supabase/server'
 import { createSupabaseClientMock } from '../test/supabaseMock'
 import { assertAdminRole, serverUserId } from './auth'
 
+// serverSupabaseUser の戻り型（JwtPayload | null）を #supabase/server 由来で導出する。
+type Claims = Awaited<ReturnType<typeof serverSupabaseUser>>
 const eventStub = {} as Parameters<typeof serverUserId>[0]
-const asClaims = (v: unknown): JwtPayload | null => v as JwtPayload | null
+const asClaims = (v: unknown): Claims => v as Claims
 
 describe('serverUserId', () => {
   beforeEach(() => {
