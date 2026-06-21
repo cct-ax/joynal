@@ -79,6 +79,7 @@ null  // 204 No Content
 | reports | POST | `/api/reports` | 日報作成 | 新人 |
 | reports | PUT | `/api/reports/:id` | 日報更新 | 新人（自分のみ） |
 | reports | DELETE | `/api/reports/:id` | 日報削除 | 新人（自分のみ） |
+| reports | GET | `/api/reports/mood-trend` | 期間の日次 mood 推移取得（mood 未入力日は除外） | 全ロール（範囲は RLS） |
 | comments | GET | `/api/comments` | 週次コメント取得 | 全ロール（範囲は RLS） |
 | comments | PUT | `/api/comments` | 週次コメント保存（upsert） | メンター・OJT |
 | assignments | GET | `/api/assignments/me` | 担当新人一覧取得 | メンター・OJT・管理者 |
@@ -121,6 +122,11 @@ await $fetch(`/api/reports/${reportId}`, {
 
 // 日報削除
 await $fetch(`/api/reports/${reportId}`, { method: 'DELETE' })
+
+// mood 推移取得（メンター向け週次サマリーのグラフ用。期間 from〜to ＋ 任意 userId）
+const moodTrend = await $fetch('/api/reports/mood-trend', {
+  query: { from: '2026-03-30', to: '2026-05-22', userId: traineeId }
+})
 
 // コメント保存
 await $fetch('/api/comments', {

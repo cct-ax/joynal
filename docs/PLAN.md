@@ -556,6 +556,10 @@
 
 > **基本方針（IDEA_2より）**: AIは代筆しない。振り返りを引き出すコーチ役に徹する。本文は必ず本人が入力する。
 
+> **前倒し実装（reference/MS5）**: AI連携の技術リスクを早期に潰すため MS5 を前倒しで着手。進め方は2スライス:
+> - **スライス1: mood 推移グラフ**（AI不要・実装済み）。`GET /api/reports/mood-trend` ＋ `WeeklySummary.vue` / `MoodTrendChart.client.vue`（@unovis/vue）。mentor/ojt/admin が選択中新人の気分推移（直近8週・日次）を閲覧。
+> - **スライス2: AI 機能群**（コーチング＋週次サマリー メンター/新人）。バックエンドは **Nuxt `server/api/ai/*`**（Edge Function ではない）。プロバイダは Claude/OpenAI 両対応（既定 Haiku 4.5）。要約は `ai_summaries` にキャッシュ（日報 `updated_at` 比較で鮮度判定）。
+
 #### 5-1 AI機能の仕様確定（PL 〜8/18）
 
 - [ ] 実装する機能の優先順位を決定（下記3候補から）
@@ -568,7 +572,8 @@
 
 #### 5-2 API連携実装（バックエンド）（PL 〜8/22）
 
-- [ ] Supabase Edge Functionを作成
+- [ ] Nuxt `server/api/ai/*` ハンドラを作成（既存 server/api パターン踏襲。Edge Function ではない）
+- [ ] `server/utils/aiChat.ts`（Claude/OpenAI 両対応のプロバイダ非依存アダプタ・素の `$fetch`）を実装
 - [ ] AI APIへのリクエスト処理を実装
 - [ ] APIキーのセキュアな管理（環境変数）
 - [ ] レスポンスのパース処理
@@ -583,9 +588,10 @@
 
 #### 5-4 メンター向けサマリーUI（メンバー 〜8/27）
 
-- [ ] メンター画面に週次サマリーエリアを追加（任意表示）
-- [ ] AIによる傾向サマリーの表示（例：「今週は挑戦に関する記述が多い」）
-- [ ] moodの推移グラフ表示（1〜5の週次変化）
+- [x] 週次サマリーエリア（`WeeklySummary.vue`）を `/report` に追加（mentor/ojt/admin・選択中新人）
+- [x] moodの推移グラフ表示（直近8週・日次／`MoodTrendChart.client.vue`・@unovis/vue）— スライス1で実装
+- [ ] AIによる傾向サマリーの表示（例：「今週は挑戦に関する記述が多い」）— スライス2
+- [ ] 新人向け振り返りサマリー（自分の1週間）— スライス2
 
 #### 5-5 テスト・調整（PL+メンバー 〜8/31）
 

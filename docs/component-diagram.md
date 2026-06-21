@@ -34,6 +34,8 @@ graph TD
     ReportInputModal["ReportInputModal\n日報入力・編集（新人）"]
     CommentInputModal["CommentInputModal\n週次コメント入力（mentor/ojt）"]
     MoodStars["MoodStars\n気分★"]
+    WeeklySummary["WeeklySummary\n週次サマリーエリア（mentor/ojt/admin）"]
+    MoodTrendChart["MoodTrendChart.client\nmood 推移グラフ（@unovis/vue）"]
   end
 
   subgraph SharedUI["components/common/"]
@@ -54,6 +56,7 @@ graph TD
     UseCurrentUser["useCurrentUser\nprofile / role / is*"]
     UseAssignedTrainees["useAssignedTrainees\n担当新人一覧＋選択状態"]
     UseWeeklyReports["useWeeklyReports\n週次日報の取得"]
+    UseMoodTrend["useMoodTrend\nmood 推移の取得（直近N週）"]
     UseWeeklyComments["useWeeklyComments\n週次コメント取得・振り分け"]
     UseWeekNavigation["useWeekNavigation\n週の状態管理"]
     UseAdminUsers["useAdminUsers\nユーザー一覧取得・操作"]
@@ -72,7 +75,7 @@ graph TD
   end
 
   subgraph ServerAPI["Server API (server/api/)"]
-    ReportsAPI["reports/ GET·POST·PUT·DELETE"]
+    ReportsAPI["reports/ GET·POST·PUT·DELETE·mood-trend(GET)"]
     CommentsAPI["comments/ GET·PUT(upsert)"]
     AssignmentsAPI["assignments/ GET /me·PUT"]
     UsersAPI["users/ GET·POST·PUT, GET /me"]
@@ -161,6 +164,8 @@ graph TD
 | `ReportInputModal.vue` | 日報の入力・編集モーダル（新人のみ） | `report.vue` |
 | `CommentArea.vue` | 週次コメント表示（mentor/ojt 2カラム）。自ロールのときだけ入力/編集ボタン | `report.vue` |
 | `CommentInputModal.vue` | 週次コメント入力・編集モーダル（mentor/ojt） | `report.vue` |
+| `WeeklySummary.vue` | 週次サマリーエリア（mentor/ojt/admin 向け）。mood 推移グラフを表示（スライス2で AI サマリーを追加） | `report.vue`（非 trainee・新人選択中） |
+| `MoodTrendChart.client.vue` | mood 推移グラフ（@unovis/vue・SVG・クライアント専用描画） | `WeeklySummary` |
 
 #### `admin/`（管理UI）
 
@@ -179,6 +184,7 @@ graph TD
 | `useCurrentUser.ts` | ログインユーザーの `profiles` を取得（keyed `useAsyncData('current-user')`）。`role` / `isAdmin` / `isMentor` / `isOjt` / `isTrainee` を返す |
 | `useAssignedTrainees.ts` | 非 trainee 向けに担当新人一覧（`GET /api/assignments/me`）を取得。`traineeOptions` と書き込み可能 computed の `selectedTraineeId`（mentor/ojt は先頭既定選択、admin は未選択） |
 | `useWeeklyReports.ts` | 指定週・対象ユーザーの日報を取得（keyed `useAsyncData('reports-week', { server: false })`）。`reportByDate` 索引も提供 |
+| `useMoodTrend.ts` | 選択中ユーザーの mood 推移を取得（keyed `useAsyncData('mood-trend', { server: false })`・直近N週）。`series`（平日網羅・未入力日は null＝グラフのギャップ）を提供 |
 | `useWeeklyComments.ts` | 指定週・対象新人の週次コメントを取得し `commenter.role` で mentor/ojt に振り分け |
 | `useWeekNavigation.ts` | 「今週月曜」計算と前後/任意週ジャンプの状態管理 |
 | `useAdminUsers.ts` | 管理画面のユーザー一覧取得（`GET /api/users`）・招待/更新/無効化の操作 |
@@ -206,6 +212,7 @@ graph TD
 |---------|-------------|------|
 | `reports/index.get.ts` | `GET /api/reports` | 週の日報一覧（`userId` 指定で対象新人を絞り込み） |
 | `reports/index.post.ts` | `POST /api/reports` | 日報作成 |
+| `reports/mood-trend.get.ts` | `GET /api/reports/mood-trend` | 期間の日次 mood 推移（mood 未入力日は除外・範囲は RLS） |
 | `reports/[id]/index.put.ts` | `PUT /api/reports/:id` | 日報更新 |
 | `reports/[id]/index.delete.ts` | `DELETE /api/reports/:id` | 日報削除 |
 | `comments/index.get.ts` | `GET /api/comments` | 週次コメント取得（weekStart + traineeId） |

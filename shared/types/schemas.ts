@@ -159,6 +159,13 @@ export const reportUpdateBodySchema = z
     message: 'check_out は check_in より後の時刻を指定してください'
   })
 
+/** GET /api/reports/mood-trend クエリ（期間 from〜to ＋ 任意の userId） */
+export const moodTrendQuerySchema = z.object({
+  from: z.string().regex(ymdRegex, 'from は YYYY-MM-DD 形式で指定してください'),
+  to: z.string().regex(ymdRegex, 'to は YYYY-MM-DD 形式で指定してください'),
+  userId: z.guid().optional()
+})
+
 /** GET /api/comments クエリ */
 export const commentsQuerySchema = z.object({
   weekStart: z.string().regex(ymdRegex),

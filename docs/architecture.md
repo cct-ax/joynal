@@ -36,6 +36,7 @@
 |---------|------|-----------|------|
 | フロントエンド | Nuxt 4 + Vue 3 | 4.x | `app/` ディレクトリ構成 |
 | UI コンポーネント | Nuxt UI | 4.x | Tailwind CSS ベース・semantic カラートークン |
+| チャート | @unovis/vue | 1.x | SVG ベース・mood 推移グラフ（`*.client.vue` でクライアント描画のみ） |
 | ユーティリティ | VueUse | latest | `useLocalStorage` 等 |
 | サーバーランタイム | Nitro (Cloudflare Pages) | Nuxt 内蔵 | `server/api/` を実行 |
 | 認証 | Supabase Auth + `@nuxtjs/supabase` | latest | JWT ベース |
@@ -69,11 +70,14 @@ joynal/
 │   │       ├── ReportInputModal.vue   # 日報入力・編集モーダル（新人）
 │   │       ├── CommentArea.vue        # 週次コメント表示
 │   │       ├── CommentInputModal.vue  # 週次コメント入力（mentor/ojt）
-│   │       └── MoodStars.vue          # 気分★表示・入力
+│   │       ├── MoodStars.vue          # 気分★表示・入力
+│   │       ├── WeeklySummary.vue      # 週次サマリーエリア（mentor/ojt/admin・mood推移グラフの器）
+│   │       └── MoodTrendChart.client.vue # mood 推移グラフ（@unovis/vue・クライアント専用）
 │   ├── composables/
 │   │   ├── useCurrentUser.ts        # profile・role を返す（keyed useAsyncData）
 │   │   ├── useAssignedTrainees.ts   # 担当新人一覧＋選択状態
 │   │   ├── useWeeklyReports.ts      # 週次日報の取得
+│   │   ├── useMoodTrend.ts          # mood 推移の取得（直近N週・週次サマリー用）
 │   │   ├── useWeeklyComments.ts     # 週次コメントの取得・振り分け
 │   │   ├── useWeekNavigation.ts     # 週の状態管理
 │   │   ├── useAdminUsers.ts         # 管理画面のユーザー一覧取得・操作
@@ -114,6 +118,7 @@ joynal/
 │   │   ├── reports/
 │   │   │   ├── index.get.ts      # GET  /api/reports      週の日報一覧
 │   │   │   ├── index.post.ts     # POST /api/reports      日報作成
+│   │   │   ├── mood-trend.get.ts # GET  /api/reports/mood-trend 期間の日次 mood 推移
 │   │   │   └── [id]/
 │   │   │       ├── index.put.ts  # PUT  /api/reports/:id  日報更新
 │   │   │       └── index.delete.ts # DELETE /api/reports/:id 日報削除

@@ -1,6 +1,8 @@
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
+  # @unovis/ts の地図コンポーネント用 transitive 依存。日報の mood 推移グラフでは地図を使わないためビルド不要。
+  maplibre-gl: false
   sharp: true
   unrs-resolver: true
   vue-demi: true

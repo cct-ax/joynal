@@ -50,6 +50,19 @@ export type ReportUpdateBody = {
   mood?: MoodValue | null
 }
 
+/** GET /api/reports/mood-trend のクエリ（期間と任意のユーザー絞り込み） */
+export type MoodTrendQuery = {
+  from: string
+  to: string
+  userId?: string
+}
+
+/** mood 推移グラフの1点（日付＋気分）。mood 未入力（NULL）の日は含めない。 */
+export type MoodTrendPoint = {
+  date: string
+  mood: MoodValue
+}
+
 // ----------------------------------------------------------------
 // Comments
 // ----------------------------------------------------------------

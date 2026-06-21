@@ -45,6 +45,15 @@ const { mentorComment, ojtComment, refresh: refreshComments } = useWeeklyComment
   commentTraineeId
 )
 
+// 週次サマリー（mentor/ojt/admin が新人を選択中のときだけ取得）。mood 推移グラフで使う。
+const moodTrendEnabled = computed(() => !isTrainee.value && selectedTraineeId.value !== null)
+const { points: moodPoints, series: moodSeries, status: moodStatus } = useMoodTrend(
+  currentWeekStart,
+  reportUserId,
+  moodTrendEnabled
+)
+const moodHasData = computed(() => moodPoints.value.length > 0)
+
 // 詳細展開（mentor/ojt/admin で使う、新人は使わない）
 const expandedDate = ref<string | null>(null)
 const onToggleDetail = (date: Date): void => {
@@ -253,6 +262,14 @@ const onCommentSaved = async (): Promise<void> => {
         @edit-comment="onEditComment"
       />
     </UCard>
+
+    <!-- 週次サマリー（mentor/ojt/admin が新人選択中）。mood 推移グラフ。 -->
+    <WeeklySummary
+      v-if="!isTrainee && selectedTraineeId"
+      :series="moodSeries"
+      :has-data="moodHasData"
+      :loading="moodStatus === 'pending' || moodStatus === 'idle'"
+    />
 
     <!-- 日報入力・編集モーダル（新人ロールのみが操作起点） -->
     <LazyReportInputModal

@@ -124,6 +124,17 @@ export type CommentUpsertBody = {
   traineeId: string
   content: string
 }
+
+// GET /api/reports/mood-trend（mood 推移グラフ用）
+export type MoodTrendQuery = {
+  from: string
+  to: string
+  userId?: string
+}
+export type MoodTrendPoint = {
+  date: string
+  mood: MoodValue // mood 未入力日はレスポンスに含めない
+}
 ```
 
 ### Zod スキーマは `schemas.ts` に書く
