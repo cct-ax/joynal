@@ -1,5 +1,7 @@
 allowBuilds:
   '@parcel/watcher': true
+  # @nuxt/content の dev 用ローカル SQLite。docs サイトは dev 限定のため本番(worker)には含めない。
+  better-sqlite3: true
   esbuild: true
   # @unovis/ts の地図コンポーネント用 transitive 依存。日報の mood 推移グラフでは地図を使わないためビルド不要。
   maplibre-gl: false

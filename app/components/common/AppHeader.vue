@@ -15,6 +15,9 @@ const user = useSupabaseUser()
 const { profile, pending, isAdmin } = useCurrentUser()
 const route = useRoute()
 
+// 設計ドキュメントサイト（@nuxt/content）は dev 限定。dev のときだけヘッダに導線を出す。
+const isDev = import.meta.dev
+
 // admin 専用ナビ。/report と /admin の 2 項目、現在のルートを active にする。
 const adminNavItems = computed<NavigationMenuItem[]>(() => [
   { label: '日報', to: '/report', active: route.path === '/report' },
@@ -78,6 +81,15 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
           highlight
           aria-label="管理者ナビゲーション"
         />
+        <!-- dev 限定: 設計ドキュメントサイトへの導線 -->
+        <NuxtLink
+          v-if="isDev"
+          to="/docs"
+          class="text-sm font-medium text-muted hover:text-default transition-colors"
+          :class="{ 'text-primary': route.path.startsWith('/docs') }"
+        >
+          Docs
+        </NuxtLink>
       </div>
     </template>
 
