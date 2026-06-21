@@ -47,7 +47,7 @@ describe('WeeklySummary', () => {
 
   it('showChart=false なら気分グラフを出さず AI サマリーパネルのみ', async () => {
     const wrapper = await mountSuspended(WeeklySummary, {
-      props: { showChart: false },
+      props: { showChart: false, series: [], hasData: false },
       global: { stubs }
     })
     expect(wrapper.find('[data-test="chart"]').exists()).toBe(false)

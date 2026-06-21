@@ -35,11 +35,8 @@ describe('AiSummaryPanel', () => {
     const wrapper = await mountSuspended(AiSummaryPanel, {
       props: { summary, stale: false, generating: false }
     })
-    const btn = Array.from(wrapper.element.querySelectorAll('button')).find(
-      b => b.textContent?.includes('再生成')
-    )
-    btn?.click()
-    await wrapper.vm.$nextTick()
+    const btn = wrapper.findAll('button').find(b => b.text().includes('再生成'))
+    await btn?.trigger('click')
     expect(wrapper.emitted('generate')).toBeTruthy()
     wrapper.unmount()
   })
