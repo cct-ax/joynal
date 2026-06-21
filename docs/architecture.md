@@ -74,21 +74,21 @@ joynal/
 │   │       ├── WeeklySummary.vue      # 週次サマリーエリア（mentor/ojt/admin・mood推移グラフの器）
 │   │       ├── MoodTrendChart.client.vue # mood 推移グラフ（@unovis/vue・クライアント専用）
 │   │       ├── CoachHints.vue         # AI コーチングのヒント表示（新人・質問＋短評・代筆なし）
-│   │       └── AiSummaryPanel.vue     # AI 週次サマリー表示（生成/再生成・鮮度バッジ・参考情報）
+│   │       └── AiSummaryPanel.vue     # AI 週次サマリー表示（生成/再生成・鮮度バッジ・SSE 逐次表示・参考情報）
 │   ├── composables/
 │   │   ├── useCurrentUser.ts        # profile・role を返す（keyed useAsyncData）
 │   │   ├── useAssignedTrainees.ts   # 担当新人一覧＋選択状態
 │   │   ├── useWeeklyReports.ts      # 週次日報の取得
 │   │   ├── useMoodTrend.ts          # mood 推移の取得（直近N週・週次サマリー用）
 │   │   ├── useCoach.ts              # AI コーチング取得（POST /api/ai/coach）
-│   │   ├── useWeeklySummary.ts      # AI 週次サマリー取得・生成（GET/POST /api/ai/weekly-summary）
+│   │   ├── useWeeklySummary.ts      # AI 週次サマリー取得（GET）・生成（POST=SSE ストリーミング、readSseStream で逐次受信）
 │   │   ├── useWeeklyComments.ts     # 週次コメントの取得・振り分け
 │   │   ├── useWeekNavigation.ts     # 週の状態管理
 │   │   ├── useAdminUsers.ts         # 管理画面のユーザー一覧取得・操作
 │   │   ├── useMentorAssignments.ts  # 割り当て編集行のビューモデル生成
 │   │   ├── useLazyOpen.ts           # モーダルの遅延マウント・mounted ゲート
 │   │   └── useApiError.ts           # $fetch エラーのトースト化
-│   ├── utils/                    # app 専用: time / calendarDate / role / fetchError / passwordReset / asyncDataCache
+│   ├── utils/                    # app 専用: time / calendarDate / role / fetchError / passwordReset / asyncDataCache / sse(SSE ストリーム読取)
 │   ├── layouts/
 │   │   └── default.vue           # 全ページ共通ヘッダー・ナビ
 │   ├── middleware/
@@ -129,7 +129,7 @@ joynal/
 │   │   ├── ai/
 │   │   │   ├── coach.post.ts     # POST /api/ai/coach     新人コーチング（質問＋短評・代筆なし）
 │   │   │   ├── weekly-summary.get.ts  # GET  /api/ai/weekly-summary 週次サマリー取得（キャッシュ）
-│   │   │   └── weekly-summary.post.ts # POST /api/ai/weekly-summary 週次サマリー生成/再生成
+│   │   │   └── weekly-summary.post.ts # POST /api/ai/weekly-summary 週次サマリー生成/再生成（SSE ストリーミング）
 │   │   ├── comments/
 │   │   │   ├── index.get.ts      # GET  /api/comments     週次コメント取得
 │   │   │   └── index.put.ts      # PUT  /api/comments     週次コメント保存
@@ -142,7 +142,7 @@ joynal/
 │   │       ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
 │   │       └── [id]/
 │   │           └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
-│   └── utils/                    # server 専用: auth / supabaseError / validate / year / aiChat(プロバイダ非依存 AI アダプタ) / aiCoach(コーチング) / aiWeeklySummary(週次サマリー) / aiRateLimit(日次レート上限)
+│   └── utils/                    # server 専用: auth / supabaseError / validate / year / aiChat(プロバイダ非依存 AI アダプタ・一括/ストリーミング両対応) / aiCoach(コーチング) / aiWeeklySummary(週次サマリー) / aiRateLimit(日次レート上限)
 │
 ├── supabase/
 │   ├── migrations/               # DB マイグレーション SQL

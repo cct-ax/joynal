@@ -90,6 +90,130 @@ export const extractOpenAiText = (res: unknown): string | null => {
 }
 
 /**
+ * Anthropic SSE の data ペイロード(JSON文字列)から差分テキストを取り出す。
+ * content_block_delta / text_delta 以外（message_start・ping 等）は null。
+ */
+export const extractAnthropicDelta = (payload: string): string | null => {
+  let json: unknown
+  try {
+    json = JSON.parse(payload)
+  } catch {
+    return null
+  }
+  if (getProp(json, 'type') !== 'content_block_delta') return null
+  const delta = getProp(json, 'delta')
+  if (getProp(delta, 'type') !== 'text_delta') return null
+  const text = getProp(delta, 'text')
+  return typeof text === 'string' && text.length > 0 ? text : null
+}
+
+/**
+ * OpenAI 互換 SSE の data ペイロード(JSON文字列)から差分テキストを取り出す。
+ * 終端マーカー `[DONE]` や content が無いチャンクは null。
+ */
+export const extractOpenAiDelta = (payload: string): string | null => {
+  if (payload === '[DONE]') return null
+  let json: unknown
+  try {
+    json = JSON.parse(payload)
+  } catch {
+    return null
+  }
+  const choices = getProp(json, 'choices')
+  if (!Array.isArray(choices)) return null
+  const content = getProp(getProp(choices[0], 'delta'), 'content')
+  return typeof content === 'string' && content.length > 0 ? content : null
+}
+
+/**
+ * SSE バイトストリームを読み、各行の `data:` ペイロード(JSON文字列 or `[DONE]`)を yield する。
+ * Anthropic/OpenAI 互換とも data は 1 行なので行単位で十分。TextDecoderStream に依存せず
+ * TextDecoder で逐次デコードする（Cloudflare Workers 互換）。
+ */
+async function* readSseDataPayloads(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let nl: number
+      while ((nl = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, nl).trimEnd()
+        buffer = buffer.slice(nl + 1)
+        if (line.startsWith('data:')) yield line.slice(5).trim()
+      }
+    }
+    const tail = buffer.trimEnd()
+    if (tail.startsWith('data:')) yield tail.slice(5).trim()
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+/**
+ * 解決済み config で AI プロバイダをストリーミング呼び出しし、差分テキストを順次 yield する。
+ * - apiKey 未設定は 500
+ * - 上流の通信失敗は 502（AI_UPSTREAM_ERROR）
+ * 戻りの差分を呼び出し側が連結して全文を得る。
+ */
+export async function* streamAiProvider(config: ResolvedAiConfig, req: AiChatRequest): AsyncGenerator<string> {
+  if (!config.apiKey) {
+    throw createError({ statusCode: 500, message: 'AI API キーが設定されていません' })
+  }
+  const maxTokens = req.maxTokens ?? config.maxTokens
+
+  let body: ReadableStream<Uint8Array>
+  try {
+    if (config.provider === 'anthropic') {
+      body = await $fetch<ReadableStream<Uint8Array>>('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        responseType: 'stream',
+        headers: {
+          'x-api-key': config.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: {
+          model: config.model,
+          max_tokens: maxTokens,
+          system: req.system,
+          messages: [{ role: 'user', content: req.user }],
+          stream: true
+        }
+      })
+    } else {
+      // OpenAI と Gemini は OpenAI 互換フォーマット（URL のみ異なる）
+      body = await $fetch<ReadableStream<Uint8Array>>(OPENAI_COMPAT_URL[config.provider], {
+        method: 'POST',
+        responseType: 'stream',
+        headers: { Authorization: `Bearer ${config.apiKey}` },
+        body: {
+          model: config.model,
+          max_tokens: maxTokens,
+          messages: [
+            { role: 'system', content: req.system },
+            { role: 'user', content: req.user }
+          ],
+          stream: true
+        }
+      })
+    }
+  } catch (error) {
+    console.error('[aiChat] upstream stream request failed:', summarizeError(error))
+    throw createError(AI_UPSTREAM_ERROR)
+  }
+
+  const extractDelta = config.provider === 'anthropic' ? extractAnthropicDelta : extractOpenAiDelta
+  for await (const payload of readSseDataPayloads(body)) {
+    if (payload.length === 0) continue
+    const delta = extractDelta(payload)
+    if (delta !== null) yield delta
+  }
+}
+
+/**
  * 解決済み config で AI プロバイダを 1 回呼び、本文テキストを返す。
  * - apiKey 未設定は 500
  * - 上流の通信失敗・レスポンス形状不正は 502（AI_UPSTREAM_ERROR）
@@ -184,4 +308,21 @@ export const aiChat = async (event: H3Event, params: AiChatParams): Promise<AiCh
   const config = resolveAiConfig(event, { provider: params.provider, model: params.model })
   const text = await callAiProvider(config, { system: params.system, user: params.user, maxTokens: params.maxTokens })
   return { text, model: config.model, provider: config.provider }
+}
+
+/** aiChatStream の戻り。差分ストリームに加え、永続化用に確定済み model/provider を同期で返す。 */
+export type AiChatStream = { provider: AiProvider, model: string, stream: AsyncGenerator<string> }
+
+/**
+ * runtimeConfig を解決して AI プロバイダをストリーミング呼び出す合成関数。
+ * model/provider は upsert に使うため同期で確定し、差分は stream（AsyncGenerator）で逐次返す。
+ * 上流呼び出し・apiKey チェックは stream の初回反復時に走る（呼び出しのみでは副作用なし）。
+ */
+export const aiChatStream = (event: H3Event, params: AiChatParams): AiChatStream => {
+  const config = resolveAiConfig(event, { provider: params.provider, model: params.model })
+  return {
+    provider: config.provider,
+    model: config.model,
+    stream: streamAiProvider(config, { system: params.system, user: params.user, maxTokens: params.maxTokens })
+  }
 }

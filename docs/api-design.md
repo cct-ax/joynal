@@ -82,7 +82,7 @@ null  // 204 No Content
 | reports | GET | `/api/reports/mood-trend` | 期間の日次 mood 推移取得（mood 未入力日は除外） | 全ロール（範囲は RLS） |
 | ai | POST | `/api/ai/coach` | 新人コーチング（振り返りの質問＋短評・代筆なし） | 全ロール（主に新人） |
 | ai | GET | `/api/ai/weekly-summary` | 週次サマリー取得（キャッシュ＋鮮度判定用 max(updated_at)） | 新人＝自分・mentor/ojt/admin＝担当新人 |
-| ai | POST | `/api/ai/weekly-summary` | 週次サマリー生成 / 再生成 | 新人＝自分・mentor/ojt/admin＝担当新人 |
+| ai | POST | `/api/ai/weekly-summary` | 週次サマリー生成 / 再生成（**SSE ストリーミング**） | 新人＝自分・mentor/ojt/admin＝担当新人 |
 | comments | GET | `/api/comments` | 週次コメント取得 | 全ロール（範囲は RLS） |
 | comments | PUT | `/api/comments` | 週次コメント保存（upsert） | メンター・OJT |
 | assignments | GET | `/api/assignments/me` | 担当新人一覧取得 | メンター・OJT・管理者 |
@@ -145,12 +145,20 @@ const weekly = await $fetch('/api/ai/weekly-summary', {
   query: { userId: traineeId, weekStart: '2026-05-18' }
 })
 
-// 週次サマリー生成 / 再生成（その週に日報が無ければ 422）
-const generated = await $fetch('/api/ai/weekly-summary', {
+// 週次サマリー生成 / 再生成（SSE ストリーミング）。
+// 事前チェック（未認証 401・不正ボディ 400・日報なし 422・レート上限 429）は
+// ストリーム開始前に通常の HTTP ステータスで返す。HTTP 200（SSE 開始）後の AI 上流失敗は
+// error イベントで通知する。生成トークンは delta で逐次届き、done で本文確定＋ai_summaries に保存。
+const stream = await $fetch('/api/ai/weekly-summary', {
   method: 'POST',
-  body: { userId: traineeId, weekStart: '2026-05-18' }
+  body: { userId: traineeId, weekStart: '2026-05-18' },
+  responseType: 'stream'
 })
-// → { content: '...', audience: 'self' | 'mentor', sourceUpdatedAt: '...' }
+for await (const frame of readSseStream(stream)) {
+  // event: 'delta' → { text }          … 生成トークン片（連結して全文に）
+  // event: 'done'  → { audience, sourceUpdatedAt } … 完了メタ（鮮度基準）
+  // event: 'error' → { message, code } … AI 上流失敗
+}
 
 // コメント保存
 await $fetch('/api/comments', {

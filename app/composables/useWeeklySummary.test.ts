@@ -12,6 +12,16 @@ mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 let wrapper: VueWrapper | null = null
 const fetchMock = vi.fn()
 
+/** フレーム文字列の配列を SSE バイトストリームに変換する（generate の responseType:'stream' 用）。 */
+const sseStream = (frames: string[]): ReadableStream<Uint8Array> =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      const encoder = new TextEncoder()
+      for (const frame of frames) controller.enqueue(encoder.encode(frame))
+      controller.close()
+    }
+  })
+
 const mountSummary = async (args: { userId?: string, enabled?: boolean, weekStart?: string } = {}) => {
   const weekStart = ref(args.weekStart ?? '2026-05-18')
   const userId = ref<string | undefined>('userId' in args ? args.userId : 'trainee-1')
@@ -85,23 +95,44 @@ describe('useWeeklySummary', () => {
     expect(stale.value).toBe(false)
   })
 
-  it('generate で POST し summary を更新する', async () => {
+  it('generate で SSE を POST し delta を連結して summary を更新する', async () => {
     requestFetchMock.mockResolvedValue({ summary: null, latestReportUpdatedAt: null })
-    fetchMock.mockResolvedValue({ content: '生成済み', audience: 'self', sourceUpdatedAt: '2026-05-20T00:00:00Z' })
+    fetchMock.mockResolvedValue(sseStream([
+      'event: delta\ndata: {"text":"生成"}\n\n',
+      'event: delta\ndata: {"text":"済み"}\n\n',
+      'event: done\ndata: {"audience":"self","sourceUpdatedAt":"2026-05-20T00:00:00Z"}\n\n'
+    ]))
+    const { summary, generate, streamingContent } = await mountSummary()
+
+    await generate()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/ai/weekly-summary', expect.objectContaining({
+      method: 'POST',
+      responseType: 'stream',
+      body: { userId: 'trainee-1', weekStart: '2026-05-18' }
+    }))
+    expect(summary.value?.content).toBe('生成済み')
+    expect(summary.value?.sourceUpdatedAt).toBe('2026-05-20T00:00:00Z')
+    // 完了後は streamingContent をクリアし summary 表示に切り替える
+    expect(streamingContent.value).toBe('')
+  })
+
+  it('error イベントで error トースト、summary は変わらない', async () => {
+    requestFetchMock.mockResolvedValue({ summary: null, latestReportUpdatedAt: null })
+    fetchMock.mockResolvedValue(sseStream([
+      'event: error\ndata: {"message":"AI 応答の取得に失敗しました","code":"AI_UPSTREAM_ERROR"}\n\n'
+    ]))
     const { summary, generate } = await mountSummary()
 
     await generate()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/ai/weekly-summary', {
-      method: 'POST',
-      body: { userId: 'trainee-1', weekStart: '2026-05-18' }
-    })
-    expect(summary.value?.content).toBe('生成済み')
+    expect(toastAddMock).toHaveBeenCalledWith(expect.objectContaining({ color: 'error' }))
+    expect(summary.value).toBeNull()
   })
 
-  it('generate 失敗で error トースト、summary は変わらない', async () => {
+  it('POST 自体が reject（事前チェック失敗）でも error トースト', async () => {
     requestFetchMock.mockResolvedValue({ summary: null, latestReportUpdatedAt: null })
-    fetchMock.mockRejectedValue({ statusCode: 502 })
+    fetchMock.mockRejectedValue({ statusCode: 429 })
     const { summary, generate } = await mountSummary()
 
     await generate()

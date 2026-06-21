@@ -23,6 +23,15 @@ describe('AiSummaryPanel', () => {
     wrapper.unmount()
   })
 
+  it('生成中は streamingContent をライブ表示し summary 本文は出さない', async () => {
+    const wrapper = await mountSuspended(AiSummaryPanel, {
+      props: { summary, stale: false, generating: true, streamingContent: '生成中の途中経過' }
+    })
+    expect(wrapper.text()).toContain('生成中の途中経過')
+    expect(wrapper.text()).not.toContain('サマリー本文')
+    wrapper.unmount()
+  })
+
   it('stale なら更新バッジを表示する', async () => {
     const wrapper = await mountSuspended(AiSummaryPanel, {
       props: { summary, stale: true, generating: false }

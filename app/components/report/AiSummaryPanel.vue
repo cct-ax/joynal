@@ -7,11 +7,15 @@
  */
 import type { WeeklySummaryData } from '#shared/types/api'
 
-defineProps<{
+withDefaults(defineProps<{
   summary: WeeklySummaryData | null
   stale: boolean
   generating: boolean
-}>()
+  /** 生成中に逐次積まれる本文（SSE delta の連結）。 */
+  streamingContent?: string
+}>(), {
+  streamingContent: ''
+})
 
 const emit = defineEmits<{ generate: [] }>()
 </script>
@@ -34,7 +38,14 @@ const emit = defineEmits<{ generate: [] }>()
       </UButton>
     </div>
 
-    <template v-if="summary">
+    <!-- 生成中: SSE で届く差分を逐次表示（タイプライタ的に伸びる） -->
+    <p
+      v-if="generating && streamingContent"
+      class="text-sm text-highlighted whitespace-pre-wrap"
+    >
+      {{ streamingContent }}<span class="ml-0.5 animate-pulse text-muted">▌</span>
+    </p>
+    <template v-else-if="summary">
       <UAlert
         v-if="stale"
         color="warning"

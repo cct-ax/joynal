@@ -119,6 +119,21 @@ export type WeeklySummaryGetResponse = {
   latestReportUpdatedAt: string | null
 }
 
+/**
+ * POST /api/ai/weekly-summary（生成）の SSE イベントの data ペイロード。
+ *
+ * 生成は HTTP 200 + text/event-stream で逐次配信する。事前チェック（認証・バリデーション・
+ * 日報なし 422・レート上限 429）は SSE 開始前に通常の HTTP ステータスで返す。SSE 開始後に
+ * 起きうる AI 上流失敗のみ `error` イベントで配信する。各イベントの data は 1 行 JSON 文字列。
+ *
+ * - event:`delta` → WeeklySummaryDeltaData（生成トークン片。順次連結する）
+ * - event:`done`  → WeeklySummaryDoneData（完了メタ。本文確定・鮮度基準）
+ * - event:`error` → WeeklySummaryErrorData（AI 上流失敗。message/code はエラー封筒と同形）
+ */
+export type WeeklySummaryDeltaData = { text: string }
+export type WeeklySummaryDoneData = { audience: AiAudience, sourceUpdatedAt: string }
+export type WeeklySummaryErrorData = { message: string, code: string }
+
 // ----------------------------------------------------------------
 // Comments
 // ----------------------------------------------------------------

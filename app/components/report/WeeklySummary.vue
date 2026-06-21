@@ -17,6 +17,7 @@ withDefaults(defineProps<{
   summary?: WeeklySummaryData | null
   summaryStale?: boolean
   summaryGenerating?: boolean
+  summaryStreamingContent?: string
 }>(), {
   showChart: true,
   series: () => [],
@@ -24,7 +25,8 @@ withDefaults(defineProps<{
   loading: false,
   summary: null,
   summaryStale: false,
-  summaryGenerating: false
+  summaryGenerating: false,
+  summaryStreamingContent: ''
 })
 
 const emit = defineEmits<{ generate: [] }>()
@@ -68,6 +70,7 @@ const emit = defineEmits<{ generate: [] }>()
         :summary="summary"
         :stale="summaryStale"
         :generating="summaryGenerating"
+        :streaming-content="summaryStreamingContent"
         @generate="emit('generate')"
       />
     </div>

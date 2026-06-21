@@ -65,6 +65,7 @@ const {
   summary: weeklySummary,
   stale: summaryStale,
   generating: summaryGenerating,
+  streamingContent: summaryStreamingContent,
   generate: generateSummary
 } = useWeeklySummary(weekStartYmd, summaryUserId, summaryEnabled)
 
@@ -287,6 +288,7 @@ const onCommentSaved = async (): Promise<void> => {
       :summary="weeklySummary"
       :summary-stale="summaryStale"
       :summary-generating="summaryGenerating"
+      :summary-streaming-content="summaryStreamingContent"
       @generate="generateSummary"
     />
 
