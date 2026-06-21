@@ -80,6 +80,7 @@ null  // 204 No Content
 | reports | PUT | `/api/reports/:id` | 日報更新 | 新人（自分のみ） |
 | reports | DELETE | `/api/reports/:id` | 日報削除 | 新人（自分のみ） |
 | reports | GET | `/api/reports/mood-trend` | 期間の日次 mood 推移取得（mood 未入力日は除外） | 全ロール（範囲は RLS） |
+| ai | POST | `/api/ai/coach` | 新人コーチング（振り返りの質問＋短評・代筆なし） | 全ロール（主に新人） |
 | comments | GET | `/api/comments` | 週次コメント取得 | 全ロール（範囲は RLS） |
 | comments | PUT | `/api/comments` | 週次コメント保存（upsert） | メンター・OJT |
 | assignments | GET | `/api/assignments/me` | 担当新人一覧取得 | メンター・OJT・管理者 |
@@ -127,6 +128,14 @@ await $fetch(`/api/reports/${reportId}`, { method: 'DELETE' })
 const moodTrend = await $fetch('/api/reports/mood-trend', {
   query: { from: '2026-03-30', to: '2026-05-22', userId: traineeId }
 })
+
+// AI コーチング（入力中ドラフト＋気分から振り返りの質問＋短評。本文の代筆はしない）
+// 上流 AI 失敗・応答不正は 502（data.code = 'AI_UPSTREAM_ERROR'）
+const coach = await $fetch('/api/ai/coach', {
+  method: 'POST',
+  body: { content: '今日は API を実装した。テストで詰まった。', mood: 3 }
+})
+// → { questions: ['...', '...'], feedback: '...' }
 
 // コメント保存
 await $fetch('/api/comments', {

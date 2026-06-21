@@ -38,6 +38,9 @@ const apiError = useApiError()
 const deleteLoading = ref(false)
 const confirmDeleteOpen = ref(false)
 
+// AI コーチング（振り返りの深掘り質問＋短評）。本文への挿入導線は持たない（代筆防止）。
+const { hints: coachHints, pending: coachPending, fetchHints: fetchCoachHints, reset: resetCoachHints } = useCoach()
+
 const isEdit = computed(() => props.report !== null)
 const title = computed(() => (isEdit.value ? '日報を編集' : '日報を入力'))
 
@@ -146,6 +149,14 @@ const onMoodUpdate = (v: ReportSchema['mood'] | null): void => {
   state.mood = v ?? undefined
 }
 
+// モーダルを開くたびに前回のコーチングヒントをクリアする。
+watch(() => props.open, (open) => {
+  if (open) resetCoachHints()
+})
+
+// 入力中のドラフトと気分を渡してコーチングヒントを取得する。
+const onShowHints = (): Promise<void> => fetchCoachHints(state.content, state.mood)
+
 // テストで submit / onDelete を直接呼べるよう defineExpose する。
 // UForm のスキーマ検証は別途スキーマテストでカバーするため、ロジック検証はこちらで行う。
 defineExpose({ submit, onDelete })
@@ -208,6 +219,25 @@ defineExpose({ submit, onDelete })
             class="w-full"
           />
         </UFormField>
+
+        <div class="-mt-1">
+          <UButton
+            variant="link"
+            color="primary"
+            size="sm"
+            icon="i-lucide-sparkles"
+            :loading="coachPending"
+            class="px-0"
+            @click="onShowHints"
+          >
+            ヒントを見る（AI）
+          </UButton>
+          <LazyCoachHints
+            v-if="coachHints"
+            :hints="coachHints"
+            class="mt-2"
+          />
+        </div>
 
         <UFormField
           name="mood"

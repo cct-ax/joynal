@@ -135,6 +135,16 @@ export type MoodTrendPoint = {
   date: string
   mood: MoodValue // mood 未入力日はレスポンスに含めない
 }
+
+// POST /api/ai/coach（新人コーチング）
+export type AiCoachBody = {
+  content?: string // 入力中のドラフト本文（任意・空ならスターター質問）
+  mood?: MoodValue
+}
+export type AiCoachResponse = {
+  questions: string[] // 振り返りの深掘り質問（2〜3個）
+  feedback: string // 短い励まし（1〜2文・空文字可）
+}
 ```
 
 ### Zod スキーマは `schemas.ts` に書く

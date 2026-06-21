@@ -44,7 +44,7 @@ const AI_UPSTREAM_ERROR = {
 }
 
 /** unknown から安全にプロパティを 1 つ取り出す（型ガードを 1 箇所に集約）。 */
-const getProp = (obj: unknown, key: string): unknown =>
+export const getProp = (obj: unknown, key: string): unknown =>
   typeof obj === 'object' && obj !== null && key in obj
     ? (obj as Record<string, unknown>)[key]
     : undefined

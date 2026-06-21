@@ -72,12 +72,14 @@ joynal/
 │   │       ├── CommentInputModal.vue  # 週次コメント入力（mentor/ojt）
 │   │       ├── MoodStars.vue          # 気分★表示・入力
 │   │       ├── WeeklySummary.vue      # 週次サマリーエリア（mentor/ojt/admin・mood推移グラフの器）
-│   │       └── MoodTrendChart.client.vue # mood 推移グラフ（@unovis/vue・クライアント専用）
+│   │       ├── MoodTrendChart.client.vue # mood 推移グラフ（@unovis/vue・クライアント専用）
+│   │       └── CoachHints.vue         # AI コーチングのヒント表示（新人・質問＋短評・代筆なし）
 │   ├── composables/
 │   │   ├── useCurrentUser.ts        # profile・role を返す（keyed useAsyncData）
 │   │   ├── useAssignedTrainees.ts   # 担当新人一覧＋選択状態
 │   │   ├── useWeeklyReports.ts      # 週次日報の取得
 │   │   ├── useMoodTrend.ts          # mood 推移の取得（直近N週・週次サマリー用）
+│   │   ├── useCoach.ts              # AI コーチング取得（POST /api/ai/coach）
 │   │   ├── useWeeklyComments.ts     # 週次コメントの取得・振り分け
 │   │   ├── useWeekNavigation.ts     # 週の状態管理
 │   │   ├── useAdminUsers.ts         # 管理画面のユーザー一覧取得・操作
@@ -122,6 +124,8 @@ joynal/
 │   │   │   └── [id]/
 │   │   │       ├── index.put.ts  # PUT  /api/reports/:id  日報更新
 │   │   │       └── index.delete.ts # DELETE /api/reports/:id 日報削除
+│   │   ├── ai/
+│   │   │   └── coach.post.ts     # POST /api/ai/coach     新人コーチング（質問＋短評・代筆なし）
 │   │   ├── comments/
 │   │   │   ├── index.get.ts      # GET  /api/comments     週次コメント取得
 │   │   │   └── index.put.ts      # PUT  /api/comments     週次コメント保存
@@ -134,7 +138,7 @@ joynal/
 │   │       ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
 │   │       └── [id]/
 │   │           └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
-│   └── utils/                    # server 専用: auth / supabaseError(throwSupabaseError) / validate / year
+│   └── utils/                    # server 専用: auth / supabaseError(throwSupabaseError) / validate / year / aiChat(プロバイダ非依存 AI アダプタ) / aiCoach(コーチングのプロンプト・パース)
 │
 ├── supabase/
 │   ├── migrations/               # DB マイグレーション SQL
@@ -336,10 +340,13 @@ GitHub (main ブランチ)
       └── 環境変数:
           ├── NUXT_PUBLIC_SUPABASE_URL    # Supabase プロジェクト URL
           ├── NUXT_PUBLIC_SUPABASE_KEY    # anon（publishable）key
-          └── NUXT_SUPABASE_SECRET_KEY    # service_role（secret）key。ユーザー管理・招待・無効化で
-                                          # service role 経由のアクセスに使う（@nuxtjs/supabase v2 はこの名前で読む）
+          ├── NUXT_SUPABASE_SECRET_KEY    # service_role（secret）key。ユーザー管理・招待・無効化で
+          │                               # service role 経由のアクセスに使う（@nuxtjs/supabase v2 はこの名前で読む）
+          ├── NUXT_ANTHROPIC_API_KEY      # AI（Claude）。コーチング・週次サマリーで使用
+          ├── NUXT_OPENAI_API_KEY         # AI（OpenAI）。プロバイダ切替時に使用
+          └── NUXT_AI_PROVIDER / NUXT_ANTHROPIC_MODEL / NUXT_OPENAI_MODEL / NUXT_AI_MAX_TOKENS  # AI 既定（provider/model/トークン上限）
 ```
 
 > 環境変数は Cloudflare Pages の **Production / Preview スコープごとに別管理**。ブランチデプロイは Preview スコープを参照し、追加後は再デプロイが必要。`NUXT_SUPABASE_SECRET_KEY` 未設定だとユーザー管理系 API（`/api/users` など）が 500 になる。
 
-> **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。
+> **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。外部 AI プロバイダ（Claude / OpenAI）への送信は SDK を使わず素の `$fetch` で行う（Workers 互換のため）。

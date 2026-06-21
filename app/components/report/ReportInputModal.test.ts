@@ -1,6 +1,6 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VueWrapper } from '@vue/test-utils'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import type { DailyReport } from '#shared/types/models'
 import type { ReportInputModalExposed } from '#shared/types/components'
 import ReportInputModal from './ReportInputModal.vue'
@@ -180,6 +180,22 @@ describe('ReportInputModal', () => {
       })
     )
     expect(wrapper.emitted('saved')).toBeUndefined()
+  })
+
+  it('「ヒントを見る」ボタンのクリックで POST /api/ai/coach を呼ぶ', async () => {
+    fetchMock.mockResolvedValueOnce({ questions: ['Q1'], feedback: 'F' })
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const hintBtn = Array.from(document.body.querySelectorAll('button')).find(
+      b => b.textContent?.includes('ヒントを見る')
+    )
+    expect(hintBtn).toBeDefined()
+
+    hintBtn?.click()
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/ai/coach', expect.objectContaining({ method: 'POST' }))
   })
 
   it('保存成功で success トーストが追加される', async () => {

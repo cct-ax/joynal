@@ -166,6 +166,12 @@ export const moodTrendQuerySchema = z.object({
   userId: z.guid().optional()
 })
 
+/** POST /api/ai/coach ボディ（ドラフト本文＋気分。どちらも任意・本文は空可＝スターター質問） */
+export const aiCoachBodySchema = z.object({
+  content: z.string().max(5000, 'content は5000文字以内で指定してください').optional(),
+  mood: moodUnion.optional()
+})
+
 /** GET /api/comments クエリ */
 export const commentsQuerySchema = z.object({
   weekStart: z.string().regex(ymdRegex),

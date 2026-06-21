@@ -36,6 +36,7 @@ graph TD
     MoodStars["MoodStars\n気分★"]
     WeeklySummary["WeeklySummary\n週次サマリーエリア（mentor/ojt/admin）"]
     MoodTrendChart["MoodTrendChart.client\nmood 推移グラフ（@unovis/vue）"]
+    CoachHints["CoachHints\nAI コーチングのヒント（新人）"]
   end
 
   subgraph SharedUI["components/common/"]
@@ -57,6 +58,7 @@ graph TD
     UseAssignedTrainees["useAssignedTrainees\n担当新人一覧＋選択状態"]
     UseWeeklyReports["useWeeklyReports\n週次日報の取得"]
     UseMoodTrend["useMoodTrend\nmood 推移の取得（直近N週）"]
+    UseCoach["useCoach\nAI コーチング取得"]
     UseWeeklyComments["useWeeklyComments\n週次コメント取得・振り分け"]
     UseWeekNavigation["useWeekNavigation\n週の状態管理"]
     UseAdminUsers["useAdminUsers\nユーザー一覧取得・操作"]
@@ -80,11 +82,17 @@ graph TD
     AssignmentsAPI["assignments/ GET /me·PUT"]
     UsersAPI["users/ GET·POST·PUT, GET /me"]
     AuthAPI["auth/ login·logout·reset·reset-otp·update-password"]
+    AiAPI["ai/ coach(POST)"]
   end
 
   subgraph Supabase["Supabase（外部サービス）"]
     SupabaseAuth["Auth（JWT・セッション）"]
     SupabaseDB["PostgreSQL + RLS\nprofiles / daily_reports\ncomments / mentor_assignments"]
+  end
+
+  subgraph AiProvider["AI プロバイダ（外部・素の $fetch）"]
+    Claude["Claude（Anthropic Messages）"]
+    OpenAI["OpenAI（Chat Completions）"]
   end
 
   AppVue --> DefaultLayout
@@ -108,6 +116,7 @@ graph TD
   ReportPage --"$fetch / useAsyncData"--> ReportsAPI
   ReportPage --> CommentsAPI
   ReportPage --> AssignmentsAPI
+  ReportPage --> AiAPI
   LoginPage --> AuthAPI
   AdminPage --> UsersAPI
   AdminPage --> AssignmentsAPI
@@ -117,6 +126,7 @@ graph TD
   AssignmentsAPI --> SupabaseDB
   UsersAPI --> SupabaseDB
   AuthAPI --> SupabaseAuth
+  AiAPI --> AiProvider
 
   UseCurrentUser --> UsersAPI
   Models --> DBTypes
@@ -166,6 +176,7 @@ graph TD
 | `CommentInputModal.vue` | 週次コメント入力・編集モーダル（mentor/ojt） | `report.vue` |
 | `WeeklySummary.vue` | 週次サマリーエリア（mentor/ojt/admin 向け）。mood 推移グラフを表示（スライス2で AI サマリーを追加） | `report.vue`（非 trainee・新人選択中） |
 | `MoodTrendChart.client.vue` | mood 推移グラフ（@unovis/vue・SVG・クライアント専用描画） | `WeeklySummary` |
+| `CoachHints.vue` | AI コーチングのヒント表示（質問＋短評・本文挿入導線なし＝代筆防止） | `ReportInputModal`（Lazy） |
 
 #### `admin/`（管理UI）
 
@@ -190,9 +201,10 @@ graph TD
 | `useAdminUsers.ts` | 管理画面のユーザー一覧取得（`GET /api/users`）・招待/更新/無効化の操作 |
 | `useMentorAssignments.ts` | 全新人を網羅した割り当て編集行（`AssignmentRowVM`）とメンター/OJT 選択肢を生成 |
 | `useLazyOpen.ts` | モーダルの遅延マウント・`mounted` ゲート（初回オープンまで生成を遅らせる） |
+| `useCoach.ts` | AI コーチング取得（`POST /api/ai/coach`・$fetch + useApiError）。`hints` / `pending` / `fetchHints` / `reset` を提供 |
 | `useApiError.ts` | `$fetch` エラーを statusCode/code 別メッセージでトースト通知 |
 
-> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts`）。
+> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts` / `aiChat.ts`（プロバイダ非依存 AI アダプタ）/ `aiCoach.ts`（コーチングのプロンプト・パース））。
 
 ### 型定義
 
@@ -213,6 +225,7 @@ graph TD
 | `reports/index.get.ts` | `GET /api/reports` | 週の日報一覧（`userId` 指定で対象新人を絞り込み） |
 | `reports/index.post.ts` | `POST /api/reports` | 日報作成 |
 | `reports/mood-trend.get.ts` | `GET /api/reports/mood-trend` | 期間の日次 mood 推移（mood 未入力日は除外・範囲は RLS） |
+| `ai/coach.post.ts` | `POST /api/ai/coach` | 新人コーチング（質問＋短評・代筆なし・上流失敗は 502） |
 | `reports/[id]/index.put.ts` | `PUT /api/reports/:id` | 日報更新 |
 | `reports/[id]/index.delete.ts` | `DELETE /api/reports/:id` | 日報削除 |
 | `comments/index.get.ts` | `GET /api/comments` | 週次コメント取得（weekStart + traineeId） |
