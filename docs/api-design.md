@@ -21,7 +21,7 @@ description: API 共通仕様・エラー形式・エンドポイント索引（
 ## 基本方針
 
 - すべてのエンドポイントは `/api/` プレフィックスを持つ
-- フロントは Supabase を直接呼ばず、必ず `server/api/*` 経由。`serverSupabaseClient` がユーザーの JWT を転送し、Supabase RLS が自動適用される
+- フロントは Supabase を直接呼ばず、必ず `server/api/*` 経由（方針の詳細は [アーキテクチャのデータアクセス層](./architecture.md#データアクセス層)）。`serverSupabaseClient` がユーザーの JWT を転送し、Supabase RLS が自動適用される
 - 認証は Cookie の JWT を自動で引き継ぐ（`@nuxtjs/supabase` が処理）
 - レスポンスは常に JSON
 - エラー時は HTTP ステータスコード + `{ message: string }` を返す
@@ -111,7 +111,10 @@ null  // 204 No Content
 
 ## フロントエンドからの呼び出し例
 
-app 側の使い方ガイド（OpenAPI には無い情報）。
+app 側の使い方ガイド（OpenAPI には無い、`$fetch` での呼び出しパターン）。各エンドポイントの正確なパラメータ・レスポンスは `/_scalar` を参照。
+
+<details>
+<summary>各エンドポイントの $fetch 呼び出し例</summary>
 
 ```typescript
 // 日報一覧取得
@@ -211,3 +214,5 @@ await $fetch('/api/auth/reset-password-otp', {
   body: { email, token: '123456', password: '...' }
 })
 ```
+
+</details>
