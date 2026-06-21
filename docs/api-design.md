@@ -12,8 +12,8 @@ description: API 共通仕様・エラー形式・エンドポイント索引（
 各エンドポイントの詳細（リクエスト/レスポンス/エラー）は、コードから自動生成される**インタラクティブな OpenAPI ドキュメント**を一次情報とする。
 
 > **API ドキュメントの見方（基本は Scalar）**
-> - `pnpm dev` 起動後 → **http://localhost:3000/_scalar**（Scalar UI・叩いて試せる）
-> - 生の OpenAPI spec が要るとき → `/_openapi.json`（Swagger UI 版も同 spec で `/_swagger` にあり）
+> - `pnpm dev` 起動後 → **http://localhost:3000/_docs/scalar**（Scalar UI・叩いて試せる）
+> - 生の OpenAPI spec が要るとき → `/_docs/openapi.json`（Swagger UI 版も同 spec で `/_docs/swagger` にあり）
 > - **dev 限定**（本番では非公開）。spec は各 `server/api` ハンドラの `defineRouteMeta` から自動生成される。
 
 ---
@@ -79,7 +79,7 @@ null  // 204 No Content
 
 ## エンドポイント一覧（索引）
 
-詳細（パラメータ・ボディ・レスポンス・エラー）は OpenAPI（`/_scalar`）を参照。
+詳細（パラメータ・ボディ・レスポンス・エラー）は OpenAPI（`/_docs/scalar`）を参照。
 
 | タグ | メソッド | パス | 概要 | 対象ロール |
 |------|---------|------|------|----------|
@@ -111,7 +111,7 @@ null  // 204 No Content
 
 ## フロントエンドからの呼び出し例
 
-app 側の使い方ガイド（OpenAPI には無い、`$fetch` での呼び出しパターン）。各エンドポイントの正確なパラメータ・レスポンスは `/_scalar` を参照。
+app 側の使い方ガイド（OpenAPI には無い、`$fetch` での呼び出しパターン）。各エンドポイントの正確なパラメータ・レスポンスは `/_docs/scalar` を参照。
 
 <details>
 <summary>各エンドポイントの $fetch 呼び出し例</summary>
