@@ -389,6 +389,30 @@ const { data: reports } = await useFetch('/api/reports', {
 
 > `useFetch` は SSR・キャッシュ・ローディング状態を自動で管理してくれる。
 
+### ストリーミング（SSE）取得は `responseType: 'stream'` ＋ `readSseStream`
+
+AI 週次サマリー生成（`POST /api/ai/weekly-summary`）のように、生成トークンを逐次表示したいミューテーションは **SSE（`text/event-stream`）** で受ける。クライアントは `$fetch` の `responseType: 'stream'` でストリームを取得し、`app/utils/sse.ts` の `readSseStream` で `{ event, data }` フレームを逐次処理する（`useWeeklySummary.generate()` 参照）。
+
+```typescript
+// ✓ SSE を逐次読む（生成トークンを少しずつ表示）
+try {
+  const stream = await $fetch<ReadableStream<Uint8Array>>('/api/ai/weekly-summary', {
+    method: 'POST',
+    body: { userId, weekStart },
+    responseType: 'stream'
+  })
+  for await (const frame of readSseStream(stream)) {
+    if (frame.event === 'delta') streamingContent.value += parseDeltaText(frame.data)
+    else if (frame.event === 'done') { /* 完了メタを反映 */ }
+    else if (frame.event === 'error') { /* useApiError で通知 */ }
+  }
+} catch (error) {
+  apiError.notify(error, { fallback: 'サマリーの生成に失敗しました' })
+}
+```
+
+> **設計の要点**: 認証・バリデーション・日報なし(422)・レート上限(429) の**事前チェックはストリーム開始前**に通常の HTTP ステータスで返す（`useApiError` がそのまま機能）。HTTP 200（SSE 開始）後に起きうる AI 上流失敗のみ `error` イベントで通知する。サーバーは h3 `createEventStream` で `delta` / `done` / `error` を push し、各 `data` は 1 行 JSON 文字列。上流 AI への送信は SDK を使わず素の `$fetch`（`stream: true`）で行い、`server/utils/aiChat.ts` の `streamAiProvider` が provider 別 SSE をパースする（Cloudflare Workers 互換）。
+
 ---
 
 ## Git ワークフロー

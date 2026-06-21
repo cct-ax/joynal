@@ -180,7 +180,7 @@ graph TD
 | `WeeklySummary.vue` | 週次サマリーエリア。mentor/ojt/admin は mood 推移グラフ＋AI サマリー、新人本人は AI サマリーのみ | `report.vue` |
 | `MoodTrendChart.client.vue` | mood 推移グラフ（@unovis/vue・SVG・クライアント専用描画） | `WeeklySummary` |
 | `CoachHints.vue` | AI コーチングのヒント表示（質問＋短評・本文挿入導線なし＝代筆防止） | `ReportInputModal`（Lazy） |
-| `AiSummaryPanel.vue` | AI 週次サマリー表示（生成/再生成・鮮度バッジ・「参考情報」注記） | `WeeklySummary` |
+| `AiSummaryPanel.vue` | AI 週次サマリー表示（生成/再生成・鮮度バッジ・SSE 逐次表示＋カーソル・「参考情報」注記） | `WeeklySummary` |
 
 #### `admin/`（管理UI）
 
@@ -206,10 +206,10 @@ graph TD
 | `useMentorAssignments.ts` | 全新人を網羅した割り当て編集行（`AssignmentRowVM`）とメンター/OJT 選択肢を生成 |
 | `useLazyOpen.ts` | モーダルの遅延マウント・`mounted` ゲート（初回オープンまで生成を遅らせる） |
 | `useCoach.ts` | AI コーチング取得（`POST /api/ai/coach`・$fetch + useApiError）。`hints` / `pending` / `fetchHints` / `reset` を提供 |
-| `useWeeklySummary.ts` | AI 週次サマリー取得（GET・keyed useAsyncData）・生成（POST）。`summary` / `stale` / `generating` / `generate` を提供 |
+| `useWeeklySummary.ts` | AI 週次サマリー取得（GET・keyed useAsyncData）・生成（POST=**SSE ストリーミング**・`readSseStream` で逐次受信）。`summary` / `stale` / `generating` / `streamingContent` / `generate` を提供 |
 | `useApiError.ts` | `$fetch` エラーを statusCode/code 別メッセージでトースト通知 |
 
-> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts` / `aiChat.ts`（プロバイダ非依存 AI アダプタ）/ `aiCoach.ts`（コーチング）/ `aiWeeklySummary.ts`（週次サマリー）/ `aiRateLimit.ts`（日次レート上限））。
+> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts` / `sse.ts`（SSE ストリーム読取 `readSseStream`））、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts` / `aiChat.ts`（プロバイダ非依存 AI アダプタ・一括/ストリーミング両対応）/ `aiCoach.ts`（コーチング）/ `aiWeeklySummary.ts`（週次サマリー）/ `aiRateLimit.ts`（日次レート上限））。
 
 ### 型定義
 
@@ -232,7 +232,7 @@ graph TD
 | `reports/mood-trend.get.ts` | `GET /api/reports/mood-trend` | 期間の日次 mood 推移（mood 未入力日は除外・範囲は RLS） |
 | `ai/coach.post.ts` | `POST /api/ai/coach` | 新人コーチング（質問＋短評・代筆なし・上流失敗は 502） |
 | `ai/weekly-summary.get.ts` | `GET /api/ai/weekly-summary` | 週次サマリー取得（キャッシュ＋鮮度用 max(updated_at)・生成しない） |
-| `ai/weekly-summary.post.ts` | `POST /api/ai/weekly-summary` | 週次サマリー生成/再生成（audience 導出・upsert・日報無は 422） |
+| `ai/weekly-summary.post.ts` | `POST /api/ai/weekly-summary` | 週次サマリー生成/再生成（**SSE ストリーミング**・delta/done/error・audience 導出・完了時 upsert・日報無は 422） |
 | `reports/[id]/index.put.ts` | `PUT /api/reports/:id` | 日報更新 |
 | `reports/[id]/index.delete.ts` | `DELETE /api/reports/:id` | 日報削除 |
 | `comments/index.get.ts` | `GET /api/comments` | 週次コメント取得（weekStart + traineeId） |
