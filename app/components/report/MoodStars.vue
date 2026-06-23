@@ -3,11 +3,6 @@ import { MOOD_VALUES, isMoodValue, type MoodValue } from '#shared/types/api'
 
 type MoodStarsSize = 'xs' | 'sm' | 'md'
 const MOOD_LABEL = '気分'
-const GAP_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
-  xs: 'gap-0.5',
-  sm: 'gap-0.5',
-  md: 'gap-1'
-}
 const BUTTON_SIZE_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
   xs: 'size-4',
   sm: 'size-5',
@@ -42,7 +37,6 @@ const displayValue = computed<MoodValue | undefined>(() =>
   hoveredValue.value ?? selectedValue.value
 )
 
-const gapClass = computed(() => GAP_CLASS_BY_SIZE[props.size])
 const buttonSizeClass = computed(() => BUTTON_SIZE_CLASS_BY_SIZE[props.size])
 const iconSizeClass = computed(() => ICON_SIZE_CLASS_BY_SIZE[props.size])
 
@@ -56,6 +50,9 @@ const readonlyLabel = computed(() => {
 
 const isActive = (value: MoodValue): boolean =>
   displayValue.value !== undefined && value <= displayValue.value
+
+const isSelected = (value: MoodValue): boolean =>
+  selectedValue.value !== undefined && value <= selectedValue.value
 
 const getButtonLabel = (value: MoodValue): string => {
   const base = `${MOOD_LABEL}: ${value} / ${MOOD_VALUES.length}`
@@ -74,7 +71,6 @@ const selectMood = (value: MoodValue) => {
 <template>
   <div
     class="inline-flex items-center"
-    :class="gapClass"
     :role="props.readonly ? 'img' : 'group'"
     :aria-label="props.readonly ? readonlyLabel : MOOD_LABEL"
   >
@@ -82,10 +78,10 @@ const selectMood = (value: MoodValue) => {
       <UIcon
         v-for="value in MOOD_VALUES"
         :key="value"
-        name="i-lucide-star"
+        :name="isSelected(value) ? 'i-mdi-star' : 'i-mdi-star-outline'"
         :class="[
           iconSizeClass,
-          isActive(value) ? 'fill-current text-amber-400' : 'fill-transparent text-dimmed'
+          isSelected(value) ? 'text-amber-400' : 'text-dimmed'
         ]"
       />
     </template>
@@ -107,11 +103,11 @@ const selectMood = (value: MoodValue) => {
       @mouseleave="hoveredValue = null"
     >
       <UIcon
-        name="i-lucide-star"
+        :name="isSelected(value) ? 'i-mdi-star' : 'i-mdi-star-outline'"
         aria-hidden="true"
         :class="[
           iconSizeClass,
-          isActive(value) ? 'fill-current' : 'fill-transparent'
+          'shrink-0'
         ]"
       />
     </button>

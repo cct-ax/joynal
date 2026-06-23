@@ -120,7 +120,33 @@ const ojtComment = ref<string | null>(null)
 //   $fetch('/api/comments', { query: { weekStart: formatYmd(currentWeekStart.value), traineeId: selectedTraineeId.value } })
 
 // --- モーダル ---
-// TODO: 日報入力・編集モーダルの open/close 制御と選択中の日付状態を実装する（新人用）
+const selectedDate = ref<string | null>(null)
+const selectedReport = ref<DailyReport | null>(null)
+
+const isReportInputModalOpen = computed({
+  get: () => selectedDate.value !== null,
+  set: (isOpen: boolean) => {
+    if (!isOpen) {
+      selectedDate.value = null
+      selectedReport.value = null
+    }
+  }
+})
+
+const openReportInput = (date: string): void => {
+  selectedDate.value = date
+  selectedReport.value = null
+}
+
+const openReportEdit = (report: DailyReport | undefined): void => {
+  if (!report) {
+    return
+  }
+
+  selectedDate.value = report.date
+  selectedReport.value = report
+}
+
 // TODO: 日報詳細モーダルの open/close 制御と選択中のレコード状態を実装する（メンター・OJT用）
 
 const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
@@ -385,9 +411,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                         class="cursor-pointer"
                         aria-label="日報を入力"
                         title="日報を入力"
-                      >
-                        <!-- TODO: 入力モーダルを開く -->
-                      </UButton>
+                        @click="openReportInput(item.dateKey)"
+                      />
                       <UButton
                         v-else
                         type="button"
@@ -399,9 +424,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                         class="cursor-pointer"
                         aria-label="日報を編集"
                         title="日報を編集"
-                      >
-                        <!-- TODO: 編集モーダルを開く -->
-                      </UButton>
+                        @click="openReportEdit(item.report)"
+                      />
                     </template>
 
                     <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
@@ -492,9 +516,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       class="cursor-pointer"
                       aria-label="日報を入力"
                       title="日報を入力"
-                    >
-                      <!-- TODO: 入力モーダルを開く -->
-                    </UButton>
+                      @click="openReportInput(item.dateKey)"
+                    />
                     <UButton
                       v-else
                       type="button"
@@ -506,9 +529,8 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
                       class="cursor-pointer"
                       aria-label="日報を編集"
                       title="日報を編集"
-                    >
-                      <!-- TODO: 編集モーダルを開く -->
-                    </UButton>
+                      @click="openReportEdit(item.report)"
+                    />
                   </template>
 
                   <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
@@ -583,7 +605,12 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
         </UCard>
       </template>
 
-      <!-- TODO: 日報入力・編集モーダルコンポーネントをここに配置する（新人用） -->
+      <ReportInputModal
+        v-if="role === 'trainee'"
+        v-model:open="isReportInputModalOpen"
+        :date="selectedDate"
+        :report="selectedReport"
+      />
       <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
     </div>
   </div>
