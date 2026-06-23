@@ -3,11 +3,6 @@ import { MOOD_VALUES, isMoodValue, type MoodValue } from '#shared/types/api'
 
 type MoodStarsSize = 'xs' | 'sm' | 'md'
 const MOOD_LABEL = '気分'
-const GAP_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
-  xs: 'gap-0.5',
-  sm: 'gap-0.5',
-  md: 'gap-1'
-}
 const BUTTON_SIZE_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
   xs: 'size-4',
   sm: 'size-5',
@@ -42,7 +37,6 @@ const displayValue = computed<MoodValue | undefined>(() =>
   hoveredValue.value ?? selectedValue.value
 )
 
-const containerGapClass = computed(() => props.readonly ? GAP_CLASS_BY_SIZE[props.size] : undefined)
 const buttonSizeClass = computed(() => BUTTON_SIZE_CLASS_BY_SIZE[props.size])
 const iconSizeClass = computed(() => ICON_SIZE_CLASS_BY_SIZE[props.size])
 
@@ -77,7 +71,6 @@ const selectMood = (value: MoodValue) => {
 <template>
   <div
     class="inline-flex items-center"
-    :class="containerGapClass"
     :role="props.readonly ? 'img' : 'group'"
     :aria-label="props.readonly ? readonlyLabel : MOOD_LABEL"
   >

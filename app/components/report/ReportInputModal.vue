@@ -153,10 +153,7 @@ defineExpose({ submit })
               :ui="{ content: 'w-(--reka-popover-trigger-width)' }"
             >
               <template #anchor>
-                <div
-                  class="flex w-full"
-                  @click="checkInPickerOpen = true"
-                >
+                <div class="flex w-full">
                   <UInputTime
                     v-model="checkInValue"
                     granularity="minute"
@@ -173,7 +170,7 @@ defineExpose({ submit })
                     aria-label="出勤時間を選択"
                     aria-haspopup="dialog"
                     :aria-expanded="checkInPickerOpen"
-                    @click.stop="checkInPickerOpen = !checkInPickerOpen"
+                    @click="checkInPickerOpen = !checkInPickerOpen"
                   />
                 </div>
               </template>
@@ -208,10 +205,7 @@ defineExpose({ submit })
               :ui="{ content: 'w-(--reka-popover-trigger-width)' }"
             >
               <template #anchor>
-                <div
-                  class="flex w-full"
-                  @click="checkOutPickerOpen = true"
-                >
+                <div class="flex w-full">
                   <UInputTime
                     v-model="checkOutValue"
                     granularity="minute"
@@ -228,7 +222,7 @@ defineExpose({ submit })
                     aria-label="退勤時間を選択"
                     aria-haspopup="dialog"
                     :aria-expanded="checkOutPickerOpen"
-                    @click.stop="checkOutPickerOpen = !checkOutPickerOpen"
+                    @click="checkOutPickerOpen = !checkOutPickerOpen"
                   />
                 </div>
               </template>
