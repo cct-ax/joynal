@@ -107,11 +107,23 @@ const isCurrentWeek = computed(
 )
 
 // --- 日報データ ---
+const reportsQuery = computed(() => ({
+  weekStart: formatYmd(currentWeekStart.value),
+  userId: selectedTraineeId.value
+}))
+
+const { data: reportList, refresh: refreshReports } = await useFetch<DailyReport[]>(
+  '/api/reports',
+  {
+    query: reportsQuery,
+    default: () => []
+  }
+)
+
 // key: 'YYYY-MM-DD', value: daily_report レコード
-const reports = ref<Record<string, DailyReport>>({})
-// TODO: currentWeekStart と対象ユーザーID をもとに日報を取得して reports に格納する
-//   $fetch('/api/reports', { query: { weekStart: formatYmd(currentWeekStart.value), userId: selectedTraineeId.value ?? undefined } })
-//   取得した配列を Record<string, DailyReport> に変換: Object.fromEntries(data.map(r => [r.date, r]))
+const reports = computed<Record<string, DailyReport>>(() =>
+  Object.fromEntries((reportList.value ?? []).map(report => [report.date, report]))
+)
 
 // --- コメントデータ ---
 const mentorComment = ref<string | null>(null)
@@ -145,6 +157,10 @@ const openReportEdit = (report: DailyReport | undefined): void => {
 
   selectedDate.value = report.date
   selectedReport.value = report
+}
+
+const onReportSaved = async (): Promise<void> => {
+  await refreshReports()
 }
 
 // TODO: 日報詳細モーダルの open/close 制御と選択中のレコード状態を実装する（メンター・OJT用）
@@ -610,6 +626,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
         v-model:open="isReportInputModalOpen"
         :date="selectedDate"
         :report="selectedReport"
+        @saved="onReportSaved"
       />
       <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
     </div>
