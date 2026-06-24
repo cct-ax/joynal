@@ -15,8 +15,8 @@ defineRouteMeta({
           schema: {
             type: 'object',
             properties: {
-              check_in: { type: 'string', description: '出勤時刻 HH:MM' },
-              check_out: { type: 'string', description: '退勤時刻 HH:MM（両方指定時は check_in より後）' },
+              check_in: { type: 'string', description: '出勤時刻 HH:MM（15分単位）' },
+              check_out: { type: 'string', description: '退勤時刻 HH:MM（15分単位、両方指定時は check_in より後）' },
               content: { type: 'string' },
               mood: { type: ['integer', 'null'], description: '気分（1〜5、null で解除）' }
             }

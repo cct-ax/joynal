@@ -30,6 +30,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@iconify-json/mdi": "^1.2.3",
     "@nuxt/eslint": "^1.4.1",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/test-utils": "^4.0.2",
