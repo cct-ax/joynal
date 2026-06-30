@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Time } from '@internationalized/date'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { isMoodValue, type MoodValue } from '#shared/types/api'
+import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
 import type { DailyReport } from '#shared/types/models'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
@@ -17,6 +17,9 @@ const TIME_OPTIONS = Array.from({ length: 24 * 60 / TIME_OPTION_INTERVAL_MINUTES
 })
 
 const open = defineModel<boolean>('open', { required: true })
+const emit = defineEmits<{
+  saved: []
+}>()
 const props = withDefaults(defineProps<{
   date: string | null
   report?: DailyReport | null
@@ -27,6 +30,9 @@ const props = withDefaults(defineProps<{
 const form = useTemplateRef('form')
 const checkInPickerOpen = ref(false)
 const checkOutPickerOpen = ref(false)
+const toast = useToast()
+const apiError = useApiError()
+const loading = ref(false)
 const state = reactive<Partial<ReportSchema>>({
   date: '',
   check_in: '',
@@ -48,6 +54,17 @@ const syncState = (): void => {
   state.check_out = toHm(props.report?.check_out)
   state.content = props.report?.content ?? ''
   state.mood = isMoodValue(props.report?.mood) ? props.report.mood : undefined
+  form.value?.clear()
+}
+
+const resetForm = (): void => {
+  state.date = ''
+  state.check_in = ''
+  state.check_out = ''
+  state.content = ''
+  state.mood = undefined
+  checkInPickerOpen.value = false
+  checkOutPickerOpen.value = false
   form.value?.clear()
 }
 
@@ -83,7 +100,49 @@ const selectCheckOutTime = (time: string): void => {
 }
 
 const submit = async (data: ReportSchema): Promise<void> => {
-  await Promise.resolve(data)
+  const report = props.report
+
+  loading.value = true
+  try {
+    if (report) {
+      const body: ReportUpdateBody = {
+        check_in: data.check_in,
+        check_out: data.check_out,
+        content: data.content,
+        mood: data.mood ?? null
+      }
+      await $fetch(`/api/reports/${report.id}`, {
+        method: 'PUT',
+        body
+      })
+    } else {
+      const body: ReportCreateBody = {
+        date: data.date,
+        check_in: data.check_in,
+        check_out: data.check_out,
+        content: data.content,
+        ...(data.mood !== undefined ? { mood: data.mood } : {})
+      }
+      await $fetch('/api/reports', {
+        method: 'POST',
+        body
+      })
+    }
+
+    toast.add({ title: report ? '日報を更新しました' : '日報を保存しました', color: 'success' })
+    resetForm()
+    emit('saved')
+    open.value = false
+  } catch (error: unknown) {
+    apiError.notify(error, report
+      ? { fallback: '更新に失敗しました' }
+      : {
+          statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+          fallback: '保存に失敗しました'
+        })
+  } finally {
+    loading.value = false
+  }
 }
 
 const onSubmit = (event: FormSubmitEvent<ReportSchema>): Promise<void> =>
@@ -279,6 +338,7 @@ defineExpose({ submit })
         color="neutral"
         variant="ghost"
         class="cursor-pointer"
+        :disabled="loading"
         @click="close"
       >
         キャンセル
@@ -288,6 +348,8 @@ defineExpose({ submit })
         :form="FORM_ID"
         icon="i-lucide-save"
         class="cursor-pointer"
+        :loading="loading"
+        :disabled="loading"
       >
         保存
       </UButton>
