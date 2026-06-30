@@ -2,6 +2,7 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { VueWrapper } from '@vue/test-utils'
 import type { ReportInputModalExposed } from '#shared/types/components'
+import type { DailyReport } from '#shared/types/models'
 import ReportInputModal from './ReportInputModal.vue'
 
 const toastAddMock = vi.fn()
@@ -19,6 +20,18 @@ const validReport = {
   check_out: '18:00',
   content: '日報保存APIを実装',
   mood: 4 as const
+}
+
+const existingReport: DailyReport = {
+  id: '00000000-0000-4000-8000-000000000001',
+  user_id: '00000000-0000-4000-8000-000000000002',
+  date: validReport.date,
+  check_in: '09:00:00',
+  check_out: '18:00:00',
+  content: '更新前の日報',
+  mood: 4,
+  created_at: '2026-06-24T09:00:00Z',
+  updated_at: '2026-06-24T09:00:00Z'
 }
 
 describe('ReportInputModal', () => {
@@ -112,6 +125,72 @@ describe('ReportInputModal', () => {
     expect(notifyMock).toHaveBeenCalledWith(error, {
       statusMessages: { 409: '同じ日付の日報がすでに存在します' },
       fallback: '保存に失敗しました'
+    })
+    expect(toastAddMock).not.toHaveBeenCalled()
+    expect(wrapper.emitted('saved')).toBeUndefined()
+    expect(wrapper.emitted('update:open')).toBeUndefined()
+  })
+
+  it('既存日報を PUT /api/reports/:id で更新する', async () => {
+    fetchMock.mockResolvedValueOnce({})
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: existingReport.date, report: existingReport }
+    })
+
+    await exposedOf(wrapper).submit(validReport)
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/reports/${existingReport.id}`, {
+      method: 'PUT',
+      body: {
+        check_in: validReport.check_in,
+        check_out: validReport.check_out,
+        content: validReport.content,
+        mood: validReport.mood
+      }
+    })
+    expect(toastAddMock).toHaveBeenCalledWith({
+      title: '日報を更新しました',
+      color: 'success'
+    })
+    expect(wrapper.emitted('saved')).toHaveLength(1)
+    expect(wrapper.emitted('update:open')).toContainEqual([false])
+  })
+
+  it('編集時に mood を解除すると null を送信する', async () => {
+    fetchMock.mockResolvedValueOnce({})
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: existingReport.date, report: existingReport }
+    })
+
+    await exposedOf(wrapper).submit({
+      date: validReport.date,
+      check_in: validReport.check_in,
+      check_out: validReport.check_out,
+      content: validReport.content
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/reports/${existingReport.id}`, {
+      method: 'PUT',
+      body: {
+        check_in: validReport.check_in,
+        check_out: validReport.check_out,
+        content: validReport.content,
+        mood: null
+      }
+    })
+  })
+
+  it('編集失敗時は useApiError で通知してモーダルを閉じない', async () => {
+    const error = { statusCode: 500 }
+    fetchMock.mockRejectedValueOnce(error)
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: existingReport.date, report: existingReport }
+    })
+
+    await exposedOf(wrapper).submit(validReport)
+
+    expect(notifyMock).toHaveBeenCalledWith(error, {
+      fallback: '更新に失敗しました'
     })
     expect(toastAddMock).not.toHaveBeenCalled()
     expect(wrapper.emitted('saved')).toBeUndefined()

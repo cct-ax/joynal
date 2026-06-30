@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Time } from '@internationalized/date'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { isMoodValue, type MoodValue, type ReportCreateBody } from '#shared/types/api'
+import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
 import type { DailyReport } from '#shared/types/models'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
@@ -100,34 +100,46 @@ const selectCheckOutTime = (time: string): void => {
 }
 
 const submit = async (data: ReportSchema): Promise<void> => {
-  // 編集 API の接続は後続 issue で行う。
-  if (props.report) {
-    return
-  }
-
-  const body: ReportCreateBody = {
-    date: data.date,
-    check_in: data.check_in,
-    check_out: data.check_out,
-    content: data.content,
-    ...(data.mood !== undefined ? { mood: data.mood } : {})
-  }
+  const report = props.report
 
   loading.value = true
   try {
-    await $fetch('/api/reports', {
-      method: 'POST',
-      body
-    })
-    toast.add({ title: '日報を保存しました', color: 'success' })
+    if (report) {
+      const body: ReportUpdateBody = {
+        check_in: data.check_in,
+        check_out: data.check_out,
+        content: data.content,
+        mood: data.mood ?? null
+      }
+      await $fetch(`/api/reports/${report.id}`, {
+        method: 'PUT',
+        body
+      })
+    } else {
+      const body: ReportCreateBody = {
+        date: data.date,
+        check_in: data.check_in,
+        check_out: data.check_out,
+        content: data.content,
+        ...(data.mood !== undefined ? { mood: data.mood } : {})
+      }
+      await $fetch('/api/reports', {
+        method: 'POST',
+        body
+      })
+    }
+
+    toast.add({ title: report ? '日報を更新しました' : '日報を保存しました', color: 'success' })
     resetForm()
     emit('saved')
     open.value = false
   } catch (error: unknown) {
-    apiError.notify(error, {
-      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
-      fallback: '保存に失敗しました'
-    })
+    apiError.notify(error, report
+      ? { fallback: '更新に失敗しました' }
+      : {
+          statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+          fallback: '保存に失敗しました'
+        })
   } finally {
     loading.value = false
   }
