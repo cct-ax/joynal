@@ -41,7 +41,8 @@ const state = reactive<Partial<ReportSchema>>({
   mood: undefined
 })
 
-const title = computed(() => props.report ? '日報を編集' : '日報を入力')
+const isEdit = computed(() => props.report !== null)
+const title = computed(() => isEdit.value ? '日報を編集' : '日報を入力')
 
 const displayDate = computed(() => {
   const date = parseYmd(state.date ?? '')
@@ -351,7 +352,7 @@ defineExpose({ submit })
         :loading="loading"
         :disabled="loading"
       >
-        保存
+        {{ isEdit ? '更新' : '保存' }}
       </UButton>
     </template>
   </UModal>

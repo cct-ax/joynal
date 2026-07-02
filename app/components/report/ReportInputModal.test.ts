@@ -14,6 +14,9 @@ mockNuxtImport('useApiError', () => () => ({ notify: notifyMock }))
 const exposedOf = (wrapper: VueWrapper): ReportInputModalExposed =>
   wrapper.vm as unknown as ReportInputModalExposed
 
+const submitButtonLabel = (): string | undefined =>
+  document.querySelector<HTMLButtonElement>('button[form="report-input-form"]')?.textContent?.trim()
+
 const validReport = {
   date: '2026-06-24',
   check_in: '09:00',
@@ -49,6 +52,18 @@ describe('ReportInputModal', () => {
     wrapper?.unmount()
     wrapper = null
     vi.unstubAllGlobals()
+  })
+
+  it('新規入力では「保存」、編集では「更新」を主ボタンに表示する', async () => {
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: validReport.date, report: null }
+    })
+
+    expect(submitButtonLabel()).toBe('保存')
+
+    await wrapper.setProps({ report: existingReport })
+
+    expect(submitButtonLabel()).toBe('更新')
   })
 
   it('新規日報を POST /api/reports で保存する', async () => {
