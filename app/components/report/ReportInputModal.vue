@@ -19,6 +19,7 @@ const TIME_OPTIONS = Array.from({ length: 24 * 60 / TIME_OPTION_INTERVAL_MINUTES
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{
   saved: []
+  deleted: []
 }>()
 const props = withDefaults(defineProps<{
   date: string | null
@@ -33,6 +34,8 @@ const checkOutPickerOpen = ref(false)
 const toast = useToast()
 const apiError = useApiError()
 const loading = ref(false)
+const deleteLoading = ref(false)
+const confirmDeleteOpen = ref(false)
 const state = reactive<Partial<ReportSchema>>({
   date: '',
   check_in: '',
@@ -149,9 +152,32 @@ const submit = async (data: ReportSchema): Promise<void> => {
 const onSubmit = (event: FormSubmitEvent<ReportSchema>): Promise<void> =>
   submit(event.data)
 
+const onDelete = async (): Promise<void> => {
+  const report = props.report
+  if (!report || deleteLoading.value) {
+    return
+  }
+
+  deleteLoading.value = true
+  try {
+    await $fetch(`/api/reports/${report.id}`, { method: 'DELETE' })
+    toast.add({ title: '日報を削除しました', color: 'success' })
+    confirmDeleteOpen.value = false
+    resetForm()
+    emit('deleted')
+    open.value = false
+  } catch (error: unknown) {
+    apiError.notify(error, { fallback: '削除に失敗しました' })
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
 watch(open, (isOpen): void => {
   if (isOpen) {
     syncState()
+  } else {
+    confirmDeleteOpen.value = false
   }
 }, { immediate: true })
 
@@ -161,7 +187,7 @@ watch([() => props.date, () => props.report], (): void => {
   }
 })
 
-defineExpose({ submit })
+defineExpose({ submit, onDelete })
 </script>
 
 <template>
@@ -334,26 +360,52 @@ defineExpose({ submit })
     </template>
 
     <template #footer="{ close }">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="ghost"
-        class="cursor-pointer"
-        :disabled="loading"
-        @click="close"
-      >
-        キャンセル
-      </UButton>
-      <UButton
-        type="submit"
-        :form="FORM_ID"
-        icon="i-lucide-save"
-        class="cursor-pointer"
-        :loading="loading"
-        :disabled="loading"
-      >
-        {{ isEdit ? '更新' : '保存' }}
-      </UButton>
+      <div class="flex w-full items-center justify-between gap-3">
+        <UButton
+          v-if="isEdit"
+          type="button"
+          icon="i-lucide-trash-2"
+          color="error"
+          variant="soft"
+          class="cursor-pointer"
+          :disabled="loading || deleteLoading"
+          @click="confirmDeleteOpen = true"
+        >
+          削除
+        </UButton>
+        <div v-else />
+
+        <div class="flex items-center gap-2">
+          <UButton
+            type="button"
+            color="neutral"
+            variant="ghost"
+            class="cursor-pointer"
+            :disabled="loading || deleteLoading"
+            @click="close"
+          >
+            キャンセル
+          </UButton>
+          <UButton
+            type="submit"
+            :form="FORM_ID"
+            icon="i-lucide-save"
+            class="cursor-pointer"
+            :loading="loading"
+            :disabled="loading || deleteLoading"
+          >
+            {{ isEdit ? '更新' : '保存' }}
+          </UButton>
+        </div>
+      </div>
     </template>
   </UModal>
+
+  <ConfirmDialog
+    v-model:open="confirmDeleteOpen"
+    title="日報を削除"
+    message="この日報を削除します。削除後は元に戻せません。よろしいですか？"
+    :loading="deleteLoading"
+    @confirm="onDelete"
+  />
 </template>
