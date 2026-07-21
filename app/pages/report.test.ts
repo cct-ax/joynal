@@ -29,7 +29,7 @@ describe('report ページ', () => {
       global: {
         stubs: {
           ReportInputModal: {
-            template: '<button data-testid="saved" @click="$emit(\'saved\')">saved</button>'
+            template: '<button data-testid="saved" @click="$emit(\'saved\')">saved</button><button data-testid="deleted" @click="$emit(\'deleted\')">deleted</button>'
           }
         }
       }
@@ -46,6 +46,23 @@ describe('report ページ', () => {
       }),
       expect.any(String)
     )
+    expect(refreshReportsMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('日報削除後に一覧を再取得する', async () => {
+    wrapper = await mountSuspended(ReportPage, {
+      global: {
+        stubs: {
+          ReportInputModal: {
+            template: '<button data-testid="deleted" @click="$emit(\'deleted\')">deleted</button>'
+          }
+        }
+      }
+    })
+
+    await wrapper.get('[data-testid="deleted"]').trigger('click')
+    await flushPromises()
+
     expect(refreshReportsMock).toHaveBeenCalledTimes(1)
   })
 })

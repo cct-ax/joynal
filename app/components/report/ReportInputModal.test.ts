@@ -17,6 +17,10 @@ const exposedOf = (wrapper: VueWrapper): ReportInputModalExposed =>
 const submitButtonLabel = (): string | undefined =>
   document.querySelector<HTMLButtonElement>('button[form="report-input-form"]')?.textContent?.trim()
 
+const buttonByLabel = (label: string): HTMLButtonElement | undefined =>
+  Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+    .find(button => button.textContent?.trim() === label)
+
 const validReport = {
   date: '2026-06-24',
   check_in: '09:00',
@@ -169,6 +173,60 @@ describe('ReportInputModal', () => {
     })
     expect(wrapper.emitted('saved')).toHaveLength(1)
     expect(wrapper.emitted('update:open')).toContainEqual([false])
+  })
+
+  it('削除ボタンは編集時のみ表示し、確認ダイアローグを開く', async () => {
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: validReport.date, report: null }
+    })
+
+    expect(buttonByLabel('削除')).toBeUndefined()
+
+    await wrapper.setProps({ report: existingReport })
+    buttonByLabel('削除')?.click()
+    await nextTick()
+
+    expect(document.body.textContent).toContain('削除後は元に戻せません')
+  })
+
+  it('既存日報を DELETE /api/reports/:id で削除する', async () => {
+    fetchMock.mockResolvedValueOnce(null)
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: existingReport.date, report: existingReport }
+    })
+
+    await exposedOf(wrapper).onDelete()
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/reports/${existingReport.id}`, {
+      method: 'DELETE'
+    })
+    expect(toastAddMock).toHaveBeenCalledWith({
+      title: '日報を削除しました',
+      color: 'success'
+    })
+    expect(wrapper.emitted('deleted')).toHaveLength(1)
+    expect(wrapper.emitted('saved')).toBeUndefined()
+    expect(wrapper.emitted('update:open')).toContainEqual([false])
+  })
+
+  it('削除失敗時は useApiError で通知してモーダルを閉じない', async () => {
+    const error = { statusCode: 500 }
+    fetchMock.mockRejectedValueOnce(error)
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: existingReport.date, report: existingReport }
+    })
+
+    buttonByLabel('削除')?.click()
+    await nextTick()
+    await exposedOf(wrapper).onDelete()
+
+    expect(notifyMock).toHaveBeenCalledWith(error, {
+      fallback: '削除に失敗しました'
+    })
+    expect(toastAddMock).not.toHaveBeenCalled()
+    expect(wrapper.emitted('deleted')).toBeUndefined()
+    expect(wrapper.emitted('update:open')).toBeUndefined()
+    expect(document.body.textContent).toContain('削除後は元に戻せません')
   })
 
   it('編集時に mood を解除すると null を送信する', async () => {

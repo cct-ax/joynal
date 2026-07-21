@@ -163,6 +163,10 @@ const onReportSaved = async (): Promise<void> => {
   await refreshReports()
 }
 
+const onReportDeleted = async (): Promise<void> => {
+  await refreshReports()
+}
+
 // TODO: 日報詳細モーダルの open/close 制御と選択中のレコード状態を実装する（メンター・OJT用）
 
 const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
@@ -627,6 +631,7 @@ const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => 
         :date="selectedDate"
         :report="selectedReport"
         @saved="onReportSaved"
+        @deleted="onReportDeleted"
       />
       <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
     </div>
