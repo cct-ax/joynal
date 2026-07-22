@@ -16,6 +16,7 @@ const state = reactive<Partial<PasswordChangeSchema>>({
 })
 
 const toast = useToast()
+const apiError = useApiError()
 const loading = ref(false)
 
 const resetForm = (): void => {
@@ -35,9 +36,9 @@ watch(open, (isOpen): void => {
   }
 })
 
-const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<void> => {
+const submit = async (data: PasswordChangeSchema): Promise<void> => {
   loading.value = true
-  const body = { password: event.data.next }
+  const body = { password: data.next }
 
   try {
     await $fetch<UpdatePasswordResponse>('/api/auth/update-password', {
@@ -46,12 +47,16 @@ const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<voi
     })
     toast.add({ title: 'パスワードを変更しました', color: 'success' })
     close()
-  } catch {
-    toast.add({ title: 'パスワードの変更に失敗しました', color: 'error' })
+  } catch (error: unknown) {
+    apiError.notify(error, { fallback: 'パスワードの変更に失敗しました' })
   } finally {
     loading.value = false
   }
 }
+
+const onSubmit = (event: FormSubmitEvent<PasswordChangeSchema>): Promise<void> => submit(event.data)
+
+defineExpose({ submit })
 </script>
 
 <template>
@@ -72,7 +77,7 @@ const submit = async (event: FormSubmitEvent<PasswordChangeSchema>): Promise<voi
         :schema="passwordChangeSchema"
         :state="state"
         class="space-y-4"
-        @submit="submit"
+        @submit="onSubmit"
       >
         <UFormField
           label="現在のパスワード"
