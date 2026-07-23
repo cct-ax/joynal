@@ -11,8 +11,8 @@ overrides:
   # devalue <5.8.1 は GHSA-77vg-94rm-hx3p（sparse array deserialization の DoS, high）。
   # nuxt/nitro 経由の推移的依存。patched 版へ底上げして pnpm audit --audit-level=high を green に保つ。
   devalue: "^5.8.1"
-  # shell-quote <=1.8.3 は GHSA-w7jw-789q-3m8p（critical）。launch-editor が推移的に引く。
-  shell-quote: "^1.8.4"
+  # shell-quote <=1.8.3 は GHSA-w7jw-789q-3m8p（critical）、<=1.8.4 は GHSA-395f-4hp3-45gv（二次計算量 DoS, high）。launch-editor が推移的に引く。
+  shell-quote: "^1.8.5"
   # esbuild <0.28.1 は GHSA-gv7w-rqvm-qjhr（low）。Vite/fontless が推移的に引く。
   esbuild: "^0.28.1"
   # ws <8.21.0 は GHSA-96hv-2xvq-fx4p（high）。Supabase realtime が推移的に引く。
@@ -21,13 +21,19 @@ overrides:
   vite: "^7.3.5"
   # undici <7.28.0 は GHSA-vmh5-mc38-953g / GHSA-vxpw-j846-p89q / GHSA-hm92-r4w5-c3mj（high）。Wrangler/miniflare が推移的に引く。
   undici: "^7.28.0"
-  # tar <=7.5.15 は GHSA（PAX size override による parser interpretation differential / file smuggling, medium）。推移的依存。
-  tar: "^7.5.16"
+  # tar <=7.5.15 は PAX size override による parser interpretation differential（medium）、
+  # <=7.5.17 は GHSA-8x88-c5mf-7j5w（負の entry size による無限ループ, high）、
+  # <=7.5.18 は GHSA-23hp-3jrh-7fpw（解凍/パースの DoS, critical）。@vercel/nft 経由の推移的依存。
+  tar: "^7.5.19"
   # launch-editor <=2.14.0 は GHSA（Windows UNC パス経由の NTLMv2 hash 漏えい, medium）。Vite 経由の推移的依存。
   launch-editor: "^2.14.1"
-  # brace-expansion <5.0.6 は GHSA-v6h2-p8h4-qcjw（ReDoS, medium）。推移的依存。
-  brace-expansion: "^5.0.6"
-  # js-yaml <=4.1.1 は GHSA-h67p-54hq-rp68（merge key の二次計算量 DoS, moderate）。eslint-typegen 経由の推移的依存。
-  js-yaml: "^4.1.2"
+  # brace-expansion <5.0.6 は GHSA-v6h2-p8h4-qcjw（ReDoS, medium）、<5.0.7 は GHSA-3jxr-9vmj-r5cp（{} 連続グループの指数時間展開 DoS, high）。推移的依存。
+  brace-expansion: "^5.0.7"
+  # js-yaml <=4.1.1 は GHSA-h67p-54hq-rp68（merge key の二次計算量 DoS, moderate）、<4.3.0 は GHSA-52cp-r559-cp3m（merge-key チェーンの二次計算量 CPU, high）。eslint-typegen 経由の推移的依存。
+  js-yaml: "^4.3.0"
   # @babel/core <=7.29.0 は GHSA-4x5r-pxfx-6jf8（sourceMappingURL 経由の任意ファイル読み取り, low）。nitro/vite builder 経由の推移的依存。
   "@babel/core": "^7.29.1"
+  # svgo >=4.0.0 <4.0.2 は GHSA-2p49-hgcm-8545（removeScripts plugin が実行可能要素を残す, high）。推移的依存。
+  svgo: "^4.0.2"
+  # sharp <0.35.0 は GHSA-f88m-g3jw-g9cj（libvips 由来の脆弱性の継承, high）。推移的依存。
+  sharp: "^0.35.0"
