@@ -1,0 +1,60 @@
+name: バグ報告
+description: 不具合・想定外の挙動を報告する
+labels: ["バグ"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        不具合の報告ありがとうございます。再現に必要な情報をできるだけ埋めてください。
+        ※ セキュリティ脆弱性は公開 Issue ではなく [SECURITY.md](../../SECURITY.md) の手順で報告してください。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 何が起きているかを簡潔に書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 不具合を再現する手順を順番に書いてください。
+      placeholder: |
+        1. ログインする
+        2. 日報画面を開く
+        3. 「保存」を押す
+        4. エラーが表示される
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する挙動
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の挙動
+      description: 表示されたエラーメッセージがあれば貼り付けてください。
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: 発生したユーザーロール
+      options:
+        - trainee（新人）
+        - mentor（メンター）
+        - ojt（OJT）
+        - admin（管理者）
+        - 不明 / 未ログイン
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: 環境（ブラウザ・OS など）
+      placeholder: 例) Chrome 130 / macOS
+    validations:
+      required: false
