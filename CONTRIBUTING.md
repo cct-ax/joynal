@@ -179,7 +179,7 @@ pnpm lint:fix         # コードの自動修正・整形（フォーマッタ�
 pnpm typecheck        # 型チェック
 pnpm test             # ユニット・統合テスト実行
 pnpm test:coverage    # カバレッジ付きでテスト実行
-pnpm test:e2e         # E2E（Playwright・設定のみ／spec 未整備）
+pnpm test:e2e         # E2E テスト（Playwright・要ローカル Supabase）
 
 # Supabase の型定義を再生成（DBスキーマを変更した後に実行）
 npx supabase gen types typescript --linked > shared/types/database.types.ts
@@ -190,9 +190,7 @@ PR を出す前に `pnpm lint` と `pnpm test` を実行して green になる�
 
 ### E2E テスト（Playwright）
 
-E2E の **ツールチェーン（`playwright.config.ts`・`pnpm test:e2e`）は用意済み**ですが、**spec は未整備**です（今後追加）。CI では E2E を実行しません。主要フローの検証は当面 MS 結合テスト（手動）でカバーします。
-
-spec を追加する際は、実 RLS を確認するためローカル Supabase スタックに対して実行します（Docker 必須）。`*.spec.ts` は `e2e/**` 配下に置きます。
+主要フロー（ログイン認証・日報CRUD・週次コメント）の E2E は Playwright で、実 RLS を確認するためローカル Supabase スタックに対して実行します（Docker 必須）。
 
 ```bash
 supabase start                               # ローカルスタック起動
@@ -200,6 +198,8 @@ supabase db reset                            # migrations ＋ supabase/seed.sql 
 npx playwright install --with-deps chromium  # 初回のみ: ブラウザ導入
 pnpm test:e2e                                # 実行（playwright.config.ts の webServer が build→preview を起動）
 ```
+
+テストユーザー（共通パスワードは `e2e/fixtures.ts`）: `trainee@e2e.test` / `mentor@e2e.test` / `admin@e2e.test`。**E2E は CI では実行せず**、ローカルでの手動実行のみです。
 
 ### Supabase Auth 設定（メールテンプレ / OTP）
 

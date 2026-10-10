@@ -1,31 +1,34 @@
+---
+description: 3層構成（Nuxt / Nitro / Supabase）とデータアクセス方針・認証/データフロー・ディレクトリ構成。
+---
 
 # アーキテクチャ設計書
 
+このページで分かること: システムの3層構成、フロントが Supabase を直接呼ばない**データアクセス方針**、認証とデータの流れ、ディレクトリ構成。
+
+> 関連: [コンポーネント構成](./component-diagram.md) ・ [DB 設計](./db-design.md) ・ [用語集](./glossary.md)
+
 ## システム概要
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ブラウザ（Vue / Nuxt）                                      │
-│  pages/ · components/ · composables/                        │
-└────────────────────────┬────────────────────────────────────┘
-                         │ $fetch('/api/...')
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Nuxt Server（Nitro / Cloudflare Pages）                    │
-│  server/api/                                                │
-│  ・リクエストのバリデーション                                │
-│  ・serverSupabaseClient でユーザー JWT を引き継ぎ           │
-└────────────────────────┬────────────────────────────────────┘
-                         │ HTTP (JWT 付き)
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Supabase                                                   │
-│  ┌─────────────┐   ┌──────────────────────────────────┐   │
-│  │  Auth       │   │  PostgreSQL + RLS                │   │
-│  │  JWT 発行   │   │  profiles / daily_reports        │   │
-│  │  セッション  │   │  comments / mentor_assignments   │   │
-│  └─────────────┘   └──────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+ブラウザ・Nuxt Server（Nitro）・Supabase の3層構成。ブラウザは Supabase を直接見ず、必ず `server/api/` を経由する（後述の [データアクセス層](#データアクセス層)）。
+
+```mermaid
+flowchart TD
+  subgraph Browser["ブラウザ（Vue / Nuxt）"]
+    BParts["pages/ · components/ · composables/"]
+  end
+
+  subgraph Server["Nuxt Server（Nitro / Cloudflare Pages）"]
+    SParts["server/api/\n・リクエストのバリデーション\n・serverSupabaseClient でユーザー JWT を引き継ぎ"]
+  end
+
+  subgraph Supabase["Supabase"]
+    Auth["Auth\nJWT 発行・セッション"]
+    DB["PostgreSQL + RLS\nprofiles / daily_reports\ncomments / mentor_assignments\nai_summaries / ai_usage"]
+  end
+
+  Browser -->|"$fetch('/api/...')"| Server
+  Server -->|"HTTP（JWT 付き）"| Supabase
 ```
 
 ---
@@ -36,6 +39,7 @@
 |---------|------|-----------|------|
 | フロントエンド | Nuxt 4 + Vue 3 | 4.x | `app/` ディレクトリ構成 |
 | UI コンポーネント | Nuxt UI | 4.x | Tailwind CSS ベース・semantic カラートークン |
+| チャート | @unovis/vue | 1.x | SVG ベース・mood 推移グラフ（`*.client.vue` でクライアント描画のみ） |
 | ユーティリティ | VueUse | latest | `useLocalStorage` 等 |
 | サーバーランタイム | Nitro (Cloudflare Pages) | Nuxt 内蔵 | `server/api/` を実行 |
 | 認証 | Supabase Auth + `@nuxtjs/supabase` | latest | JWT ベース |
@@ -46,6 +50,11 @@
 ---
 
 ## ディレクトリ構成
+
+トップレベルの構成は `app/`（フロントエンド）・`shared/`（app・server 共用の型/純粋ロジック）・`server/`（Nitro の Server API）・`supabase/`（DB マイグレーションと Auth 設定）・`docs/`（設計ドキュメント）。各ファイルの詳細な役割は [コンポーネント構成図の「各ファイルの役割」](./component-diagram.md#各ファイルの役割) を正典とする（ここでは全体像の把握に使う）。
+
+<details>
+<summary>ディレクトリツリー（全体）</summary>
 
 ```
 joynal/
@@ -69,18 +78,25 @@ joynal/
 │   │       ├── ReportInputModal.vue   # 日報入力・編集モーダル（新人）
 │   │       ├── CommentArea.vue        # 週次コメント表示
 │   │       ├── CommentInputModal.vue  # 週次コメント入力（mentor/ojt）
-│   │       └── MoodStars.vue          # 気分★表示・入力
+│   │       ├── MoodStars.vue          # 気分★表示・入力
+│   │       ├── WeeklySummary.vue      # 週次サマリーエリア（mentor/ojt/admin・mood推移グラフの器）
+│   │       ├── MoodTrendChart.client.vue # mood 推移グラフ（@unovis/vue・クライアント専用）
+│   │       ├── CoachHints.vue         # AI コーチングのヒント表示（新人・質問＋短評・代筆なし）
+│   │       └── AiSummaryPanel.vue     # AI 週次サマリー表示（生成/再生成・鮮度バッジ・SSE 逐次表示・参考情報）
 │   ├── composables/
 │   │   ├── useCurrentUser.ts        # profile・role を返す（keyed useAsyncData）
 │   │   ├── useAssignedTrainees.ts   # 担当新人一覧＋選択状態
 │   │   ├── useWeeklyReports.ts      # 週次日報の取得
+│   │   ├── useMoodTrend.ts          # mood 推移の取得（直近N週・週次サマリー用）
+│   │   ├── useCoach.ts              # AI コーチング取得（POST /api/ai/coach）
+│   │   ├── useWeeklySummary.ts      # AI 週次サマリー取得（GET）・生成（POST=SSE ストリーミング、readSseStream で逐次受信）
 │   │   ├── useWeeklyComments.ts     # 週次コメントの取得・振り分け
 │   │   ├── useWeekNavigation.ts     # 週の状態管理
 │   │   ├── useAdminUsers.ts         # 管理画面のユーザー一覧取得・操作
 │   │   ├── useMentorAssignments.ts  # 割り当て編集行のビューモデル生成
 │   │   ├── useLazyOpen.ts           # モーダルの遅延マウント・mounted ゲート
 │   │   └── useApiError.ts           # $fetch エラーのトースト化
-│   ├── utils/                    # app 専用: time / calendarDate / role / fetchError / passwordReset / asyncDataCache
+│   ├── utils/                    # app 専用: time / calendarDate / role / fetchError / passwordReset / asyncDataCache / sse(SSE ストリーム読取)
 │   ├── layouts/
 │   │   └── default.vue           # 全ページ共通ヘッダー・ナビ
 │   ├── middleware/
@@ -114,9 +130,14 @@ joynal/
 │   │   ├── reports/
 │   │   │   ├── index.get.ts      # GET  /api/reports      週の日報一覧
 │   │   │   ├── index.post.ts     # POST /api/reports      日報作成
+│   │   │   ├── mood-trend.get.ts # GET  /api/reports/mood-trend 期間の日次 mood 推移
 │   │   │   └── [id]/
 │   │   │       ├── index.put.ts  # PUT  /api/reports/:id  日報更新
 │   │   │       └── index.delete.ts # DELETE /api/reports/:id 日報削除
+│   │   ├── ai/
+│   │   │   ├── coach.post.ts     # POST /api/ai/coach     新人コーチング（質問＋短評・代筆なし）
+│   │   │   ├── weekly-summary.get.ts  # GET  /api/ai/weekly-summary 週次サマリー取得（キャッシュ）
+│   │   │   └── weekly-summary.post.ts # POST /api/ai/weekly-summary 週次サマリー生成/再生成（SSE ストリーミング）
 │   │   ├── comments/
 │   │   │   ├── index.get.ts      # GET  /api/comments     週次コメント取得
 │   │   │   └── index.put.ts      # PUT  /api/comments     週次コメント保存
@@ -129,7 +150,7 @@ joynal/
 │   │       ├── index.post.ts     # POST /api/users        ユーザー招待（管理者のみ）
 │   │       └── [id]/
 │   │           └── index.put.ts  # PUT  /api/users/:id    ユーザー更新（管理者のみ）
-│   └── utils/                    # server 専用: auth / supabaseError(throwSupabaseError) / validate / year
+│   └── utils/                    # server 専用: auth / supabaseError / validate / year / aiChat(プロバイダ非依存 AI アダプタ・一括/ストリーミング両対応) / aiCoach(コーチング) / aiWeeklySummary(週次サマリー) / aiRateLimit(日次レート上限)
 │
 ├── supabase/
 │   ├── migrations/               # DB マイグレーション SQL
@@ -139,6 +160,8 @@ joynal/
 ├── docs/                         # 設計ドキュメント
 └── nuxt.config.ts
 ```
+
+</details>
 
 ---
 
@@ -308,7 +331,7 @@ sequenceDiagram
 | Server API ユニットテスト | Vitest | ハンドラーの入出力・バリデーション（Supabase クライアントをモック） |
 | Vue コンポーネントテスト | Vitest + Vue Test Utils | UI の表示・操作（`$fetch` をモック） |
 | RLS 統合テスト | Vitest | ロール別アクセス制御（実 DB に接続） |
-| E2E テスト | Playwright（設定のみ・spec 未整備） | 主要フローの spec は今後追加（現状は当面 MS 結合テストで手動確認） |
+| E2E テスト | Playwright（ローカル Supabase） | ログイン認証・日報CRUD・週次コメント入力などの主要フロー |
 
 ---
 
@@ -323,16 +346,22 @@ GitHub (main ブランチ)
   │   ├── build: pnpm build（Cloudflare プリセット）
   │   └── security: pnpm audit --audit-level=high
   │
+  │   ※ E2E（Playwright）は CI では実行せずローカル実行のみ
+  │
   └── Cloudflare Pages（main マージ時に自動デプロイ）
       ├── ビルド: pnpm run build
       ├── Nitro preset: cloudflare-pages
       └── 環境変数:
           ├── NUXT_PUBLIC_SUPABASE_URL    # Supabase プロジェクト URL
           ├── NUXT_PUBLIC_SUPABASE_KEY    # anon（publishable）key
-          └── NUXT_SUPABASE_SECRET_KEY    # service_role（secret）key。ユーザー管理・招待・無効化で
-                                          # service role 経由のアクセスに使う（@nuxtjs/supabase v2 はこの名前で読む）
+          ├── NUXT_SUPABASE_SECRET_KEY    # service_role（secret）key。ユーザー管理・招待・無効化で
+          │                               # service role 経由のアクセスに使う（@nuxtjs/supabase v2 はこの名前で読む）
+          ├── NUXT_ANTHROPIC_API_KEY      # AI（Claude）。コーチング・週次サマリーで使用
+          ├── NUXT_OPENAI_API_KEY         # AI（OpenAI）。プロバイダ切替時に使用
+          ├── NUXT_GEMINI_API_KEY         # AI（Google Gemini）。OpenAI 互換エンドポイント経由
+          └── NUXT_AI_PROVIDER / NUXT_*_MODEL / NUXT_AI_MAX_TOKENS / NUXT_AI_DAILY_LIMIT  # AI 既定（provider/model/トークン上限/日次レート上限）
 ```
 
 > 環境変数は Cloudflare Pages の **Production / Preview スコープごとに別管理**。ブランチデプロイは Preview スコープを参照し、追加後は再デプロイが必要。`NUXT_SUPABASE_SECRET_KEY` 未設定だとユーザー管理系 API（`/api/users` など）が 500 になる。
 
-> **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。
+> **注意**: `server/api/` は Cloudflare Pages Functions として実行される。Cloudflare Workers の制約（Node.js API の一部が使用不可）に注意し、`nuxt.config.ts` の `nitro.cloudflare.nodeCompat: true` で互換レイヤーを有効化している。外部 AI プロバイダ（Claude / OpenAI / Gemini）への送信は SDK を使わず素の `$fetch` で行う（Workers 互換のため。Gemini は OpenAI 互換エンドポイントを使用）。

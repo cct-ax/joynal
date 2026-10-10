@@ -1,11 +1,19 @@
+---
+description: API 共通仕様・エラー形式・エンドポイント索引（詳細は OpenAPI / Scalar が一次情報）。
+---
+
 # API設計書
+
+このページで分かること: API の共通方針、レスポンス/エラー形式、エンドポイント索引。各エンドポイントの詳細は OpenAPI（Scalar）が一次情報。
+
+> 関連: [アーキテクチャ](./architecture.md) ・ [DB 設計](./db-design.md) ・ [用語集](./glossary.md)
 
 本書は API の**方針・共通仕様の概要**をまとめたもの。
 各エンドポイントの詳細（リクエスト/レスポンス/エラー）は、コードから自動生成される**インタラクティブな OpenAPI ドキュメント**を一次情報とする。
 
 > **API ドキュメントの見方（基本は Scalar）**
-> - `pnpm dev` 起動後 → **http://localhost:3000/_scalar** （Scalar UI・叩いて試せる）
-> - 生の OpenAPI spec が要るとき → `/_openapi.json`（Swagger UI 版も同 spec で `/_swagger` にあり）
+> - `pnpm dev` 起動後 → **http://localhost:3000/_docs/scalar**　（Scalar UI・叩いて試せる）
+> - 生の OpenAPI spec が要るとき → `/_docs/openapi.json`（Swagger UI 版も同 spec で `/_docs/swagger` にあり）
 > - **dev 限定**（本番では非公開）。spec は各 `server/api` ハンドラの `defineRouteMeta` から自動生成される。
 
 ---
@@ -13,7 +21,7 @@
 ## 基本方針
 
 - すべてのエンドポイントは `/api/` プレフィックスを持つ
-- フロントは Supabase を直接呼ばず、必ず `server/api/*` 経由。`serverSupabaseClient` がユーザーの JWT を転送し、Supabase RLS が自動適用される
+- フロントは Supabase を直接呼ばず、必ず `server/api/*` 経由（方針の詳細は [アーキテクチャのデータアクセス層](./architecture.md#データアクセス層)）。`serverSupabaseClient` がユーザーの JWT を転送し、Supabase RLS が自動適用される
 - 認証は Cookie の JWT を自動で引き継ぐ（`@nuxtjs/supabase` が処理）
 - レスポンスは常に JSON
 - エラー時は HTTP ステータスコード + `{ message: string }` を返す
@@ -71,7 +79,7 @@ null  // 204 No Content
 
 ## エンドポイント一覧（索引）
 
-詳細（パラメータ・ボディ・レスポンス・エラー）は OpenAPI（`/_scalar`）を参照。
+詳細（パラメータ・ボディ・レスポンス・エラー）は OpenAPI（`/_docs/scalar`）を参照。
 
 | タグ | メソッド | パス | 概要 | 対象ロール |
 |------|---------|------|------|----------|
@@ -79,6 +87,10 @@ null  // 204 No Content
 | reports | POST | `/api/reports` | 日報作成 | 新人 |
 | reports | PUT | `/api/reports/:id` | 日報更新 | 新人（自分のみ） |
 | reports | DELETE | `/api/reports/:id` | 日報削除 | 新人（自分のみ） |
+| reports | GET | `/api/reports/mood-trend` | 期間の日次 mood 推移取得（mood 未入力日は除外） | 全ロール（範囲は RLS） |
+| ai | POST | `/api/ai/coach` | 新人コーチング（振り返りの質問＋短評・代筆なし） | 全ロール（主に新人） |
+| ai | GET | `/api/ai/weekly-summary` | 週次サマリー取得（キャッシュ＋鮮度判定用 max(updated_at)） | 新人＝自分・mentor/ojt/admin＝担当新人 |
+| ai | POST | `/api/ai/weekly-summary` | 週次サマリー生成 / 再生成（**SSE ストリーミング**） | 新人＝自分・mentor/ojt/admin＝担当新人 |
 | comments | GET | `/api/comments` | 週次コメント取得 | 全ロール（範囲は RLS） |
 | comments | PUT | `/api/comments` | 週次コメント保存（upsert） | メンター・OJT |
 | assignments | GET | `/api/assignments/me` | 担当新人一覧取得 | メンター・OJT・管理者 |
@@ -99,7 +111,10 @@ null  // 204 No Content
 
 ## フロントエンドからの呼び出し例
 
-app 側の使い方ガイド（OpenAPI には無い情報）。
+app 側の使い方ガイド（OpenAPI には無い、`$fetch` での呼び出しパターン）。各エンドポイントの正確なパラメータ・レスポンスは `/_docs/scalar` を参照。
+
+<details>
+<summary>各エンドポイントの $fetch 呼び出し例</summary>
 
 ```typescript
 // 日報一覧取得
@@ -121,6 +136,40 @@ await $fetch(`/api/reports/${reportId}`, {
 
 // 日報削除
 await $fetch(`/api/reports/${reportId}`, { method: 'DELETE' })
+
+// mood 推移取得（メンター向け週次サマリーのグラフ用。期間 from〜to ＋ 任意 userId）
+const moodTrend = await $fetch('/api/reports/mood-trend', {
+  query: { from: '2026-03-30', to: '2026-05-22', userId: traineeId }
+})
+
+// AI コーチング（入力中ドラフト＋気分から振り返りの質問＋短評。本文の代筆はしない）
+// 上流 AI 失敗・応答不正は 502（data.code = 'AI_UPSTREAM_ERROR'）
+const coach = await $fetch('/api/ai/coach', {
+  method: 'POST',
+  body: { content: '今日は API を実装した。テストで詰まった。', mood: 3 }
+})
+// → { questions: ['...', '...'], feedback: '...' }
+
+// 週次サマリー取得（キャッシュ）。summary が null なら未生成。
+// 鮮度（再生成要否）は summary.sourceUpdatedAt < latestReportUpdatedAt で判定する
+const weekly = await $fetch('/api/ai/weekly-summary', {
+  query: { userId: traineeId, weekStart: '2026-05-18' }
+})
+
+// 週次サマリー生成 / 再生成（SSE ストリーミング）。
+// 事前チェック（未認証 401・不正ボディ 400・日報なし 422・レート上限 429）は
+// ストリーム開始前に通常の HTTP ステータスで返す。HTTP 200（SSE 開始）後の AI 上流失敗は
+// error イベントで通知する。生成トークンは delta で逐次届き、done で本文確定＋ai_summaries に保存。
+const stream = await $fetch('/api/ai/weekly-summary', {
+  method: 'POST',
+  body: { userId: traineeId, weekStart: '2026-05-18' },
+  responseType: 'stream'
+})
+for await (const frame of readSseStream(stream)) {
+  // event: 'delta' → { text }          … 生成トークン片（連結して全文に）
+  // event: 'done'  → { audience, sourceUpdatedAt } … 完了メタ（鮮度基準）
+  // event: 'error' → { message, code } … AI 上流失敗
+}
 
 // コメント保存
 await $fetch('/api/comments', {
@@ -165,3 +214,5 @@ await $fetch('/api/auth/reset-password-otp', {
   body: { email, token: '123456', password: '...' }
 })
 ```
+
+</details>

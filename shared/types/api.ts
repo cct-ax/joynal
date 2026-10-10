@@ -58,6 +58,90 @@ export type ReportUpdateBody = {
   mood?: MoodValue | null
 }
 
+/** GET /api/reports/mood-trend のクエリ（期間と任意のユーザー絞り込み） */
+export type MoodTrendQuery = {
+  from: string
+  to: string
+  userId?: string
+}
+
+/** mood 推移グラフの1点（日付＋気分）。mood 未入力（NULL）の日は含めない。 */
+export type MoodTrendPoint = {
+  date: string
+  mood: MoodValue
+}
+
+// ----------------------------------------------------------------
+// AI（コーチング・週次サマリー）
+// ----------------------------------------------------------------
+
+/** POST /api/ai/coach のリクエストボディ（入力中ドラフト＋気分。どちらも任意・本文は空可） */
+export type AiCoachBody = {
+  content?: string
+  mood?: MoodValue
+}
+
+/**
+ * POST /api/ai/coach のレスポンス。
+ * 振り返りの深掘り質問（2〜3個）と短い励まし（1〜2文）。本文の代筆はしない。
+ * ドラフトが空のときは questions のみ（スターター質問）、feedback は空文字。
+ */
+export type AiCoachResponse = {
+  questions: string[]
+  feedback: string
+}
+
+/**
+ * 週次サマリーの語り口。
+ * 'self'＝新人本人の振り返り、'mentor'＝メンター/OJT/管理者の観察。
+ * 値はクライアントの指定を信用せず、サーバーが「対象 userId == 自分か」で導出する。
+ */
+export type AiAudience = 'self' | 'mentor'
+
+/** GET /api/ai/weekly-summary のクエリ（対象ユーザー＋週） */
+export type WeeklySummaryQuery = {
+  userId: string
+  weekStart: string
+}
+
+/** POST /api/ai/weekly-summary のリクエストボディ（生成/再生成） */
+export type WeeklySummaryBody = {
+  userId: string
+  weekStart: string
+}
+
+/** 週次サマリー1件分（キャッシュ済みの内容＋鮮度判定用の生成時日報 max(updated_at)） */
+export type WeeklySummaryData = {
+  content: string
+  audience: AiAudience
+  sourceUpdatedAt: string
+}
+
+/**
+ * GET /api/ai/weekly-summary のレスポンス。
+ * summary が null なら未生成。latestReportUpdatedAt はその週の日報 max(updated_at)（無ければ null）。
+ * 鮮度（再生成要否）は summary.sourceUpdatedAt < latestReportUpdatedAt で判定する。
+ */
+export type WeeklySummaryGetResponse = {
+  summary: WeeklySummaryData | null
+  latestReportUpdatedAt: string | null
+}
+
+/**
+ * POST /api/ai/weekly-summary（生成）の SSE イベントの data ペイロード。
+ *
+ * 生成は HTTP 200 + text/event-stream で逐次配信する。事前チェック（認証・バリデーション・
+ * 日報なし 422・レート上限 429）は SSE 開始前に通常の HTTP ステータスで返す。SSE 開始後に
+ * 起きうる AI 上流失敗のみ `error` イベントで配信する。各イベントの data は 1 行 JSON 文字列。
+ *
+ * - event:`delta` → WeeklySummaryDeltaData（生成トークン片。順次連結する）
+ * - event:`done`  → WeeklySummaryDoneData（完了メタ。本文確定・鮮度基準）
+ * - event:`error` → WeeklySummaryErrorData（AI 上流失敗。message/code はエラー封筒と同形）
+ */
+export type WeeklySummaryDeltaData = { text: string }
+export type WeeklySummaryDoneData = { audience: AiAudience, sourceUpdatedAt: string }
+export type WeeklySummaryErrorData = { message: string, code: string }
+
 // ----------------------------------------------------------------
 // Comments
 // ----------------------------------------------------------------

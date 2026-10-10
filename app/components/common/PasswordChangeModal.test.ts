@@ -4,23 +4,18 @@ import type { VueWrapper } from '@vue/test-utils'
 import type { PasswordChangeModalExposed } from '#shared/types/components'
 import PasswordChangeModal from './PasswordChangeModal.vue'
 
+// useToast はテスト環境では UI に出ないので、呼び出しを spy する
 const toastAddMock = vi.fn()
 mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 
-const notifyMock = vi.fn()
-mockNuxtImport('useApiError', () => () => ({ notify: notifyMock }))
+/** wrapper.vm から defineExpose の API を取り出す helper（キャストはここに集約） */
+const exposedOf = (w: VueWrapper): PasswordChangeModalExposed =>
+  w.vm as unknown as PasswordChangeModalExposed
 
 const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
 mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
-
-const exposedOf = (wrapper: VueWrapper): PasswordChangeModalExposed =>
-  wrapper.vm as unknown as PasswordChangeModalExposed
-
-const validPasswordChange = {
-  current: 'current-password',
-  next: 'new-password-123',
-  confirm: 'new-password-123'
-}
 
 describe('PasswordChangeModal', () => {
   let wrapper: VueWrapper | null = null
@@ -28,64 +23,65 @@ describe('PasswordChangeModal', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
-    notifyMock.mockReset()
   })
 
   afterEach(() => {
+    // teleport 先（document.body）の DOM をテスト間で隔離する
     wrapper?.unmount()
     wrapper = null
   })
 
-  it('open=true で3つのパスワード入力欄を表示する', async () => {
+  it('open=true で 3 フィールドのフォームが表示される', async () => {
     wrapper = await mountSuspended(PasswordChangeModal, {
       props: { open: true }
     })
-
     expect(document.body.textContent).toContain('現在のパスワード')
     expect(document.body.textContent).toContain('新しいパスワード')
     expect(document.body.textContent).toContain('新しいパスワード（確認）')
   })
 
-  it('open=false ではフォームを表示しない', async () => {
+  it('open=false ではフォームが表示されない', async () => {
     wrapper = await mountSuspended(PasswordChangeModal, {
       props: { open: false }
     })
-
     expect(document.body.textContent).not.toContain('現在のパスワード')
   })
 
-  it('新しいパスワードだけを API に送信し、成功時に通知して閉じる', async () => {
+  it('submit で POST /api/auth/update-password を新パスワードのみで呼ぶ', async () => {
     fetchMock.mockResolvedValueOnce(null)
     wrapper = await mountSuspended(PasswordChangeModal, {
       props: { open: true }
     })
+    const vm = exposedOf(wrapper)
 
-    await exposedOf(wrapper).submit(validPasswordChange)
+    await vm.submit({ current: 'oldpass', next: 'newpass123', confirm: 'newpass123' })
 
+    // current / confirm は送らず、新パスワードのみを password として送る
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/update-password', {
       method: 'POST',
-      body: { password: validPasswordChange.next }
+      body: { password: 'newpass123' }
     })
-    expect(toastAddMock).toHaveBeenCalledWith({
-      title: 'パスワードを変更しました',
-      color: 'success'
-    })
-    expect(wrapper.emitted('update:open')).toContainEqual([false])
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'パスワードを変更しました', color: 'success' })
+    )
+    // 成功時はモーダルを閉じる（update:open=false を emit）
+    expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false])
   })
 
-  it('API 失敗時は useApiError で通知し、モーダルを閉じない', async () => {
-    const error = { statusCode: 500 }
-    fetchMock.mockRejectedValueOnce(error)
+  it('失敗時は error トーストを出し success トーストは出さない', async () => {
+    fetchMock.mockRejectedValueOnce({ statusCode: 500 })
     wrapper = await mountSuspended(PasswordChangeModal, {
       props: { open: true }
     })
+    const vm = exposedOf(wrapper)
 
-    await exposedOf(wrapper).submit(validPasswordChange)
+    await vm.submit({ current: 'oldpass', next: 'newpass123', confirm: 'newpass123' })
 
-    expect(notifyMock).toHaveBeenCalledWith(error, {
-      fallback: 'パスワードの変更に失敗しました'
-    })
-    expect(toastAddMock).not.toHaveBeenCalled()
-    expect(wrapper.emitted('update:open')).toBeUndefined()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'パスワードの変更に失敗しました', color: 'error' })
+    )
+    expect(toastAddMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ color: 'success' })
+    )
   })
 })

@@ -169,6 +169,28 @@ export const reportUpdateBodySchema = z
     message: 'check_out は check_in より後の時刻を指定してください'
   })
 
+/** GET /api/reports/mood-trend クエリ（期間 from〜to ＋ 任意の userId） */
+export const moodTrendQuerySchema = z.object({
+  from: z.string().regex(ymdRegex, 'from は YYYY-MM-DD 形式で指定してください'),
+  to: z.string().regex(ymdRegex, 'to は YYYY-MM-DD 形式で指定してください'),
+  userId: z.guid().optional()
+})
+
+/** POST /api/ai/coach ボディ（ドラフト本文＋気分。どちらも任意・本文は空可＝スターター質問） */
+export const aiCoachBodySchema = z.object({
+  content: z.string().max(5000, 'content は5000文字以内で指定してください').optional(),
+  mood: moodUnion.optional()
+})
+
+/** GET /api/ai/weekly-summary クエリ（対象ユーザー＋週） */
+export const weeklySummaryQuerySchema = z.object({
+  userId: z.guid(),
+  weekStart: z.string().regex(ymdRegex, 'weekStart は YYYY-MM-DD 形式で指定してください')
+})
+
+/** POST /api/ai/weekly-summary ボディ（生成/再生成）。query と同形。 */
+export const weeklySummaryBodySchema = weeklySummaryQuerySchema
+
 /** GET /api/comments クエリ */
 export const commentsQuerySchema = z.object({
   weekStart: z.string().regex(ymdRegex),

@@ -23,3 +23,8 @@ export type MentorAssignment = Tables<'mentor_assignments'>
 export type MentorAssignmentInsert = TablesInsert<'mentor_assignments'>
 /** メンター担当割り当ての更新用型 */
 export type MentorAssignmentUpdate = TablesUpdate<'mentor_assignments'>
+
+/** AI 週次サマリー行（ai_summaries テーブル） */
+export type AiSummary = Tables<'ai_summaries'>
+/** AI 週次サマリーの挿入用型 */
+export type AiSummaryInsert = TablesInsert<'ai_summaries'>

@@ -2,16 +2,19 @@
 /**
  * パスワードリセット画面（OTP方式・単一フォーム）。
  *
- * メールアドレス入力＋確認コード送信と、新パスワード設定を 1 枚のフォームで行う。
+ * 申請（確認コード送信）と新パスワード設定を 1 枚のフォームで行う。
  * コードは同一ブラウザに手入力する方式のため、リンク着地用の別ページや
- * クロスページの state 引き継ぎは不要。すべて server/api/auth 経由で行い、
- * フロントエンドから Supabase を直接呼ばない。
+ * クロスページの state 引き継ぎは不要。
  *
  * - 「送信/再送」: メール欄右のインラインボタン（type=button）。POST /api/auth/reset-password が
- *   recovery OTP を送信する。フォーム送信ではないので email のみ検証する。
+ *   resetPasswordForEmail で recovery OTP を送信する。フォーム送信ではないので email のみ検証する。
  * - 「パスワードを更新」: フォーム submit。POST /api/auth/reset-password-otp が
- *   コード検証 → パスワード更新 → 全セッション失効を行う。成功時は /login?reset=success へ
- *   external 遷移し、完了 toast は login 画面で出す（リロードを跨ぐため遷移先で表示）。
+ *   verifyOtp(type=recovery) → updateUser → 全セッション失効（signOut）を行う。
+ *   成功時は /login?reset=success へ external 遷移し、完了 toast は login 画面で出す。
+ *
+ * セキュリティ: 更新後はサーバー側で全セッションを失効させるため、/login へは external 遷移で
+ * クライアント状態も確実にクリアする（リロードを跨ぐため完了表示は toast でなく遷移先で行う）。
+ * リンク方式と違い redirect を使わないので Redirect URLs 登録は不要。
  */
 import type { FormSubmitEvent } from '@nuxt/ui'
 import {
@@ -90,152 +93,125 @@ const submitNewPassword = async (data: ResetWithOtpSchema): Promise<void> => {
 }
 
 // UForm の @submit はバリデーション済みデータを event.data で渡す。
-const onSubmitNewPassword = (event: FormSubmitEvent<ResetWithOtpSchema>): Promise<void> =>
-  submitNewPassword(event.data)
+const onSubmitNewPassword = (event: FormSubmitEvent<ResetWithOtpSchema>): Promise<void> => submitNewPassword(event.data)
 
 defineExpose({ requestCode, submitNewPassword })
 </script>
 
 <template>
-  <div class="relative flex min-h-screen items-center justify-center bg-muted px-5 py-8 text-default">
-    <UColorModeButton
-      color="neutral"
-      variant="outline"
-      size="sm"
-      square
-      class="fixed inset-e-4 top-4 z-10 cursor-pointer"
-    />
+  <AuthCard>
+    <template #header>
+      <h1 class="text-xl font-bold tracking-tight">
+        パスワードリセット
+      </h1>
+    </template>
 
-    <!-- TODO(R-7 #82): この UCard を共通 AuthCard へ抽出予定 -->
-    <UCard
-      class="w-full max-w-sm shadow-sm"
-      :ui="{
-        body: 'p-7'
-      }"
+    <!-- 単一フォーム（メール入力＋コード送信＋新パスワード設定） -->
+    <UForm
+      :schema="resetWithOtpSchema"
+      :state="state"
+      class="space-y-4"
+      @submit="onSubmitNewPassword"
     >
-      <div class="mb-5">
-        <h1 class="text-xl font-bold text-highlighted">
-          パスワードリセット
-        </h1>
-        <p class="mt-2 text-sm text-muted">
-          メールアドレスを入力して確認コードを送信し、届いたコードと新しいパスワード（8文字以上）を入力してください。
-        </p>
-      </div>
-
-      <!-- 単一フォーム（メール入力＋コード送信＋新パスワード設定） -->
-      <UForm
-        :schema="resetWithOtpSchema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmitNewPassword"
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        メールアドレスを入力して確認コードを送信し、届いたコードと新しいパスワード（8文字以上）を入力してください。
+      </p>
+      <UFormField
+        name="email"
+        label="メールアドレス"
+        required
+        :error="emailError || undefined"
       >
-        <UFormField
-          label="メールアドレス"
-          name="email"
-          required
-          :error="emailError || undefined"
-        >
-          <div class="flex gap-2">
-            <UInput
-              id="email"
-              v-model="state.email"
-              type="email"
-              autocomplete="email"
-              spellcheck="false"
-              autocapitalize="none"
-              placeholder="mail@example.com"
-              class="flex-1"
-            />
-            <UButton
-              type="button"
-              color="neutral"
-              variant="subtle"
-              :loading="sendLoading"
-              class="cursor-pointer"
-              @click="requestCode({ email: state.email })"
-            >
-              {{ codeSent ? '再送' : '送信' }}
-            </UButton>
-          </div>
-          <p
-            v-if="codeSent"
-            role="status"
-            class="mt-1 flex items-center gap-1 text-sm text-success"
+        <div class="flex gap-2">
+          <UInput
+            v-model="state.email"
+            type="email"
+            autocomplete="email"
+            spellcheck="false"
+            autocapitalize="none"
+            placeholder="mail@example.com"
+            class="flex-1"
+          />
+          <UButton
+            type="button"
+            color="neutral"
+            variant="subtle"
+            :loading="sendLoading"
+            @click="requestCode({ email: state.email })"
           >
-            <UIcon
-              name="i-lucide-check"
-              class="size-4 shrink-0"
-            />
-            確認コードを送信しました
-          </p>
-        </UFormField>
-
-        <UFormField
-          label="確認コード"
-          name="token"
-          required
+            {{ codeSent ? '再送' : '送信' }}
+          </UButton>
+        </div>
+        <p
+          v-if="codeSent"
+          role="status"
+          class="mt-1 flex items-center gap-1 text-sm text-green-600 dark:text-green-400"
         >
-          <UInput
-            id="token"
-            v-model="state.token"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="8"
-            placeholder="メールに記載のコード"
-            class="w-full"
+          <UIcon
+            name="i-lucide-check"
+            class="size-4 shrink-0"
           />
-        </UFormField>
+          確認コードを送信しました
+        </p>
+      </UFormField>
+      <UFormField
+        name="token"
+        label="確認コード"
+        required
+      >
+        <UInput
+          v-model="state.token"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="8"
+          placeholder="メールに記載のコード"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField
+        name="password"
+        label="新しいパスワード"
+        required
+      >
+        <UInput
+          v-model="state.password"
+          type="password"
+          autocomplete="new-password"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField
+        name="confirm"
+        label="新しいパスワード（確認）"
+        required
+      >
+        <UInput
+          v-model="state.confirm"
+          type="password"
+          autocomplete="new-password"
+          class="w-full"
+        />
+      </UFormField>
+      <UButton
+        type="submit"
+        :loading="loading"
+        block
+      >
+        パスワードを更新
+      </UButton>
+    </UForm>
 
-        <UFormField
-          label="新しいパスワード"
-          name="password"
-          required
-        >
-          <UInput
-            id="password"
-            v-model="state.password"
-            type="password"
-            autocomplete="new-password"
-            placeholder="••••••••"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="新しいパスワード（確認）"
-          name="confirm"
-          required
-        >
-          <UInput
-            id="confirm"
-            v-model="state.confirm"
-            type="password"
-            autocomplete="new-password"
-            placeholder="••••••••"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UButton
-          type="submit"
-          color="primary"
-          block
-          :loading="loading"
-          :disabled="loading"
-          class="mt-1 cursor-pointer"
-        >
-          {{ loading ? '更新中...' : 'パスワードを更新' }}
-        </UButton>
-      </UForm>
-
-      <div class="mt-5">
-        <NuxtLink
-          to="/login"
-          class="text-sm text-primary transition hover:underline"
-        >
-          ← ログイン画面に戻る
-        </NuxtLink>
-      </div>
-    </UCard>
-  </div>
+    <template #footer>
+      <NuxtLink
+        to="/login"
+        class="flex items-center justify-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        <UIcon
+          name="i-lucide-arrow-left"
+          class="size-4"
+        />
+        ログイン画面に戻る
+      </NuxtLink>
+    </template>
+  </AuthCard>
 </template>

@@ -1,639 +1,316 @@
 <script setup lang="ts">
-import { getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date'
-import type { Profile, DailyReport } from '#shared/types/models'
-import type { UserRole } from '#shared/types/api'
-import type { ReportWeekday, WeekDayItem } from '#shared/types/report'
+/**
+ * 日報画面（全ロール共通レイアウト）。
+ *
+ * - 週ナビ → 月〜金の ReportRow → CommentArea の縦並び。
+ * - trainee: 自分の日報を CRUD し、その週の mentor/ojt コメントを閲覧する。
+ * - mentor/ojt/admin: 担当新人セレクタで対象を選び、日報を週単位で閲覧する。
+ *   mentor/ojt は CommentInputModal で週次コメントを入力・編集できる。
+ * - 取得・選択ロジックは composable に委譲し、本ページは配線に徹する:
+ *   - useAssignedTrainees（セレクタの状態）
+ *   - useWeeklyReports（週次日報）
+ *   - useWeeklyComments（週次コメント＝mentor/ojt 振り分け）
+ */
+import type { DailyReport } from '#shared/types/models'
 
-// --- ロール & 対象新人 ---
-// TODO: useCurrentUser() composable を使ってロールを取得する（Supabase 直接呼び出しは禁止）
-// const { role: currentRole, isTrainee, isMentor, isOjt, isAdmin, pending } = useCurrentUser()
-const role = ref<UserRole | null>('trainee')
-const selectedTraineeId = ref<string | undefined>(undefined)
-const trainees = ref<Pick<Profile, 'id' | 'name'>[]>([])
-const traineeSelectItems = computed(() =>
-  trainees.value.map(trainee => ({
-    label: trainee.name,
-    value: trainee.id
-  }))
+const { role, profile, isAdmin, isMentor, isOjt, pending: profilePending } = useCurrentUser()
+
+// 週ナビ用の状態（「今週月曜」計算を 1 箇所に集約）
+const { currentWeekStart, weekDays, weekStartYmd } = useWeekNavigation()
+
+// 担当新人セレクタ（非 trainee のみ取得・表示）
+const { traineeOptions, selectedTraineeId, pending: assigneesPending } = useAssignedTrainees()
+
+const isTrainee = computed(() => role.value === 'trainee')
+
+// 対象 ID の派生:
+// - 日報の userId: trainee は送らず RLS に委譲、それ以外は選択中の新人
+// - コメントの traineeId: trainee は自分自身、それ以外は選択中の新人
+const reportUserId = computed<string | undefined>(() =>
+  isTrainee.value ? undefined : (selectedTraineeId.value ?? undefined)
+)
+const commentTraineeId = computed<string | null>(() =>
+  isTrainee.value ? (profile.value?.id ?? null) : selectedTraineeId.value
+)
+// trainee は常に取得、それ以外は新人が選択されているときだけ取得する
+const reportsEnabled = computed(() => isTrainee.value || selectedTraineeId.value !== null)
+
+const { reportByDate, refresh: refreshReports, status: reportsStatus } = useWeeklyReports(
+  weekStartYmd,
+  reportUserId,
+  reportsEnabled
+)
+const { mentorComment, ojtComment, refresh: refreshComments } = useWeeklyComments(
+  weekStartYmd,
+  commentTraineeId
 )
 
-// TODO: ロール取得後、$fetch を使って担当新人一覧を取得して trainees に格納する
-//   メンター・OJT: $fetch('/api/assignments/me', { query: { year } }) → trainee フィールドを展開
-//   管理者: $fetch('/api/users') → role === 'trainee' のみフィルタ
+// 週次サマリー（mentor/ojt/admin が新人を選択中のときだけ取得）。mood 推移グラフで使う。
+const moodTrendEnabled = computed(() => !isTrainee.value && selectedTraineeId.value !== null)
+const { points: moodPoints, series: moodSeries, status: moodStatus } = useMoodTrend(
+  currentWeekStart,
+  reportUserId,
+  moodTrendEnabled
+)
+const moodHasData = computed(() => moodPoints.value.length > 0)
 
-// --- 週ナビゲーション ---
-// TODO(R-8/R-9 #83/#84): 週ナビ→WeekNavigator＋useWeekNavigation・週ジャンプ→WeekPickerModal へ抽出予定。
-// 日付/週ロジックは shared/utils/date.ts の共通関数を使う（auto-import・重複実装を避ける）。
-const currentWeekStart = ref(getMondayOf(new Date()))
-const weekCalendarOpen = ref(false)
-const DAY_LABELS: readonly ReportWeekday[] = ['月', '火', '水', '木', '金']
-const DEFAULT_DAY_LABEL: ReportWeekday = '月'
-const MAX_MOOD = 5
+// 週次 AI サマリー（trainee は自分・非 trainee は選択中の新人）。trainee も対象にする。
+const summaryUserId = computed<string | undefined>(() =>
+  isTrainee.value ? (profile.value?.id ?? undefined) : (selectedTraineeId.value ?? undefined)
+)
+const summaryEnabled = computed(() =>
+  isTrainee.value ? Boolean(profile.value?.id) : selectedTraineeId.value !== null
+)
+const {
+  summary: weeklySummary,
+  stale: summaryStale,
+  generating: summaryGenerating,
+  streamingContent: summaryStreamingContent,
+  generate: generateSummary
+} = useWeeklySummary(weekStartYmd, summaryUserId, summaryEnabled)
 
-const weekDays = computed(() => getWeekDays(currentWeekStart.value))
-
-const weekLabel = computed(() => formatWeekLabel(currentWeekStart.value))
-
-const prevWeek = () => {
-  currentWeekStart.value = addDays(currentWeekStart.value, -7)
+// 詳細展開（mentor/ojt/admin で使う、新人は使わない）
+const expandedDate = ref<string | null>(null)
+const onToggleDetail = (date: Date): void => {
+  const ymd = formatYmd(date)
+  expandedDate.value = expandedDate.value === ymd ? null : ymd
 }
-
-const nextWeek = () => {
-  if (!canGoNextWeek.value) {
-    return
-  }
-
-  currentWeekStart.value = addDays(currentWeekStart.value, 7)
-}
-
-const goToThisWeek = () => {
-  currentWeekStart.value = getMondayOf(new Date())
-}
-
-const calendarValue = computed<DateValue | undefined>({
-  get: () => parseDate(formatYmd(currentWeekStart.value)),
-  set: (value) => {
-    if (!value) {
-      return
-    }
-
-    const selectedWeekStart = getMondayOf(value.toDate(getLocalTimeZone()))
-    const thisMonday = getMondayOf(new Date())
-    const selectedWeekKey = formatYmd(selectedWeekStart)
-    const thisWeekKey = formatYmd(thisMonday)
-    currentWeekStart.value = selectedWeekKey > thisWeekKey ? thisMonday : selectedWeekStart
-    weekCalendarOpen.value = false
-  }
+// 対象新人が変わったら展開状態をリセットする（プロト準拠）
+watch(selectedTraineeId, () => {
+  expandedDate.value = null
 })
 
-const maxCalendarValue = computed(() => parseDate(formatYmd(addDays(getMondayOf(new Date()), 4))))
-
-const isCalendarDateInSelectedWorkWeek = (date: DateValue): boolean => {
-  const dateKey = formatYmd(date.toDate(getLocalTimeZone()))
-  const weekStartKey = formatYmd(currentWeekStart.value)
-  const weekEndKey = formatYmd(addDays(currentWeekStart.value, 4))
-  return dateKey >= weekStartKey && dateKey <= weekEndKey
-}
-
-const isCalendarDateSelectedWeekStart = (date: DateValue): boolean =>
-  formatYmd(date.toDate(getLocalTimeZone())) === formatYmd(currentWeekStart.value)
-
-const getCalendarDayClass = (date: DateValue): string => {
-  if (isCalendarDateSelectedWeekStart(date)) {
-    return 'flex size-7 items-center justify-center rounded-full bg-primary font-semibold text-inverted'
-  }
-  if (isCalendarDateInSelectedWorkWeek(date)) {
-    return 'flex size-7 items-center justify-center rounded-full bg-primary/10 font-medium text-primary'
-  }
-  return 'flex size-7 items-center justify-center rounded-full'
-}
-
-const getCalendarWeekDayClass = (day: string): string => {
-  if (day.includes('土')) {
-    return 'text-info'
-  }
-  if (day.includes('日')) {
-    return 'text-error'
-  }
-  return 'text-default'
-}
-
-const canGoNextWeek = computed(
-  () => formatYmd(currentWeekStart.value) < formatYmd(getMondayOf(new Date()))
+// reports/comments は server:false でクライアント取得するため、SSR と hydration 初期は
+// 必ずスケルトンを描画してボード全体のハイドレーションずれを構造的に避ける（mounted ゲート）。
+// マウント後は profile/assignments の取得状況と reports の取得状況（idle/pending）で判定する。
+const mounted = useMounted()
+const isLoading = usePageLoading(
+  () => !mounted.value,
+  profilePending,
+  assigneesPending,
+  () => reportsStatus.value === 'idle' || reportsStatus.value === 'pending'
 )
 
-const isCurrentWeek = computed(
-  () => formatYmd(currentWeekStart.value) === formatYmd(getMondayOf(new Date()))
+// 担当新人が 1 件以上いるか。
+const hasTrainees = computed(() => traineeOptions.value.length > 0)
+
+// mentor/ojt が担当 0 件: 自分で割り当てを変更できないため管理者への連絡を促す。
+const mentorNoTrainees = computed(() => (isMentor.value || isOjt.value) && !hasTrainees.value)
+
+// admin が新人 0 件: 管理画面で新人を追加するよう CTA を出す。
+const adminNoTrainees = computed(() => isAdmin.value && !hasTrainees.value)
+
+// 非 trainee はセレクタを表示。ただし mentor/ojt が担当 0 件、または admin が新人 0 件のときは
+// 空のセレクタを出しても選べないので隠す。
+// 未選択（admin 初期）のときは空状態を出し、表は描画しない。
+const showSelector = computed(
+  () => !isTrainee.value && !mentorNoTrainees.value && !adminNoTrainees.value
 )
+const showEmpty = computed(() => !isTrainee.value && selectedTraineeId.value === null)
 
-// --- 日報データ ---
-const reportsQuery = computed(() => ({
-  weekStart: formatYmd(currentWeekStart.value),
-  userId: selectedTraineeId.value
-}))
-
-const { data: reportList, refresh: refreshReports } = await useFetch<DailyReport[]>(
-  '/api/reports',
-  {
-    query: reportsQuery,
-    default: () => []
-  }
-)
-
-// key: 'YYYY-MM-DD', value: daily_report レコード
-const reports = computed<Record<string, DailyReport>>(() =>
-  Object.fromEntries((reportList.value ?? []).map(report => [report.date, report]))
-)
-
-// --- コメントデータ ---
-const mentorComment = ref<string | null>(null)
-const ojtComment = ref<string | null>(null)
-// TODO: currentWeekStart と selectedTraineeId をもとにコメントを取得する
-//   $fetch('/api/comments', { query: { weekStart: formatYmd(currentWeekStart.value), traineeId: selectedTraineeId.value } })
-
-// --- モーダル ---
-const selectedDate = ref<string | null>(null)
+// 日報入力・編集モーダル（trainee のみが操作起点）。
+// selectedDate を立てれば開く、null に戻せば閉じる。
 const selectedReport = ref<DailyReport | null>(null)
-
-const isReportInputModalOpen = computed({
+const selectedDate = ref<string | null>(null)
+const isModalOpen = computed({
   get: () => selectedDate.value !== null,
-  set: (isOpen: boolean) => {
-    if (!isOpen) {
-      selectedDate.value = null
+  set: (v: boolean) => {
+    if (!v) {
       selectedReport.value = null
+      selectedDate.value = null
     }
   }
 })
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const reportModalMounted = useLazyOpen(isModalOpen)
 
-const openReportInput = (date: string): void => {
-  selectedDate.value = date
+const onInputReport = (date: Date): void => {
   selectedReport.value = null
+  selectedDate.value = formatYmd(date)
 }
-
-const openReportEdit = (report: DailyReport | undefined): void => {
-  if (!report) {
-    return
-  }
-
-  selectedDate.value = report.date
+const onEditReport = (report: DailyReport): void => {
   selectedReport.value = report
+  selectedDate.value = report.date
 }
-
-const onReportSaved = async (): Promise<void> => {
+const onSaved = async (): Promise<void> => {
+  await refreshReports()
+}
+const onDeleted = async (): Promise<void> => {
   await refreshReports()
 }
 
-const onReportDeleted = async (): Promise<void> => {
-  await refreshReports()
-}
-
-// TODO: 日報詳細モーダルの open/close 制御と選択中のレコード状態を実装する（メンター・OJT用）
-
-const showTraineeSelector = computed(() => role.value && role.value !== 'trainee')
-const showEmptyAdminMessage = computed(() => role.value === 'admin' && !selectedTraineeId.value)
-
-const weekDayItems = computed<WeekDayItem[]>(() => {
-  const todayKey = formatYmd(new Date())
-  return weekDays.value.map((date, index) => {
-    const dateKey = formatYmd(date)
-    return {
-      date,
-      dateKey,
-      weekday: DAY_LABELS[index] ?? DEFAULT_DAY_LABEL,
-      report: reports.value[dateKey],
-      isToday: dateKey === todayKey
-    }
-  })
+// 週次コメント入力モーダル（mentor/ojt のみ）。
+// CommentArea が emit する target（＝自分のロール）で開く。
+const editingCommentRole = ref<'mentor' | 'ojt' | null>(null)
+const isCommentModalOpen = computed({
+  get: () => editingCommentRole.value !== null,
+  set: (v: boolean) => {
+    if (!v) editingCommentRole.value = null
+  }
 })
-
-const trimContent = (content: string, maxLength: number): string =>
-  content.length > maxLength ? `${content.slice(0, maxLength)}...` : content
-
-const moodStars = computed(() => Array.from({ length: MAX_MOOD }, (_, index) => index + 1))
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const commentModalMounted = useLazyOpen(isCommentModalOpen)
+const editingComment = computed(() => {
+  if (editingCommentRole.value === 'mentor') return mentorComment.value
+  if (editingCommentRole.value === 'ojt') return ojtComment.value
+  return null
+})
+const onEditComment = (target: 'mentor' | 'ojt'): void => {
+  editingCommentRole.value = target
+}
+const onCommentSaved = async (): Promise<void> => {
+  await refreshComments()
+}
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-52px)] bg-muted px-4 py-5 text-default sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-[960px] space-y-4">
-      <!-- 新人セレクター（メンター・OJT・管理者のみ） -->
-      <UCard
-        v-if="showTraineeSelector"
-        class="shadow-sm"
-        :ui="{
-          body: 'p-4'
-        }"
+  <div
+    v-if="isLoading"
+    role="status"
+    aria-label="読み込み中…"
+    class="space-y-6"
+  >
+    <UCard :ui="{ body: 'p-0 sm:p-0' }">
+      <div class="border-b border-default px-4 py-3">
+        <USkeleton class="h-8 w-full max-w-md" />
+      </div>
+      <div
+        v-for="i in 5"
+        :key="i"
+        class="flex items-center gap-4 px-4 py-3.5 border-b border-default"
       >
-        <UFormField
-          label="対象"
-          name="trainee-selector"
-        >
-          <USelect
-            id="trainee-selector"
-            v-model="selectedTraineeId"
-            :items="traineeSelectItems"
-            value-key="value"
-            label-key="label"
-            placeholder="新人を選択してください"
-            class="w-full sm:max-w-xs"
-          />
-        </UFormField>
-      </UCard>
+        <USkeleton class="h-4 w-24 shrink-0" />
+        <USkeleton class="h-4 w-28 shrink-0" />
+        <USkeleton class="h-4 flex-1" />
+      </div>
+    </UCard>
+  </div>
 
-      <!-- 管理者で新人未選択の場合 -->
-      <UCard
-        v-if="showEmptyAdminMessage"
-        class="shadow-sm"
-        :ui="{
-          body: 'flex min-h-72 items-center justify-center p-8 text-center'
-        }"
+  <div
+    v-else
+    class="space-y-6"
+  >
+    <!-- 担当新人セレクタ（mentor/ojt/admin） -->
+    <TraineeSelector
+      v-if="showSelector"
+      v-model="selectedTraineeId"
+      :options="traineeOptions"
+      :placeholder="selectedTraineeId === null"
+    />
+
+    <!-- mentor/ojt は担当0件: 自分で割り当てできないので管理者に連絡を促す -->
+    <EmptyState
+      v-if="mentorNoTrainees"
+      icon="i-lucide-clipboard-list"
+      message="担当の新人がまだ割り当てられていません。管理者にお問い合わせください。"
+    />
+
+    <!-- admin は新人0件: 管理画面で新人を追加するよう CTA を表示する -->
+    <EmptyState
+      v-else-if="adminNoTrainees"
+      icon="i-lucide-clipboard-list"
+      message="新人がまだ登録されていません"
+    >
+      <UButton
+        to="/admin"
+        color="primary"
+        variant="solid"
       >
-        <p class="text-sm text-muted">
-          表示したい新人の日報を選んでください
-        </p>
-      </UCard>
+        管理画面で新人を追加
+      </UButton>
+    </EmptyState>
 
-      <template v-else>
-        <!-- 週ナビゲーション -->
-        <UCard
-          class="shadow-sm"
-          :ui="{
-            body: 'p-0 sm:p-0'
-          }"
-        >
-          <div class="border-b border-default p-3 sm:p-4">
-            <div
-              class="grid grid-cols-[2.25rem_minmax(0,1fr)_2.25rem_auto] items-center gap-2 sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]"
-            >
-              <UButton
-                type="button"
-                color="primary"
-                variant="outline"
-                class="size-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
-                aria-label="前の週"
-                @click="prevWeek"
-              >
-                <UIcon
-                  name="i-lucide-chevron-left"
-                  class="size-4 sm:hidden"
-                />
-                <span class="hidden sm:inline">前の週</span>
-              </UButton>
+    <!-- admin 初期など未選択のときは空状態 -->
+    <EmptyState
+      v-else-if="showEmpty"
+      icon="i-lucide-clipboard-list"
+      message="閲覧する新人を選択してください"
+    />
 
-              <UPopover
-                v-model:open="weekCalendarOpen"
-                :content="{ align: 'center', side: 'bottom', sideOffset: 8, collisionPadding: 12 }"
-              >
-                <UButton
-                  type="button"
-                  color="neutral"
-                  variant="soft"
-                  class="min-h-9 w-full min-w-0 cursor-pointer justify-center rounded-md px-2 py-2 text-center text-xs font-medium sm:px-3 sm:text-sm"
-                  aria-label="週をカレンダーで選択"
-                >
-                  <span class="min-w-0 truncate whitespace-nowrap">
-                    {{ weekLabel }}
-                  </span>
-                  <UIcon
-                    name="i-lucide-calendar-days"
-                    class="ml-1 size-4 shrink-0 text-muted"
-                  />
-                </UButton>
+    <UCard
+      v-else
+      :ui="{ body: 'p-0 sm:p-0' }"
+    >
+      <!-- 週ナビ -->
+      <div class="border-b border-default px-4 py-3">
+        <WeekNavigator v-model="currentWeekStart" />
+      </div>
 
-                <template #content>
-                  <div class="p-2">
-                    <UCalendar
-                      v-model="calendarValue"
-                      :max-value="maxCalendarValue"
-                      :week-starts-on="1"
-                      prevent-deselect
-                      color="primary"
-                      variant="subtle"
-                      size="sm"
-                      :ui="{
-                        root: 'min-w-70',
-                        body: 'pt-3',
-                        headCell: 'font-semibold',
-                        cellTrigger: 'data-selected:bg-transparent data-selected:text-inherit data-selected:ring-0'
-                      }"
-                    >
-                      <template #week-day="{ day }">
-                        <span :class="getCalendarWeekDayClass(day)">
-                          {{ day }}
-                        </span>
-                      </template>
-                      <template #day="{ day }">
-                        <span :class="getCalendarDayClass(day)">
-                          {{ day.day }}
-                        </span>
-                      </template>
-                    </UCalendar>
-                  </div>
-                </template>
-              </UPopover>
+      <!-- テーブルヘッダー（PC のみ） -->
+      <div
+        class="max-sm:hidden flex items-center bg-muted border-b border-default text-xs font-semibold text-muted uppercase tracking-wider"
+      >
+        <div class="w-36 shrink-0 px-4 py-2">
+          日付
+        </div>
+        <div class="w-32 shrink-0 px-2 py-2">
+          出退勤
+        </div>
+        <div class="flex-1 px-2 py-2">
+          やったこと
+        </div>
+        <div class="w-28 shrink-0 px-2 py-2 text-center">
+          気分
+        </div>
+        <div class="w-20 shrink-0 px-3 py-2" />
+      </div>
 
-              <UButton
-                type="button"
-                color="primary"
-                variant="outline"
-                class="size-9 cursor-pointer justify-center px-0 sm:w-auto sm:px-3"
-                :disabled="!canGoNextWeek"
-                aria-label="次の週"
-                @click="nextWeek"
-              >
-                <UIcon
-                  name="i-lucide-chevron-right"
-                  class="size-4 sm:hidden"
-                />
-                <span class="hidden sm:inline">次の週</span>
-              </UButton>
-
-              <UButton
-                type="button"
-                color="primary"
-                variant="soft"
-                class="min-h-9 w-auto cursor-pointer justify-center px-3"
-                :disabled="isCurrentWeek"
-                @click="goToThisWeek"
-              >
-                今週
-              </UButton>
-            </div>
-          </div>
-
-          <!-- 週間日報リスト（月〜金） -->
-          <div
-            class="hidden border-b border-default bg-muted text-xs font-semibold tracking-wide text-muted md:grid md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem]"
-          >
-            <div class="px-4 py-2">
-              日付
-            </div>
-            <div class="px-2 py-2">
-              出退勤
-            </div>
-            <div class="px-2 py-2">
-              やったこと
-            </div>
-            <div class="px-2 py-2 text-center">
-              気分
-            </div>
-            <div class="px-3 py-2" />
-          </div>
-
-          <div>
-            <article
-              v-for="item in weekDayItems"
-              :key="item.dateKey"
-              class="border-b border-default last:border-b-0"
-              :class="item.isToday ? 'bg-elevated/50' : 'bg-default'"
-            >
-              <div class="p-4 md:hidden">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span
-                        class="text-[13px] font-semibold"
-                        :class="item.isToday ? 'text-primary' : 'text-highlighted'"
-                      >
-                        {{ formatMonthDay(item.date) }}（{{ item.weekday }}）
-                      </span>
-                      <span
-                        v-if="item.isToday"
-                        class="size-1.5 shrink-0 rounded-full bg-primary"
-                      />
-                      <span
-                        v-if="item.report"
-                        class="truncate text-xs text-muted"
-                      >
-                        {{ item.report.check_in }} 〜 {{ item.report.check_out }}
-                      </span>
-                      <span
-                        v-else
-                        class="text-xs text-dimmed"
-                      >
-                        未入力
-                      </span>
-                    </div>
-
-                    <div
-                      v-if="item.report"
-                      class="mt-1 flex min-w-0 items-center gap-2"
-                    >
-                      <p class="min-w-0 flex-1 truncate text-[13px] text-muted">
-                        {{ trimContent(item.report.content, 60) }}
-                      </p>
-                      <div
-                        v-if="item.report.mood"
-                        class="flex shrink-0 items-center gap-0.5"
-                      >
-                        <span
-                          v-for="star in moodStars"
-                          :key="star"
-                          class="text-xs"
-                          :class="star <= (item.report.mood ?? 0) ? 'text-warning' : 'text-dimmed'"
-                        >
-                          ★
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="shrink-0">
-                    <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
-                    <template v-if="role === 'trainee'">
-                      <UButton
-                        v-if="!item.report"
-                        type="button"
-                        icon="i-lucide-pencil"
-                        color="neutral"
-                        variant="ghost"
-                        size="sm"
-                        square
-                        class="cursor-pointer"
-                        aria-label="日報を入力"
-                        title="日報を入力"
-                        @click="openReportInput(item.dateKey)"
-                      />
-                      <UButton
-                        v-else
-                        type="button"
-                        icon="i-lucide-pencil"
-                        color="neutral"
-                        variant="ghost"
-                        size="sm"
-                        square
-                        class="cursor-pointer"
-                        aria-label="日報を編集"
-                        title="日報を編集"
-                        @click="openReportEdit(item.report)"
-                      />
-                    </template>
-
-                    <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
-                    <template v-else-if="item.report">
-                      <UButton
-                        type="button"
-                        label="詳細"
-                        color="primary"
-                        variant="outline"
-                        size="sm"
-                        class="cursor-pointer"
-                      >
-                        <!-- TODO: 詳細モーダルを開く -->
-                      </UButton>
-                    </template>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                class="hidden md:grid md:grid-cols-[8rem_9rem_minmax(0,1fr)_5rem_5.5rem] md:items-center md:gap-0"
-              >
-                <div class="flex items-center gap-2 md:px-4 md:py-3">
-                  <span
-                    class="text-sm font-medium"
-                    :class="item.isToday ? 'text-primary' : 'text-highlighted'"
-                  >
-                    {{ formatMonthDay(item.date) }}（{{ item.weekday }}）
-                  </span>
-                  <span
-                    v-if="item.isToday"
-                    class="size-1.5 rounded-full bg-primary"
-                  />
-                </div>
-
-                <div class="text-sm text-muted md:px-2 md:py-3">
-                  <template v-if="item.report">
-                    {{ item.report.check_in }} 〜 {{ item.report.check_out }}
-                  </template>
-                  <template v-else>
-                    --
-                  </template>
-                </div>
-
-                <div class="min-w-0 md:px-2 md:py-3">
-                  <p
-                    v-if="item.report"
-                    class="truncate text-sm text-default"
-                  >
-                    {{ trimContent(item.report.content, 80) }}
-                  </p>
-                  <p
-                    v-else
-                    class="text-sm text-dimmed"
-                  >
-                    未入力
-                  </p>
-                </div>
-
-                <div class="flex items-center gap-0.5 md:justify-center md:px-2 md:py-3">
-                  <template v-if="item.report?.mood">
-                    <span
-                      v-for="star in moodStars"
-                      :key="star"
-                      class="text-sm"
-                      :class="star <= (item.report.mood ?? 0) ? 'text-warning' : 'text-dimmed'"
-                    >
-                      ★
-                    </span>
-                  </template>
-                  <span
-                    v-else
-                    class="text-sm text-dimmed"
-                  > -- </span>
-                </div>
-
-                <div class="flex justify-end md:px-3 md:py-3">
-                  <!-- 新人: 未入力→「入力」、入力済み→「編集」 -->
-                  <template v-if="role === 'trainee'">
-                    <UButton
-                      v-if="!item.report"
-                      type="button"
-                      icon="i-lucide-pencil"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      square
-                      class="cursor-pointer"
-                      aria-label="日報を入力"
-                      title="日報を入力"
-                      @click="openReportInput(item.dateKey)"
-                    />
-                    <UButton
-                      v-else
-                      type="button"
-                      icon="i-lucide-pencil"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      square
-                      class="cursor-pointer"
-                      aria-label="日報を編集"
-                      title="日報を編集"
-                      @click="openReportEdit(item.report)"
-                    />
-                  </template>
-
-                  <!-- メンター・OJT・管理者: 入力済みの行のみ「詳細」 -->
-                  <template v-else-if="item.report">
-                    <UButton
-                      type="button"
-                      label="詳細"
-                      color="primary"
-                      variant="outline"
-                      size="sm"
-                      class="cursor-pointer"
-                    >
-                      <!-- TODO: 詳細モーダルを開く -->
-                    </UButton>
-                  </template>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          <!-- 週次コメントエリア -->
-          <div class="border-t-2 border-default p-4 sm:p-5">
-            <h2 class="mb-4 text-xs font-semibold tracking-wide text-muted">
-              週次コメント
-            </h2>
-            <div class="grid gap-4 md:grid-cols-2">
-              <!-- メンターコメント -->
-              <section class="rounded-lg bg-elevated p-4">
-                <div class="mb-2 flex flex-wrap items-center gap-2">
-                  <UBadge
-                    color="success"
-                    variant="soft"
-                    size="sm"
-                    label="メンター"
-                  />
-                  <h3 class="text-sm font-medium text-highlighted">
-                    メンターコメント
-                  </h3>
-                </div>
-                <!-- TODO: role === 'mentor' の場合はテキストエリアで編集可能にする -->
-                <p
-                  class="text-sm leading-7"
-                  :class="mentorComment ? 'text-default' : 'italic text-dimmed'"
-                >
-                  {{ mentorComment ?? 'コメントはまだありません' }}
-                </p>
-              </section>
-
-              <!-- OJTコメント -->
-              <section class="rounded-lg bg-elevated p-4">
-                <div class="mb-2 flex flex-wrap items-center gap-2">
-                  <UBadge
-                    color="secondary"
-                    variant="soft"
-                    size="sm"
-                    label="OJT"
-                  />
-                  <h3 class="text-sm font-medium text-highlighted">
-                    OJTコメント
-                  </h3>
-                </div>
-                <!-- TODO: role === 'ojt' の場合はテキストエリアで編集可能にする -->
-                <p
-                  class="text-sm leading-7"
-                  :class="ojtComment ? 'text-default' : 'italic text-dimmed'"
-                >
-                  {{ ojtComment ?? 'コメントはまだありません' }}
-                </p>
-              </section>
-            </div>
-          </div>
-        </UCard>
-      </template>
-
-      <ReportInputModal
-        v-if="role === 'trainee'"
-        v-model:open="isReportInputModalOpen"
-        :date="selectedDate"
-        :report="selectedReport"
-        @saved="onReportSaved"
-        @deleted="onReportDeleted"
+      <!-- 月〜金の行 -->
+      <ReportRow
+        v-for="day in weekDays"
+        :key="formatYmd(day)"
+        :date="day"
+        :report="reportByDate[formatYmd(day)] ?? null"
+        :role="role ?? 'trainee'"
+        :is-expanded="expandedDate === formatYmd(day)"
+        @input-report="onInputReport"
+        @edit-report="onEditReport"
+        @toggle-detail="onToggleDetail"
       />
-      <!-- TODO: 日報詳細モーダルコンポーネントをここに配置する（メンター・OJT用） -->
-    </div>
+
+      <!-- 週次コメント -->
+      <CommentArea
+        :week-start="currentWeekStart"
+        :mentor-comment="mentorComment"
+        :ojt-comment="ojtComment"
+        :role="role ?? 'trainee'"
+        @edit-comment="onEditComment"
+      />
+    </UCard>
+
+    <!-- 週次サマリー: 非 trainee は mood 推移グラフ＋メンター視点サマリー、trainee は自分の振り返りサマリー -->
+    <WeeklySummary
+      v-if="isTrainee || selectedTraineeId"
+      :show-chart="!isTrainee"
+      :series="moodSeries"
+      :has-data="moodHasData"
+      :loading="moodStatus === 'pending' || moodStatus === 'idle'"
+      :summary="weeklySummary"
+      :summary-stale="summaryStale"
+      :summary-generating="summaryGenerating"
+      :summary-streaming-content="summaryStreamingContent"
+      @generate="generateSummary"
+    />
+
+    <!-- 日報入力・編集モーダル（新人ロールのみが操作起点） -->
+    <LazyReportInputModal
+      v-if="reportModalMounted"
+      v-model:open="isModalOpen"
+      :date="selectedDate"
+      :report="selectedReport"
+      @saved="onSaved"
+      @deleted="onDeleted"
+    />
+
+    <!-- 週次コメント入力モーダル（mentor/ojt） -->
+    <LazyCommentInputModal
+      v-if="commentTraineeId && commentModalMounted"
+      v-model:open="isCommentModalOpen"
+      :week-start="currentWeekStart"
+      :trainee-id="commentTraineeId"
+      :target-role="editingCommentRole ?? 'mentor'"
+      :existing="editingComment"
+      @saved="onCommentSaved"
+    />
   </div>
 </template>

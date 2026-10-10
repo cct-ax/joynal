@@ -69,7 +69,7 @@ pnpm typecheck      # 型チェック（vue-tsc --noEmit）
 pnpm test           # ユニット・統合テスト実行
 pnpm test:watch     # テストをウォッチ実行
 pnpm test:coverage  # カバレッジ付きでテスト実行
-pnpm test:e2e       # E2E（Playwright・設定のみ／spec 未整備）
+pnpm test:e2e       # E2E テスト（Playwright・要ローカル Supabase）
 ```
 
 > フォーマッタは @nuxt/eslint の stylistic ルールが担当するため、Prettier は使いません。
@@ -105,8 +105,9 @@ server/               # Nuxt Server API（ブラウザから直接 Supabase を�
 │   └── users/        # ユーザー管理（me・一覧・招待・更新）
 └── utils/            # server 専用ユーティリティ（auth / supabaseError / validate / year）
 docs/                 # 設計ドキュメント・開発計画
+e2e/                  # Playwright E2E（主要フローの統合テスト・ローカル Supabase）
 supabase/migrations/  # DBマイグレーション
-supabase/seed.sql     # ローカル用シード（テストユーザー）
+supabase/seed.sql     # ローカル/E2E 用シード（テストユーザー）
 ```
 
 開発の進め方は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。

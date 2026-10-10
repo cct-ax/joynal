@@ -1,52 +1,61 @@
 <script setup lang="ts">
+/**
+ * パスワード変更モーダル。
+ *
+ * - 現在のパスワード / 新しい / 確認用 の3フィールド。
+ * - 確認用の一致は passwordChangeSchema の refine で検証する。
+ * - Supabase の auth.updateUser は再認証を要求しないため、現在のパスワードは UX 上の
+ *   ダブルチェックとして使う（API には送らない）。
+ *
+ * design プロト L418-444（PwChangeForm）を Vue 化したもの。
+ */
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { UpdatePasswordResponse } from '#shared/types/api'
-import {
-  passwordChangeSchema,
-  type PasswordChangeSchema
-} from '#shared/types/schemas'
+import { passwordChangeSchema, type PasswordChangeSchema } from '#shared/types/schemas'
 
-const open = defineModel<boolean>('open', { required: true })
-const form = useTemplateRef('form')
+const props = defineProps<{
+  /** 開閉状態（v-model:open） */
+  open: boolean
+}>()
+const emit = defineEmits<{
+  /** 開閉状態の更新（v-model:open） */
+  'update:open': [value: boolean]
+}>()
+
+const toast = useToast()
+const apiError = useApiError()
 
 const state = reactive<Partial<PasswordChangeSchema>>({
   current: '',
   next: '',
   confirm: ''
 })
-
-const toast = useToast()
-const apiError = useApiError()
 const loading = ref(false)
 
-const resetForm = (): void => {
-  state.current = ''
-  state.next = ''
-  state.confirm = ''
-  form.value?.clear()
-}
+const openModel = computed({
+  get: () => props.open,
+  set: (v: boolean) => emit('update:open', v)
+})
 
-const close = (): void => {
-  open.value = false
-}
-
-watch(open, (isOpen): void => {
-  if (!isOpen) {
-    resetForm()
+// モーダルが閉じたら状態をリセットする（次回開いた時に空から始める）
+watch(openModel, (opened) => {
+  if (!opened) {
+    state.current = ''
+    state.next = ''
+    state.confirm = ''
   }
 })
 
+// 送信処理本体。UForm @submit から呼ぶほか、テストでは defineExpose 経由で直接呼ぶ。
+// 現在のパスワードは UX 上のダブルチェック用で API には送らず、新パスワードのみ送信する。
 const submit = async (data: PasswordChangeSchema): Promise<void> => {
   loading.value = true
-  const body = { password: data.next }
-
   try {
-    await $fetch<UpdatePasswordResponse>('/api/auth/update-password', {
+    await $fetch('/api/auth/update-password', {
       method: 'POST',
-      body
+      body: { password: data.next }
     })
     toast.add({ title: 'パスワードを変更しました', color: 'success' })
-    close()
+    openModel.value = false
   } catch (error: unknown) {
     apiError.notify(error, { fallback: 'パスワードの変更に失敗しました' })
   } finally {
@@ -61,87 +70,68 @@ defineExpose({ submit })
 
 <template>
   <UModal
-    v-model:open="open"
+    v-model:open="openModel"
     title="パスワード変更"
-    class="w-full max-w-sm"
-    :ui="{
-      header: 'px-5 py-3.5',
-      title: 'text-base',
-      body: 'p-5',
-      close: 'cursor-pointer'
-    }"
   >
     <template #body>
       <UForm
-        ref="form"
         :schema="passwordChangeSchema"
         :state="state"
         class="space-y-4"
         @submit="onSubmit"
       >
         <UFormField
-          label="現在のパスワード"
           name="current"
+          label="現在のパスワード"
           required
         >
           <UInput
-            id="current-password"
             v-model="state.current"
             type="password"
             autocomplete="current-password"
             class="w-full"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
-
         <UFormField
-          label="新しいパスワード"
           name="next"
+          label="新しいパスワード"
+          hint="8 文字以上"
           required
         >
           <UInput
-            id="new-password"
             v-model="state.next"
             type="password"
             autocomplete="new-password"
             class="w-full"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
-
         <UFormField
-          label="新しいパスワード（確認）"
           name="confirm"
+          label="新しいパスワード（確認）"
           required
         >
           <UInput
-            id="confirm-password"
             v-model="state.confirm"
             type="password"
             autocomplete="new-password"
             class="w-full"
-            :ui="{ base: 'w-full' }"
           />
         </UFormField>
 
-        <div class="flex justify-end gap-2 pt-1">
+        <div class="flex justify-end gap-2 pt-2">
           <UButton
-            type="button"
+            variant="outline"
             color="neutral"
-            variant="ghost"
-            class="cursor-pointer"
-            @click="close"
+            :disabled="loading"
+            @click="openModel = false"
           >
             キャンセル
           </UButton>
           <UButton
             type="submit"
-            color="primary"
             :loading="loading"
-            :disabled="loading"
-            class="cursor-pointer"
           >
-            {{ loading ? '変更中...' : '変更する' }}
+            変更する
           </UButton>
         </div>
       </UForm>

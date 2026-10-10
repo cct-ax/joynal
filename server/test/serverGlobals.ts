@@ -1,8 +1,11 @@
 import { vi } from 'vitest'
+import { createEventStream } from 'h3'
 import { assertAdminRole, serverUserId } from '../utils/auth'
 import { parseBody, parseQuery, parseRouteParam } from '../utils/validate'
 import { resolveYear } from '../utils/year'
 import { throwSupabaseError } from '../utils/supabaseError'
+import { aiChat, aiChatStream } from '../utils/aiChat'
+import { assertWithinDailyLimit } from '../utils/aiRateLimit'
 
 /**
  * server ハンドラのユニットテスト用グローバル提供。
@@ -27,3 +30,7 @@ vi.stubGlobal('parseQuery', parseQuery)
 vi.stubGlobal('parseRouteParam', parseRouteParam)
 vi.stubGlobal('resolveYear', resolveYear)
 vi.stubGlobal('throwSupabaseError', throwSupabaseError)
+vi.stubGlobal('aiChat', aiChat)
+vi.stubGlobal('aiChatStream', aiChatStream)
+vi.stubGlobal('createEventStream', createEventStream)
+vi.stubGlobal('assertWithinDailyLimit', assertWithinDailyLimit)

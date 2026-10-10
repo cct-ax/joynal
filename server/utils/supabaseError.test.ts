@@ -10,11 +10,9 @@
  * createError は Nitro の auto-import。throw された H3Error の statusCode / statusMessage / data を検証する。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { PostgrestError } from '@supabase/supabase-js'
-import { throwSupabaseError } from './supabaseError'
+import { throwSupabaseError, type SupabaseQueryError } from './supabaseError'
 
-const makeError = (code: string): PostgrestError =>
-  new PostgrestError({ message: 'db error', details: '', hint: '', code })
+const makeError = (code: string): SupabaseQueryError => ({ message: 'db error', code })
 
 afterEach(() => {
   vi.restoreAllMocks()

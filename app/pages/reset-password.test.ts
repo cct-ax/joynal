@@ -11,12 +11,14 @@ const navigateToMock = vi.fn()
 // factory は hoist されるため、navigateToMock は呼び出し時に遅延参照する（直接返すと初期化前アクセスになる）
 mockNuxtImport('navigateTo', () => (...args: unknown[]) => navigateToMock(...args))
 
-const fetchMock = vi.fn()
-mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
-
 /** wrapper.vm から defineExpose の API を取り出す helper */
 const exposedOf = (w: VueWrapper): ResetPasswordPageExposed =>
   w.vm as unknown as ResetPasswordPageExposed
+
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
 describe('reset-password ページ', () => {
   let wrapper: VueWrapper | null = null

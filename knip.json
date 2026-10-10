@@ -3,7 +3,6 @@
   "ignoreDependencies": [
     "@vueuse/core",
     "wrangler",
-    "@supabase/supabase-js",
     "h3",
     "vitest-environment-nuxt"
   ],

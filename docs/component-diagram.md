@@ -1,29 +1,78 @@
+---
+description: ページ / コンポーネント / composable / API の依存関係図とファイル役割一覧。
+---
+
 # コンポーネント構成図
+
+このページで分かること: 画面を構成するページ・コンポーネント・composable・サーバー API の依存関係と、各ファイルの役割。
+
+> 関連: [アーキテクチャ](./architecture.md) ・ [画面 UI 仕様](./design-spec.md) ・ [用語集](./glossary.md)
 
 > コンポーネントは `app/components/` 配下をドメイン別フォルダ（`admin/` `common/` `report/`）で整理している。
 > `pathPrefix: false` を設定しているため、コンポーネント名はフォルダ名を含まず据え置き（`<UserTable>` のように使う）。
 
+依存関係は3つの視点に分けて示す。**①ルーティングとデータの流れ**（リクエストがどこを通るか）・**②画面のコンポーネント構成**（画面が何で出来ているか）・**③composable と型の依存**（状態とデータ取得の依存）。
+
+### 図1: ルーティングとデータの流れ
+
+エントリ（`app.vue`）からレイアウト・ページを経て、`$fetch` で Server API を呼び、Server API が Supabase / AI プロバイダへ到達するまでの経路。
+
 ```mermaid
 graph TD
-  subgraph Entry["エントリーポイント"]
-    AppVue["app.vue"]
+  AppVue["app.vue"]
+  AuthMiddleware["middleware/auth.global.ts\n/admin アクセス時に admin ロールを確認"]
+  DefaultLayout["layouts/default.vue\nAppHeader / AppFooter"]
+
+  subgraph Pages["ページ (app/pages/)"]
+    LoginPage["login.vue / reset-password.vue / confirm.vue"]
+    ReportPage["report.vue（/report）\n週次日報＋コメント・ロール別表示"]
+    AdminPage["admin.vue（/admin）\nユーザー管理／割り当て"]
   end
 
-  subgraph Middleware["ミドルウェア"]
-    AuthMiddleware["auth.global.ts\n/admin アクセス時に\nadmin ロールを確認"]
+  subgraph ServerAPI["Server API (server/api/)"]
+    ReportsAPI["reports/ GET·POST·PUT·DELETE·mood-trend"]
+    CommentsAPI["comments/ GET·PUT(upsert)"]
+    AssignmentsAPI["assignments/ GET /me·PUT"]
+    UsersAPI["users/ GET·POST·PUT·GET /me"]
+    AuthAPI["auth/ login·logout·reset·reset-otp·update-password"]
+    AiAPI["ai/ coach(POST)·weekly-summary(GET·POST)"]
   end
 
-  subgraph Layout["レイアウト"]
-    DefaultLayout["layouts/default.vue\nAppHeader / AppFooter"]
+  subgraph External["外部サービス"]
+    SupabaseAuth["Supabase Auth\nJWT・セッション"]
+    SupabaseDB["Supabase PostgreSQL + RLS\nprofiles / daily_reports / comments\nmentor_assignments / ai_summaries / ai_usage"]
+    AiProvider["AI プロバイダ（素の $fetch）\nClaude / OpenAI / Gemini"]
   end
 
-  subgraph Pages["ページ"]
-    LoginPage["login.vue"]
-    ResetPage["reset-password.vue\nリセット（コード送信〜新パスワード設定）"]
-    ConfirmPage["confirm.vue"]
-    ReportPage["report.vue\n/report\n週次日報＋コメント\nロール別表示切替"]
-    AdminPage["admin.vue\n/admin\nユーザー管理／割り当て"]
-  end
+  AppVue --> DefaultLayout
+  DefaultLayout --> Pages
+  AuthMiddleware -. "/admin" .-> AdminPage
+
+  ReportPage --"$fetch / useAsyncData"--> ReportsAPI
+  ReportPage --> CommentsAPI
+  ReportPage --> AssignmentsAPI
+  ReportPage --> AiAPI
+  LoginPage --> AuthAPI
+  AdminPage --> UsersAPI
+  AdminPage --> AssignmentsAPI
+
+  ReportsAPI --> SupabaseDB
+  CommentsAPI --> SupabaseDB
+  AssignmentsAPI --> SupabaseDB
+  UsersAPI --> SupabaseDB
+  AuthAPI --> SupabaseAuth
+  AiAPI --> AiProvider
+```
+
+### 図2: 画面のコンポーネント構成
+
+`report.vue` / `admin.vue` と共通レイアウトが抱える子コンポーネントの入れ子。`report/` `common/` `admin/` のドメイン別フォルダで整理する。
+
+```mermaid
+graph TD
+  DefaultLayout["layouts/default.vue"]
+  ReportPage["report.vue"]
+  AdminPage["admin.vue"]
 
   subgraph ReportParts["components/report/"]
     TraineeSelector["TraineeSelector\n担当新人セレクタ"]
@@ -34,14 +83,10 @@ graph TD
     ReportInputModal["ReportInputModal\n日報入力・編集（新人）"]
     CommentInputModal["CommentInputModal\n週次コメント入力（mentor/ojt）"]
     MoodStars["MoodStars\n気分★"]
-  end
-
-  subgraph SharedUI["components/common/"]
-    AppHeaderFooter["AppHeader / AppFooter / AuthCard"]
-    EmptyState["EmptyState"]
-    ConfirmDialog["ConfirmDialog"]
-    RoleBadge["RoleBadge"]
-    PasswordChangeModal["PasswordChangeModal"]
+    WeeklySummary["WeeklySummary\n週次サマリーエリア"]
+    MoodTrendChart["MoodTrendChart.client\nmood 推移グラフ（@unovis/vue）"]
+    CoachHints["CoachHints\nAI コーチングのヒント（新人）"]
+    AiSummaryPanel["AiSummaryPanel\nAI 週次サマリー表示"]
   end
 
   subgraph AdminParts["components/admin/"]
@@ -50,48 +95,62 @@ graph TD
     AssignmentRow["AssignmentRow\nメンター/OJT 割り当て1行"]
   end
 
-  subgraph Composables["Composables"]
+  subgraph SharedUI["components/common/"]
+    AppHeaderFooter["AppHeader / AppFooter / AuthCard"]
+    PasswordChangeModal["PasswordChangeModal"]
+    Misc["EmptyState / ConfirmDialog / RoleBadge"]
+  end
+
+  DefaultLayout --> AppHeaderFooter
+  AppHeaderFooter --> PasswordChangeModal
+
+  ReportPage --> TraineeSelector
+  ReportPage --> WeekNavigator
+  ReportPage --> ReportRow
+  ReportPage --> CommentArea
+  ReportPage --> WeeklySummary
+  ReportPage --> ReportInputModal
+  ReportPage --> CommentInputModal
+  ReportRow --> ReportRowDetail
+  ReportRow --> MoodStars
+  ReportInputModal --> CoachHints
+  WeeklySummary --> MoodTrendChart
+  WeeklySummary --> AiSummaryPanel
+
+  AdminPage --> UserTable
+  AdminPage --> UserFormModal
+  AdminPage --> AssignmentRow
+```
+
+### 図3: composable と型の依存
+
+ページが状態・データ取得を委ねる composable と、`shared/types/` の型の依存関係。composable は内部で `$fetch` / `useAsyncData` により図1の Server API を呼ぶ。
+
+```mermaid
+graph TD
+  subgraph Pages["ページ"]
+    DefaultLayout["layouts/default.vue"]
+    ReportPage["report.vue"]
+    AdminPage["admin.vue"]
+  end
+
+  subgraph Composables["composables/"]
     UseCurrentUser["useCurrentUser\nprofile / role / is*"]
     UseAssignedTrainees["useAssignedTrainees\n担当新人一覧＋選択状態"]
     UseWeeklyReports["useWeeklyReports\n週次日報の取得"]
     UseWeeklyComments["useWeeklyComments\n週次コメント取得・振り分け"]
     UseWeekNavigation["useWeekNavigation\n週の状態管理"]
+    UseWeeklySummary["useWeeklySummary\nAI 週次サマリー取得・生成"]
     UseAdminUsers["useAdminUsers\nユーザー一覧取得・操作"]
     UseMentorAssignments["useMentorAssignments\n割り当て編集行のVM"]
-    UseLazyOpen["useLazyOpen\nモーダル遅延マウント"]
-    UseModalForm["useModalForm\n入力モーダルの lifecycle 共通化"]
-    UsePageLoading["usePageLoading\nページの pending 集約"]
-    UseApiError["useApiError\n$fetch エラーのトースト化"]
   end
 
-  subgraph Types["型定義"]
-    DBTypes["shared/types/database.types.ts\nSupabase 自動生成（編集禁止）"]
-    Models["shared/types/models.ts\nDailyReport / Comment / Profile"]
-    ApiTypes["shared/types/api.ts\nリクエスト/レスポンス型・共有定数"]
-    Schemas["shared/types/schemas.ts\nZod スキーマ（app・server 共用）"]
+  subgraph Types["型定義 (shared/types/)"]
+    DBTypes["database.types.ts\nSupabase 自動生成（編集禁止）"]
+    Models["models.ts\nDailyReport / Comment / Profile"]
+    ApiTypes["api.ts\nリクエスト/レスポンス型・共有定数"]
+    Schemas["schemas.ts\nZod スキーマ（app・server 共用）"]
   end
-
-  subgraph ServerAPI["Server API (server/api/)"]
-    ReportsAPI["reports/ GET·POST·PUT·DELETE"]
-    CommentsAPI["comments/ GET·PUT(upsert)"]
-    AssignmentsAPI["assignments/ GET /me·PUT"]
-    UsersAPI["users/ GET·POST·PUT, GET /me"]
-    AuthAPI["auth/ login·logout·reset·reset-otp·update-password"]
-  end
-
-  subgraph Supabase["Supabase（外部サービス）"]
-    SupabaseAuth["Auth（JWT・セッション）"]
-    SupabaseDB["PostgreSQL + RLS\nprofiles / daily_reports\ncomments / mentor_assignments"]
-  end
-
-  AppVue --> DefaultLayout
-  DefaultLayout --> Pages
-  AuthMiddleware -. "/admin" .-> AdminPage
-
-  ReportPage --> ReportParts
-  ReportPage --> CommentArea
-  ReportRow --> ReportRowDetail
-  AdminPage --> AdminParts
 
   DefaultLayout --> UseCurrentUser
   ReportPage --> UseCurrentUser
@@ -99,26 +158,16 @@ graph TD
   ReportPage --> UseWeeklyReports
   ReportPage --> UseWeeklyComments
   ReportPage --> UseWeekNavigation
+  ReportPage --> UseWeeklySummary
   AdminPage --> UseAdminUsers
   AdminPage --> UseMentorAssignments
 
-  ReportPage --"$fetch / useAsyncData"--> ReportsAPI
-  ReportPage --> CommentsAPI
-  ReportPage --> AssignmentsAPI
-  LoginPage --> AuthAPI
-  AdminPage --> UsersAPI
-  AdminPage --> AssignmentsAPI
-
-  ReportsAPI --> SupabaseDB
-  CommentsAPI --> SupabaseDB
-  AssignmentsAPI --> SupabaseDB
-  UsersAPI --> SupabaseDB
-  AuthAPI --> SupabaseAuth
-
-  UseCurrentUser --> UsersAPI
-  Models --> DBTypes
   ApiTypes --> Models
+  Models --> DBTypes
+  Schemas --> ApiTypes
 ```
+
+> このほかの composable（`useMoodTrend` / `useCoach` / `useLazyOpen` / `useModalForm` / `usePageLoading` / `useApiError`）と各ファイルの役割は下表を参照。
 
 ---
 
@@ -161,6 +210,10 @@ graph TD
 | `ReportInputModal.vue` | 日報の入力・編集モーダル（新人のみ） | `report.vue` |
 | `CommentArea.vue` | 週次コメント表示（mentor/ojt 2カラム）。自ロールのときだけ入力/編集ボタン | `report.vue` |
 | `CommentInputModal.vue` | 週次コメント入力・編集モーダル（mentor/ojt） | `report.vue` |
+| `WeeklySummary.vue` | 週次サマリーエリア。mentor/ojt/admin は mood 推移グラフ＋AI サマリー、新人本人は AI サマリーのみ | `report.vue` |
+| `MoodTrendChart.client.vue` | mood 推移グラフ（@unovis/vue・SVG・クライアント専用描画） | `WeeklySummary` |
+| `CoachHints.vue` | AI コーチングのヒント表示（質問＋短評・本文挿入導線なし＝代筆防止） | `ReportInputModal`（Lazy） |
+| `AiSummaryPanel.vue` | AI 週次サマリー表示（生成/再生成・鮮度バッジ・SSE 逐次表示＋カーソル・「参考情報」注記） | `WeeklySummary` |
 
 #### `admin/`（管理UI）
 
@@ -179,14 +232,19 @@ graph TD
 | `useCurrentUser.ts` | ログインユーザーの `profiles` を取得（keyed `useAsyncData('current-user')`）。`role` / `isAdmin` / `isMentor` / `isOjt` / `isTrainee` を返す |
 | `useAssignedTrainees.ts` | 非 trainee 向けに担当新人一覧（`GET /api/assignments/me`）を取得。`traineeOptions` と書き込み可能 computed の `selectedTraineeId`（mentor/ojt は先頭既定選択、admin は未選択） |
 | `useWeeklyReports.ts` | 指定週・対象ユーザーの日報を取得（keyed `useAsyncData('reports-week', { server: false })`）。`reportByDate` 索引も提供 |
+| `useMoodTrend.ts` | 選択中ユーザーの mood 推移を取得（keyed `useAsyncData('mood-trend', { server: false })`・直近N週）。`series`（平日網羅・未入力日は null＝グラフのギャップ）を提供 |
 | `useWeeklyComments.ts` | 指定週・対象新人の週次コメントを取得し `commenter.role` で mentor/ojt に振り分け |
 | `useWeekNavigation.ts` | 「今週月曜」計算と前後/任意週ジャンプの状態管理 |
 | `useAdminUsers.ts` | 管理画面のユーザー一覧取得（`GET /api/users`）・招待/更新/無効化の操作 |
 | `useMentorAssignments.ts` | 全新人を網羅した割り当て編集行（`AssignmentRowVM`）とメンター/OJT 選択肢を生成 |
 | `useLazyOpen.ts` | モーダルの遅延マウント・`mounted` ゲート（初回オープンまで生成を遅らせる） |
+| `useModalForm.ts` | 入力モーダルの lifecycle 共通化（open 時の state リセット＋submit の loading/エラー処理）。重複が揃ってから集約した共通部品 |
+| `usePageLoading.ts` | ページ内の複数 `pending` を集約し、画面全体のローディング状態を1つに束ねる |
+| `useCoach.ts` | AI コーチング取得（`POST /api/ai/coach`・$fetch + useApiError）。`hints` / `pending` / `fetchHints` / `reset` を提供 |
+| `useWeeklySummary.ts` | AI 週次サマリー取得（GET・keyed useAsyncData）・生成（POST=**SSE ストリーミング**・`readSseStream` で逐次受信）。`summary` / `stale` / `generating` / `streamingContent` / `generate` を提供 |
 | `useApiError.ts` | `$fetch` エラーを statusCode/code 別メッセージでトースト通知 |
 
-> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts`）、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts`）。
+> ユーティリティ関数は app 専用が `app/utils/`（`time.ts` / `calendarDate.ts` / `role.ts` / `fetchError.ts` / `passwordReset.ts` / `asyncDataCache.ts` / `sse.ts`（SSE ストリーム読取 `readSseStream`））、app・server 共通の純粋ロジックは `shared/utils/`（`date.ts`）。server 専用は `server/utils/`（`auth.ts` / `supabaseError.ts` / `validate.ts` / `year.ts` / `aiChat.ts`（プロバイダ非依存 AI アダプタ・一括/ストリーミング両対応）/ `aiCoach.ts`（コーチング）/ `aiWeeklySummary.ts`（週次サマリー）/ `aiRateLimit.ts`（日次レート上限））。
 
 ### 型定義
 
@@ -206,6 +264,10 @@ graph TD
 |---------|-------------|------|
 | `reports/index.get.ts` | `GET /api/reports` | 週の日報一覧（`userId` 指定で対象新人を絞り込み） |
 | `reports/index.post.ts` | `POST /api/reports` | 日報作成 |
+| `reports/mood-trend.get.ts` | `GET /api/reports/mood-trend` | 期間の日次 mood 推移（mood 未入力日は除外・範囲は RLS） |
+| `ai/coach.post.ts` | `POST /api/ai/coach` | 新人コーチング（質問＋短評・代筆なし・上流失敗は 502） |
+| `ai/weekly-summary.get.ts` | `GET /api/ai/weekly-summary` | 週次サマリー取得（キャッシュ＋鮮度用 max(updated_at)・生成しない） |
+| `ai/weekly-summary.post.ts` | `POST /api/ai/weekly-summary` | 週次サマリー生成/再生成（**SSE ストリーミング**・delta/done/error・audience 導出・完了時 upsert・日報無は 422） |
 | `reports/[id]/index.put.ts` | `PUT /api/reports/:id` | 日報更新 |
 | `reports/[id]/index.delete.ts` | `DELETE /api/reports/:id` | 日報削除 |
 | `comments/index.get.ts` | `GET /api/comments` | 週次コメント取得（weekStart + traineeId） |

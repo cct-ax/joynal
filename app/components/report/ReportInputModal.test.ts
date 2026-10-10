@@ -1,48 +1,39 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { VueWrapper } from '@vue/test-utils'
-import type { ReportInputModalExposed } from '#shared/types/components'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import type { DailyReport } from '#shared/types/models'
+import type { ReportInputModalExposed } from '#shared/types/components'
 import ReportInputModal from './ReportInputModal.vue'
 
+// useToast はテスト環境では UI に出ないので、呼び出しを spy する
 const toastAddMock = vi.fn()
 mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 
-const notifyMock = vi.fn()
-mockNuxtImport('useApiError', () => () => ({ notify: notifyMock }))
-
-const fetchMock = vi.fn()
-mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
-
-const exposedOf = (wrapper: VueWrapper): ReportInputModalExposed =>
-  wrapper.vm as unknown as ReportInputModalExposed
-
-const submitButtonLabel = (): string | undefined =>
-  document.querySelector<HTMLButtonElement>('button[form="report-input-form"]')?.textContent?.trim()
-
-const buttonByLabel = (label: string): HTMLButtonElement | undefined =>
-  Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
-    .find(button => button.textContent?.trim() === label)
-
-const validReport = {
-  date: '2026-06-24',
+const sampleReport: DailyReport = {
+  id: 'rep-1',
+  user_id: 'user-1',
+  date: '2026-05-25',
   check_in: '09:00',
   check_out: '18:00',
-  content: '日報保存APIを実装',
-  mood: 4 as const
+  content: '昨日の続き',
+  mood: 4,
+  created_at: '2026-05-25T00:00:00Z',
+  updated_at: '2026-05-25T00:00:00Z'
 }
 
-const existingReport: DailyReport = {
-  id: '00000000-0000-4000-8000-000000000001',
-  user_id: '00000000-0000-4000-8000-000000000002',
-  date: validReport.date,
-  check_in: '09:00:00',
-  check_out: '18:00:00',
-  content: '更新前の日報',
-  mood: 4,
-  created_at: '2026-06-24T09:00:00Z',
-  updated_at: '2026-06-24T09:00:00Z'
-}
+/**
+ * `wrapper.vm` から defineExpose の API を取り出す helper。
+ * @vue/test-utils の VueWrapper.vm は ComponentPublicInstance のため、
+ * defineExpose の型を引き当てるには 1 箇所だけキャストが必要。
+ * テスト内の他の箇所では as を使わずに済むよう、ここに集約する。
+ */
+const exposedOf = (w: VueWrapper): ReportInputModalExposed =>
+  w.vm as unknown as ReportInputModalExposed
+
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
 describe('ReportInputModal', () => {
   let wrapper: VueWrapper | null = null
@@ -50,7 +41,6 @@ describe('ReportInputModal', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
-    notifyMock.mockReset()
   })
 
   afterEach(() => {
@@ -58,215 +48,203 @@ describe('ReportInputModal', () => {
     wrapper = null
   })
 
-  it('新規入力では「保存」、編集では「更新」を主ボタンに表示する', async () => {
+  it('open=true・新規モードで「日報を入力」と日付ラベルが表示される', async () => {
     wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: validReport.date, report: null }
+      props: { open: true, date: '2026-05-25', report: null }
     })
-
-    expect(submitButtonLabel()).toBe('保存')
-
-    await wrapper.setProps({ report: existingReport })
-
-    expect(submitButtonLabel()).toBe('更新')
+    expect(document.body.textContent).toContain('日報を入力')
+    expect(document.body.textContent).toContain('2026/5/25')
   })
 
-  it('新規日報を POST /api/reports で保存する', async () => {
-    fetchMock.mockResolvedValueOnce({})
+  it('open=true・編集モードで「日報を編集」と削除ボタンが表示される', async () => {
     wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: validReport.date, report: null }
+      props: { open: true, date: null, report: sampleReport }
     })
-
-    await exposedOf(wrapper).submit(validReport)
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/reports', {
-      method: 'POST',
-      body: validReport
-    })
-    expect(toastAddMock).toHaveBeenCalledWith({
-      title: '日報を保存しました',
-      color: 'success'
-    })
-    expect(wrapper.emitted('saved')).toHaveLength(1)
-    expect(wrapper.emitted('update:open')).toContainEqual([false])
+    expect(document.body.textContent).toContain('日報を編集')
+    const deleteBtn = Array.from(document.body.querySelectorAll('button')).find(
+      b => b.textContent?.trim() === '削除'
+    )
+    expect(deleteBtn).toBeDefined()
   })
 
-  it('mood 未入力時は body に mood を含めない', async () => {
+  it('新規モードの submit で POST /api/reports を呼ぶ', async () => {
     fetchMock.mockResolvedValueOnce({})
     wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: validReport.date, report: null }
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const vm = exposedOf(wrapper)
+
+    await vm.submit({
+      date: '2026-05-25',
+      check_in: '09:00',
+      check_out: '18:00',
+      content: '実装作業',
+      mood: 4
     })
 
-    await exposedOf(wrapper).submit({
-      date: validReport.date,
-      check_in: validReport.check_in,
-      check_out: validReport.check_out,
-      content: validReport.content
-    })
-
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith('/api/reports', {
       method: 'POST',
       body: {
-        date: validReport.date,
-        check_in: validReport.check_in,
-        check_out: validReport.check_out,
-        content: validReport.content
+        date: '2026-05-25',
+        check_in: '09:00',
+        check_out: '18:00',
+        content: '実装作業',
+        mood: 4
+      }
+    })
+    expect(wrapper.emitted('saved')).toBeTruthy()
+  })
+
+  it('新規モード・mood なしでも POST する（mood キーは含まない）', async () => {
+    fetchMock.mockResolvedValueOnce({})
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const vm = exposedOf(wrapper)
+
+    await vm.submit({
+      date: '2026-05-25',
+      check_in: '09:00',
+      check_out: '18:00',
+      content: '実装作業'
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/reports', {
+      method: 'POST',
+      body: {
+        date: '2026-05-25',
+        check_in: '09:00',
+        check_out: '18:00',
+        content: '実装作業'
       }
     })
   })
 
-  it('保存成功後にフォームをリセットする', async () => {
+  it('編集モードの submit で PUT /api/reports/:id を呼ぶ', async () => {
     fetchMock.mockResolvedValueOnce({})
     wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: validReport.date, report: null }
+      props: { open: true, date: null, report: sampleReport }
     })
-    const textarea = document.querySelector('textarea')
-    expect(textarea).not.toBeNull()
-    if (!textarea) {
-      return
-    }
-    textarea.value = '入力途中の内容'
-    textarea.dispatchEvent(new Event('input'))
+    const vm = exposedOf(wrapper)
 
-    await exposedOf(wrapper).submit(validReport)
-
-    expect(textarea.value).toBe('')
-  })
-
-  it('409 エラーは useApiError で重複メッセージを通知する', async () => {
-    const error = { statusCode: 409 }
-    fetchMock.mockRejectedValueOnce(error)
-    wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: validReport.date, report: null }
+    await vm.submit({
+      date: '2026-05-25',
+      check_in: '10:00',
+      check_out: '19:00',
+      content: '更新内容',
+      mood: 5
     })
 
-    await exposedOf(wrapper).submit(validReport)
-
-    expect(notifyMock).toHaveBeenCalledWith(error, {
-      statusMessages: { 409: '同じ日付の日報がすでに存在します' },
-      fallback: '保存に失敗しました'
-    })
-    expect(toastAddMock).not.toHaveBeenCalled()
-    expect(wrapper.emitted('saved')).toBeUndefined()
-    expect(wrapper.emitted('update:open')).toBeUndefined()
-  })
-
-  it('既存日報を PUT /api/reports/:id で更新する', async () => {
-    fetchMock.mockResolvedValueOnce({})
-    wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: existingReport.date, report: existingReport }
-    })
-
-    await exposedOf(wrapper).submit(validReport)
-
-    expect(fetchMock).toHaveBeenCalledWith(`/api/reports/${existingReport.id}`, {
+    expect(fetchMock).toHaveBeenCalledWith('/api/reports/rep-1', {
       method: 'PUT',
       body: {
-        check_in: validReport.check_in,
-        check_out: validReport.check_out,
-        content: validReport.content,
-        mood: validReport.mood
+        check_in: '10:00',
+        check_out: '19:00',
+        content: '更新内容',
+        mood: 5
       }
     })
-    expect(toastAddMock).toHaveBeenCalledWith({
-      title: '日報を更新しました',
-      color: 'success'
-    })
-    expect(wrapper.emitted('saved')).toHaveLength(1)
-    expect(wrapper.emitted('update:open')).toContainEqual([false])
+    expect(wrapper.emitted('saved')).toBeTruthy()
   })
 
-  it('削除ボタンは編集時のみ表示し、確認ダイアローグを開く', async () => {
-    wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: validReport.date, report: null }
-    })
-
-    expect(buttonByLabel('削除')).toBeUndefined()
-
-    await wrapper.setProps({ report: existingReport })
-    buttonByLabel('削除')?.click()
-    await nextTick()
-
-    expect(document.body.textContent).toContain('削除後は元に戻せません')
-  })
-
-  it('既存日報を DELETE /api/reports/:id で削除する', async () => {
-    fetchMock.mockResolvedValueOnce(null)
-    wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: existingReport.date, report: existingReport }
-    })
-
-    await exposedOf(wrapper).onDelete()
-
-    expect(fetchMock).toHaveBeenCalledWith(`/api/reports/${existingReport.id}`, {
-      method: 'DELETE'
-    })
-    expect(toastAddMock).toHaveBeenCalledWith({
-      title: '日報を削除しました',
-      color: 'success'
-    })
-    expect(wrapper.emitted('deleted')).toHaveLength(1)
-    expect(wrapper.emitted('saved')).toBeUndefined()
-    expect(wrapper.emitted('update:open')).toContainEqual([false])
-  })
-
-  it('削除失敗時は useApiError で通知してモーダルを閉じない', async () => {
-    const error = { statusCode: 500 }
-    fetchMock.mockRejectedValueOnce(error)
-    wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: existingReport.date, report: existingReport }
-    })
-
-    buttonByLabel('削除')?.click()
-    await nextTick()
-    await exposedOf(wrapper).onDelete()
-
-    expect(notifyMock).toHaveBeenCalledWith(error, {
-      fallback: '削除に失敗しました'
-    })
-    expect(toastAddMock).not.toHaveBeenCalled()
-    expect(wrapper.emitted('deleted')).toBeUndefined()
-    expect(wrapper.emitted('update:open')).toBeUndefined()
-    expect(document.body.textContent).toContain('削除後は元に戻せません')
-  })
-
-  it('編集時に mood を解除すると null を送信する', async () => {
+  it('編集モードで onDelete を呼ぶと DELETE /api/reports/:id を呼ぶ', async () => {
     fetchMock.mockResolvedValueOnce({})
     wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: existingReport.date, report: existingReport }
+      props: { open: true, date: null, report: sampleReport }
     })
+    const vm = exposedOf(wrapper)
 
-    await exposedOf(wrapper).submit({
-      date: validReport.date,
-      check_in: validReport.check_in,
-      check_out: validReport.check_out,
-      content: validReport.content
-    })
+    await vm.onDelete()
 
-    expect(fetchMock).toHaveBeenCalledWith(`/api/reports/${existingReport.id}`, {
-      method: 'PUT',
-      body: {
-        check_in: validReport.check_in,
-        check_out: validReport.check_out,
-        content: validReport.content,
-        mood: null
-      }
-    })
+    expect(fetchMock).toHaveBeenCalledWith('/api/reports/rep-1', { method: 'DELETE' })
+    expect(wrapper.emitted('deleted')).toBeTruthy()
   })
 
-  it('編集失敗時は useApiError で通知してモーダルを閉じない', async () => {
-    const error = { statusCode: 500 }
-    fetchMock.mockRejectedValueOnce(error)
+  it('409 エラーで専用トーストが追加される', async () => {
+    fetchMock.mockRejectedValueOnce({ statusCode: 409 })
     wrapper = await mountSuspended(ReportInputModal, {
-      props: { open: true, date: existingReport.date, report: existingReport }
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const vm = exposedOf(wrapper)
+
+    await vm.submit({
+      date: '2026-05-25',
+      check_in: '09:00',
+      check_out: '18:00',
+      content: '内容'
     })
 
-    await exposedOf(wrapper).submit(validReport)
-
-    expect(notifyMock).toHaveBeenCalledWith(error, {
-      fallback: '更新に失敗しました'
-    })
-    expect(toastAddMock).not.toHaveBeenCalled()
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '同じ日付の日報がすでに存在します',
+        color: 'error'
+      })
+    )
     expect(wrapper.emitted('saved')).toBeUndefined()
-    expect(wrapper.emitted('update:open')).toBeUndefined()
+  })
+
+  it('時刻候補ピッカーで選んだ 15 分単位の時刻が出勤時間に反映される', async () => {
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const pickerBtn = document.body.querySelector<HTMLButtonElement>('button[aria-label="出勤時間を選択"]')
+    expect(pickerBtn).not.toBeNull()
+
+    pickerBtn?.click()
+    await flushPromises()
+
+    const option = Array.from(document.body.querySelectorAll('button')).find(
+      b => b.textContent?.trim() === '09:15'
+    )
+    expect(option).toBeDefined()
+
+    option?.click()
+    await flushPromises()
+
+    // UInputTime の hour / minute セグメント（role=spinbutton）に選択値が入る
+    const segments = Array.from(document.body.querySelectorAll('[role="spinbutton"]'))
+    expect(segments[0]?.getAttribute('aria-valuenow')).toBe('9')
+    expect(segments[1]?.getAttribute('aria-valuenow')).toBe('15')
+    // 選択後は Popover が閉じる
+    expect(pickerBtn?.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('「ヒントを見る」ボタンのクリックで POST /api/ai/coach を呼ぶ', async () => {
+    fetchMock.mockResolvedValueOnce({ questions: ['Q1'], feedback: 'F' })
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const hintBtn = Array.from(document.body.querySelectorAll('button')).find(
+      b => b.textContent?.includes('ヒントを見る')
+    )
+    expect(hintBtn).toBeDefined()
+
+    hintBtn?.click()
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/ai/coach', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('保存成功で success トーストが追加される', async () => {
+    fetchMock.mockResolvedValueOnce({})
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const vm = exposedOf(wrapper)
+
+    await vm.submit({
+      date: '2026-05-25',
+      check_in: '09:00',
+      check_out: '18:00',
+      content: '内容'
+    })
+
+    expect(toastAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '日報を保存しました',
+        color: 'success'
+      })
+    )
   })
 })

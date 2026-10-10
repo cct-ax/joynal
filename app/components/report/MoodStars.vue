@@ -1,115 +1,92 @@
 <script setup lang="ts">
-import { MOOD_VALUES, isMoodValue, type MoodValue } from '#shared/types/api'
+/**
+ * 気分（mood）の星評価コンポーネント。
+ *
+ * - 1〜5 の値を表示・編集。
+ * - readonly=true なら表示専用（一覧/詳細で使う）。各星は `<span>`（非インタラクティブ）で
+ *   描画し、値は group の aria-label で読み上げる。これにより clickable な行（トグルボタン）の
+ *   中に置いてもネストボタンにならない。
+ * - 同じ星を再クリックすると null（未入力）に戻る。
+ * - ホバー時は一時的にその位置までハイライト。
+ *
+ * アイコンは Nuxt UI の <UIcon> を使う。塗り状態は `i-mdi-star`（塗り）/
+ * `i-mdi-star-outline`（線）の名前出し分け＋ text-* の色で表現する。
+ */
+import { MOOD_VALUES, type MoodValue } from '#shared/types/api'
 
-type MoodStarsSize = 'xs' | 'sm' | 'md'
-const MOOD_LABEL = '気分'
-const BUTTON_SIZE_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
-  xs: 'size-4',
-  sm: 'size-5',
-  md: 'size-8'
-}
-const ICON_SIZE_CLASS_BY_SIZE: Record<MoodStarsSize, string> = {
-  xs: 'size-3',
-  sm: 'size-3.5',
-  md: 'size-5'
-}
-
-const props = withDefaults(defineProps<{
-  modelValue?: number | null
-  readonly?: boolean
-  size?: MoodStarsSize
-}>(), {
-  modelValue: undefined,
-  readonly: false,
-  size: 'md'
-})
+const props = withDefaults(
+  defineProps<{
+    /** DailyReport.mood が number | null のため受け取り側は緩めに許容する */
+    modelValue: MoodValue | number | null | undefined
+    /** true のとき表示専用（クリック・ホバー不可） */
+    readonly?: boolean
+    /** 星アイコンのサイズ */
+    size?: 'xs' | 'sm' | 'md'
+  }>(),
+  { readonly: false, size: 'md' }
+)
 
 const emit = defineEmits<{
+  /** 解除（再クリック）時は null、選択時は MoodValue を返す */
   'update:modelValue': [value: MoodValue | null]
 }>()
 
-const selectedValue = computed<MoodValue | undefined>(() =>
-  isMoodValue(props.modelValue) ? props.modelValue : undefined
-)
+const hoveredValue = ref<number | null>(null)
 
-const hoveredValue = ref<MoodValue | null>(null)
-const displayValue = computed<MoodValue | undefined>(() =>
-  hoveredValue.value ?? selectedValue.value
-)
+const displayValue = computed(() => hoveredValue.value ?? props.modelValue ?? 0)
 
-const buttonSizeClass = computed(() => BUTTON_SIZE_CLASS_BY_SIZE[props.size])
-const iconSizeClass = computed(() => ICON_SIZE_CLASS_BY_SIZE[props.size])
-
-const readonlyLabel = computed(() => {
-  if (!selectedValue.value) {
-    return `${MOOD_LABEL}: 未選択`
+const sizeClass = computed(() => {
+  switch (props.size) {
+    case 'xs':
+      return 'w-3 h-3'
+    case 'sm':
+      return 'w-4 h-4'
+    default:
+      return 'w-5 h-5'
   }
-
-  return `${MOOD_LABEL}: ${selectedValue.value} / ${MOOD_VALUES.length}`
 })
 
-const isActive = (value: MoodValue): boolean =>
-  displayValue.value !== undefined && value <= displayValue.value
-
-const isSelected = (value: MoodValue): boolean =>
-  selectedValue.value !== undefined && value <= selectedValue.value
-
-const getButtonLabel = (value: MoodValue): string => {
-  const base = `${MOOD_LABEL}: ${value} / ${MOOD_VALUES.length}`
-  return selectedValue.value === value ? `${base} 選択中。もう一度押すと解除` : base
+// 以下のハンドラは editable 時のみ v-on で束ねる（readonly は span でハンドラ無し）
+const onClick = (n: MoodValue): void => {
+  emit('update:modelValue', props.modelValue === n ? null : n)
 }
 
-const selectMood = (value: MoodValue) => {
-  if (props.readonly) {
-    return
-  }
+const onMouseEnter = (n: number): void => {
+  hoveredValue.value = n
+}
 
-  emit('update:modelValue', selectedValue.value === value ? null : value)
+const onMouseLeave = (): void => {
+  hoveredValue.value = null
 }
 </script>
 
 <template>
   <div
-    class="inline-flex items-center"
-    :role="props.readonly ? 'img' : 'group'"
-    :aria-label="props.readonly ? readonlyLabel : MOOD_LABEL"
+    class="inline-flex gap-0.5 items-center"
+    role="group"
+    :aria-label="`気分 ${modelValue ?? 0} / 5`"
   >
-    <template v-if="props.readonly">
-      <UIcon
-        v-for="value in MOOD_VALUES"
-        :key="value"
-        :name="isSelected(value) ? 'i-mdi-star' : 'i-mdi-star-outline'"
-        :class="[
-          iconSizeClass,
-          isSelected(value) ? 'text-amber-400' : 'text-dimmed'
-        ]"
-      />
-    </template>
-
-    <button
-      v-for="value in MOOD_VALUES"
-      v-else
-      :key="value"
-      type="button"
-      class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      :class="[
-        buttonSizeClass,
-        isActive(value) ? 'text-amber-400' : 'text-dimmed'
-      ]"
-      :aria-label="getButtonLabel(value)"
-      :aria-pressed="selectedValue === value"
-      @click="selectMood(value)"
-      @mouseenter="hoveredValue = value"
-      @mouseleave="hoveredValue = null"
+    <component
+      :is="readonly ? 'span' : 'button'"
+      v-for="n in MOOD_VALUES"
+      :key="n"
+      :type="readonly ? undefined : 'button'"
+      class="leading-none transition-transform motion-reduce:transition-none"
+      :class="{
+        'cursor-pointer hover:scale-110 motion-reduce:hover:scale-100': !readonly,
+        'cursor-default': readonly
+      }"
+      :aria-label="readonly ? undefined : `気分 ${n}`"
+      v-on="readonly ? {} : { click: () => onClick(n), mouseenter: () => onMouseEnter(n), mouseleave: onMouseLeave }"
     >
       <UIcon
-        :name="isSelected(value) ? 'i-mdi-star' : 'i-mdi-star-outline'"
+        :name="n <= displayValue ? 'i-mdi-star' : 'i-mdi-star-outline'"
         aria-hidden="true"
         :class="[
-          iconSizeClass,
-          'shrink-0'
+          sizeClass,
+          n <= displayValue ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'
         ]"
       />
-    </button>
+    </component>
   </div>
 </template>

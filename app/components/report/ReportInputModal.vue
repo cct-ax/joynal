@@ -1,171 +1,158 @@
 <script setup lang="ts">
-import type { Time } from '@internationalized/date'
+/**
+ * 日報入力・編集モーダル（新人ロール専用）。
+ *
+ * - `report` が null なら新規入力、null 以外なら編集モード。
+ * - 削除確認は ConfirmDialog に委譲する。
+ * - 409（同日重複）と 400（バリデーション）はサーバーメッセージを優先表示。
+ * - スマホでは全画面モーダル化（`:ui` で実現）。
+ *
+ * design プロト L534-597（ReportModal）を Vue 化したもの。
+ */
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
+import type { Time } from '@internationalized/date'
 import type { DailyReport } from '#shared/types/models'
+import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
-const FORM_ID = 'report-input-form'
 const TIME_OPTION_INTERVAL_MINUTES = 15
 
-const padTimePart = (value: number): string => String(value).padStart(2, '0')
-const TIME_OPTIONS = Array.from({ length: 24 * 60 / TIME_OPTION_INTERVAL_MINUTES }, (_, index) => {
-  const totalMinutes = index * TIME_OPTION_INTERVAL_MINUTES
-  const hour = Math.floor(totalMinutes / 60)
-  const minute = totalMinutes % 60
-  return `${padTimePart(hour)}:${padTimePart(minute)}`
-})
-
-const open = defineModel<boolean>('open', { required: true })
-const emit = defineEmits<{
-  saved: []
-  deleted: []
-}>()
-const props = withDefaults(defineProps<{
+const props = defineProps<{
+  /** 開閉状態（v-model:open） */
+  open: boolean
+  /** 入力対象日（YYYY-MM-DD）。新規入力時に使用。report がある場合は report.date を優先。 */
   date: string | null
-  report?: DailyReport | null
-}>(), {
-  report: null
-})
+  /** 編集対象の日報（null なら新規入力モード） */
+  report: DailyReport | null
+}>()
 
-const form = useTemplateRef('form')
-const checkInPickerOpen = ref(false)
-const checkOutPickerOpen = ref(false)
+const emit = defineEmits<{
+  /** 開閉状態の更新（v-model:open） */
+  'update:open': [value: boolean]
+  /** 保存完了時（親側でリスト再取得を行う） */
+  'saved': []
+  /** 削除完了時（親側でリスト再取得を行う） */
+  'deleted': []
+}>()
+
 const toast = useToast()
 const apiError = useApiError()
-const loading = ref(false)
 const deleteLoading = ref(false)
 const confirmDeleteOpen = ref(false)
-const state = reactive<Partial<ReportSchema>>({
-  date: '',
-  check_in: '',
-  check_out: '',
-  content: '',
-  mood: undefined
-})
+
+// AI コーチング（振り返りの深掘り質問＋短評）。本文への挿入導線は持たない（代筆防止）。
+const { hints: coachHints, pending: coachPending, fetchHints: fetchCoachHints, reset: resetCoachHints } = useCoach()
 
 const isEdit = computed(() => props.report !== null)
-const title = computed(() => isEdit.value ? '日報を編集' : '日報を入力')
+const title = computed(() => (isEdit.value ? '日報を編集' : '日報を入力'))
 
-const displayDate = computed(() => {
-  const date = parseYmd(state.date ?? '')
-  return date ? formatDateWithWeekday(date) : ''
+/** DB の mood (number | null) を MoodValue | undefined に絞り込む */
+const toMoodValue = (m: unknown): MoodValue | undefined =>
+  isMoodValue(m) ? m : undefined
+
+const openModel = computed({
+  get: () => props.open,
+  set: (v: boolean) => emit('update:open', v)
 })
 
-const syncState = (): void => {
-  state.date = props.report?.date ?? props.date ?? ''
-  state.check_in = toHm(props.report?.check_in)
-  state.check_out = toHm(props.report?.check_out)
-  state.content = props.report?.content ?? ''
-  state.mood = isMoodValue(props.report?.mood) ? props.report.mood : undefined
-  form.value?.clear()
+const close = (): void => {
+  openModel.value = false
 }
 
-const resetForm = (): void => {
-  state.date = ''
-  state.check_in = ''
-  state.check_out = ''
-  state.content = ''
-  state.mood = undefined
-  checkInPickerOpen.value = false
-  checkOutPickerOpen.value = false
-  form.value?.clear()
-}
-
-const checkInValue = computed<Time | null>({
-  get: () => toTimeValue(state.check_in),
-  set: (value) => {
-    state.check_in = fromTimeValue(value)
-  }
-})
-
-const checkOutValue = computed<Time | null>({
-  get: () => toTimeValue(state.check_out),
-  set: (value) => {
-    state.check_out = fromTimeValue(value)
-  }
-})
-
-const moodValue = computed<MoodValue | null>({
-  get: () => isMoodValue(state.mood) ? state.mood : null,
-  set: (value) => {
-    state.mood = value ?? undefined
-  }
-})
-
-const selectCheckInTime = (time: string): void => {
-  state.check_in = time
-  checkInPickerOpen.value = false
-}
-
-const selectCheckOutTime = (time: string): void => {
-  state.check_out = time
-  checkOutPickerOpen.value = false
-}
-
-const submit = async (data: ReportSchema): Promise<void> => {
-  const report = props.report
-
-  loading.value = true
-  try {
-    if (report) {
+// 開閉リセット＋submit の loading/error 定型は useModalForm に集約する。
+// 開くたびに state を初期化。編集時は report の値、新規時は date のみ。
+const { state, loading, submit } = useModalForm<ReportSchema, Partial<ReportSchema>>({
+  isOpen: () => props.open,
+  buildState: () => ({
+    date: props.report?.date ?? props.date ?? '',
+    // DB の time 由来 "HH:MM:SS" を正準 "HH:MM" に正規化してから格納する。
+    check_in: fromTimeValue(toTimeValue(props.report?.check_in)),
+    check_out: fromTimeValue(toTimeValue(props.report?.check_out)),
+    content: props.report?.content ?? '',
+    mood: toMoodValue(props.report?.mood)
+  }),
+  // 送信処理本体。編集時は PUT、新規時は POST。
+  onSubmit: async (data) => {
+    if (isEdit.value && props.report) {
+      // MoodValue 統一の効果: data.mood は MoodValue | undefined なので
+      // null 合体だけで ReportUpdateBody.mood (MoodValue | null) と一致する
       const body: ReportUpdateBody = {
         check_in: data.check_in,
         check_out: data.check_out,
         content: data.content,
         mood: data.mood ?? null
       }
-      await $fetch(`/api/reports/${report.id}`, {
-        method: 'PUT',
-        body
-      })
+      await $fetch(`/api/reports/${props.report.id}`, { method: 'PUT', body })
+      toast.add({ title: '日報を更新しました', color: 'success' })
     } else {
       const body: ReportCreateBody = {
         date: data.date,
         check_in: data.check_in,
         check_out: data.check_out,
         content: data.content,
+        // mood が undefined の場合のみキーを省略（POST の任意項目）
         ...(data.mood !== undefined ? { mood: data.mood } : {})
       }
-      await $fetch('/api/reports', {
-        method: 'POST',
-        body
-      })
+      await $fetch('/api/reports', { method: 'POST', body })
+      toast.add({ title: '日報を保存しました', color: 'success' })
     }
-
-    toast.add({ title: report ? '日報を更新しました' : '日報を保存しました', color: 'success' })
-    resetForm()
     emit('saved')
-    open.value = false
-  } catch (error: unknown) {
-    apiError.notify(error, report
-      ? { fallback: '更新に失敗しました' }
-      : {
-          statusMessages: { 409: '同じ日付の日報がすでに存在します' },
-          fallback: '保存に失敗しました'
-        })
-  } finally {
-    loading.value = false
+    close()
+  },
+  errorOptions: () => ({
+    statusMessages: { 409: '同じ日付の日報がすでに存在します' },
+    fallback: '保存に失敗しました'
+  })
+})
+
+// UInputTime は @internationalized/date の Time を扱うため、文字列の state と
+// computed プロキシで橋渡しする（state・スキーマ・API ボディは "HH:MM" 文字列のまま）。
+const checkInTime = computed<Time | null>({
+  get: () => toTimeValue(state.check_in),
+  set: (t) => {
+    state.check_in = t ? fromTimeValue(t) : ''
   }
+})
+const checkOutTime = computed<Time | null>({
+  get: () => toTimeValue(state.check_out),
+  set: (t) => {
+    state.check_out = t ? fromTimeValue(t) : ''
+  }
+})
+
+// 出退勤は 15 分単位（HH:00/15/30/45）が仕様。UInputTime の直接入力に加えて、
+// 時計ボタンから Popover の候補一覧（15 分刻み・96 件）を選べるようにする。
+const TIME_OPTIONS = buildTimeOptions(TIME_OPTION_INTERVAL_MINUTES)
+const checkInPickerOpen = ref(false)
+const checkOutPickerOpen = ref(false)
+
+const selectCheckInTime = (time: string): void => {
+  state.check_in = time
+  checkInPickerOpen.value = false
+}
+const selectCheckOutTime = (time: string): void => {
+  state.check_out = time
+  checkOutPickerOpen.value = false
 }
 
-const onSubmit = (event: FormSubmitEvent<ReportSchema>): Promise<void> =>
-  submit(event.data)
+const dateLabel = computed(() => {
+  if (!state.date) return ''
+  const d = parseYmd(state.date)
+  if (!d) return state.date
+  return formatDateWithWeekday(d)
+})
+
+const onSubmit = (event: FormSubmitEvent<ReportSchema>): Promise<void> => submit(event.data)
 
 const onDelete = async (): Promise<void> => {
-  const report = props.report
-  if (!report || deleteLoading.value) {
-    return
-  }
-
+  if (!props.report) return
   deleteLoading.value = true
   try {
-    await $fetch(`/api/reports/${report.id}`, { method: 'DELETE' })
+    await $fetch(`/api/reports/${props.report.id}`, { method: 'DELETE' })
     toast.add({ title: '日報を削除しました', color: 'success' })
     confirmDeleteOpen.value = false
-    resetForm()
     emit('deleted')
-    open.value = false
+    close()
   } catch (error: unknown) {
     apiError.notify(error, { fallback: '削除に失敗しました' })
   } finally {
@@ -173,64 +160,53 @@ const onDelete = async (): Promise<void> => {
   }
 }
 
-watch(open, (isOpen): void => {
-  if (isOpen) {
-    syncState()
-  } else {
-    confirmDeleteOpen.value = false
-  }
-}, { immediate: true })
+// MoodStars は MoodValue | null を emit するが、state.mood の型は MoodValue | undefined。
+// null → undefined に変換する setter を使う（state は Partial<ReportSchema> 上で undefined を使う）。
+const onMoodUpdate = (v: ReportSchema['mood'] | null): void => {
+  state.mood = v ?? undefined
+}
 
-watch([() => props.date, () => props.report], (): void => {
-  if (open.value) {
-    syncState()
+// モーダルを開くたびに前回のコーチングヒントをクリアし、閉じたら時刻候補の Popover も畳む。
+watch(() => props.open, (open) => {
+  if (open) {
+    resetCoachHints()
+  } else {
+    checkInPickerOpen.value = false
+    checkOutPickerOpen.value = false
   }
 })
 
+// 入力中のドラフトと気分を渡してコーチングヒントを取得する。
+const onShowHints = (): Promise<void> => fetchCoachHints(state.content, state.mood)
+
+// テストで submit / onDelete を直接呼べるよう defineExpose する。
+// UForm のスキーマ検証は別途スキーマテストでカバーするため、ロジック検証はこちらで行う。
 defineExpose({ submit, onDelete })
 </script>
 
 <template>
   <UModal
-    v-model:open="open"
+    v-model:open="openModel"
     :title="title"
-    class="w-full max-w-lg"
     :ui="{
-      header: 'px-5 py-3.5',
-      title: 'text-base',
-      body: 'p-5',
-      footer: 'justify-end px-5 py-4',
-      close: 'cursor-pointer'
+      content: 'max-sm:w-screen! max-sm:h-dvh! max-sm:max-w-none! max-sm:rounded-none! sm:max-w-md'
     }"
   >
     <template #body>
       <UForm
-        :id="FORM_ID"
-        ref="form"
         :schema="reportSchema"
         :state="state"
         class="space-y-4"
         @submit="onSubmit"
       >
-        <div class="space-y-1.5">
-          <p class="text-sm font-medium text-highlighted">
-            日付
-          </p>
-          <div
-            class="flex min-h-9 w-full cursor-not-allowed select-none items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted ring ring-inset ring-muted"
-          >
-            <UIcon
-              name="i-lucide-calendar-days"
-              class="size-4 shrink-0 text-dimmed"
-            />
-            <span>{{ displayDate }}</span>
-          </div>
+        <div class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-sm">
+          <span class="text-sm font-semibold">{{ dateLabel }}</span>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid grid-cols-2 gap-3">
           <UFormField
-            label="出勤時間"
             name="check_in"
+            label="出勤時間"
             required
           >
             <UPopover
@@ -241,10 +217,9 @@ defineExpose({ submit, onDelete })
               <template #anchor>
                 <div class="flex w-full">
                   <UInputTime
-                    v-model="checkInValue"
-                    granularity="minute"
+                    v-model="checkInTime"
                     :hour-cycle="24"
-                    class="min-w-0 flex-1"
+                    class="min-w-0 flex-1 justify-center"
                     :ui="{ base: 'w-full rounded-e-none' }"
                   />
                   <UButton
@@ -252,7 +227,7 @@ defineExpose({ submit, onDelete })
                     icon="i-lucide-clock"
                     color="neutral"
                     variant="outline"
-                    class="-ms-px shrink-0 cursor-pointer rounded-s-none"
+                    class="-ms-px shrink-0 rounded-s-none"
                     aria-label="出勤時間を選択"
                     aria-haspopup="dialog"
                     :aria-expanded="checkInPickerOpen"
@@ -260,7 +235,6 @@ defineExpose({ submit, onDelete })
                   />
                 </div>
               </template>
-
               <template #content>
                 <div class="max-h-64 overflow-y-auto p-1">
                   <UButton
@@ -270,7 +244,7 @@ defineExpose({ submit, onDelete })
                     color="neutral"
                     :variant="state.check_in === time ? 'soft' : 'ghost'"
                     block
-                    class="cursor-pointer justify-center"
+                    class="justify-center"
                     @click="selectCheckInTime(time)"
                   >
                     {{ time }}
@@ -279,10 +253,9 @@ defineExpose({ submit, onDelete })
               </template>
             </UPopover>
           </UFormField>
-
           <UFormField
-            label="退勤時間"
             name="check_out"
+            label="退勤時間"
             required
           >
             <UPopover
@@ -293,10 +266,9 @@ defineExpose({ submit, onDelete })
               <template #anchor>
                 <div class="flex w-full">
                   <UInputTime
-                    v-model="checkOutValue"
-                    granularity="minute"
+                    v-model="checkOutTime"
                     :hour-cycle="24"
-                    class="min-w-0 flex-1"
+                    class="min-w-0 flex-1 justify-center"
                     :ui="{ base: 'w-full rounded-e-none' }"
                   />
                   <UButton
@@ -304,7 +276,7 @@ defineExpose({ submit, onDelete })
                     icon="i-lucide-clock"
                     color="neutral"
                     variant="outline"
-                    class="-ms-px shrink-0 cursor-pointer rounded-s-none"
+                    class="-ms-px shrink-0 rounded-s-none"
                     aria-label="退勤時間を選択"
                     aria-haspopup="dialog"
                     :aria-expanded="checkOutPickerOpen"
@@ -312,7 +284,6 @@ defineExpose({ submit, onDelete })
                   />
                 </div>
               </template>
-
               <template #content>
                 <div class="max-h-64 overflow-y-auto p-1">
                   <UButton
@@ -322,7 +293,7 @@ defineExpose({ submit, onDelete })
                     color="neutral"
                     :variant="state.check_out === time ? 'soft' : 'ghost'"
                     block
-                    class="cursor-pointer justify-center"
+                    class="justify-center"
                     @click="selectCheckOutTime(time)"
                   >
                     {{ time }}
@@ -334,70 +305,80 @@ defineExpose({ submit, onDelete })
         </div>
 
         <UFormField
-          label="やったこと"
           name="content"
+          label="やったこと"
           required
         >
           <UTextarea
             v-model="state.content"
-            :rows="7"
-            :maxrows="12"
+            :rows="6"
             autoresize
             placeholder="本日の業務内容を記入してください"
             class="w-full"
-            :ui="{ base: 'w-full resize-none' }"
           />
         </UFormField>
 
-        <UFormField
-          label="気分"
-          name="mood"
-          hint="任意"
-        >
-          <MoodStars v-model="moodValue" />
-        </UFormField>
-      </UForm>
-    </template>
-
-    <template #footer="{ close }">
-      <div class="flex w-full items-center justify-between gap-3">
-        <UButton
-          v-if="isEdit"
-          type="button"
-          icon="i-lucide-trash-2"
-          color="error"
-          variant="soft"
-          class="cursor-pointer"
-          :disabled="loading || deleteLoading"
-          @click="confirmDeleteOpen = true"
-        >
-          削除
-        </UButton>
-        <div v-else />
-
-        <div class="flex items-center gap-2">
+        <div class="-mt-1">
           <UButton
-            type="button"
-            color="neutral"
-            variant="ghost"
-            class="cursor-pointer"
-            :disabled="loading || deleteLoading"
-            @click="close"
+            variant="link"
+            color="primary"
+            size="sm"
+            icon="i-lucide-sparkles"
+            :loading="coachPending"
+            class="px-0"
+            @click="onShowHints"
           >
-            キャンセル
+            ヒントを見る（AI）
           </UButton>
-          <UButton
-            type="submit"
-            :form="FORM_ID"
-            icon="i-lucide-save"
-            class="cursor-pointer"
-            :loading="loading"
-            :disabled="loading || deleteLoading"
-          >
-            {{ isEdit ? '更新' : '保存' }}
-          </UButton>
+          <LazyCoachHints
+            v-if="coachHints"
+            :hints="coachHints"
+            class="mt-2"
+          />
         </div>
-      </div>
+
+        <UFormField
+          name="mood"
+          label="気分（任意）"
+          hint="クリックで選択、もう一度クリックで解除"
+        >
+          <MoodStars
+            :model-value="state.mood"
+            @update:model-value="onMoodUpdate"
+          />
+        </UFormField>
+
+        <div class="flex items-center justify-between pt-2">
+          <div>
+            <UButton
+              v-if="isEdit"
+              color="error"
+              variant="soft"
+              size="sm"
+              :disabled="loading"
+              @click="confirmDeleteOpen = true"
+            >
+              削除
+            </UButton>
+          </div>
+          <div class="flex gap-2">
+            <UButton
+              variant="outline"
+              color="neutral"
+              :disabled="loading"
+              @click="close"
+            >
+              キャンセル
+            </UButton>
+            <UButton
+              type="submit"
+              :loading="loading"
+            >
+              {{ isEdit ? '更新' : '保存' }}
+            </UButton>
+          </div>
+        </div>
+      </UForm>
     </template>
   </UModal>
 

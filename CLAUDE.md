@@ -11,7 +11,7 @@ pnpm lint          # ESLint チェック
 pnpm lint:fix      # ESLint 自動修正（フォーマッタ兼用 — @nuxt/eslint stylistic）
 pnpm test          # Vitest 実行（ユニット・統合テスト）
 pnpm test:watch    # Vitest ウォッチモード
-pnpm test:e2e      # Playwright E2E（ツールのみ用意・spec は未整備）
+pnpm test:e2e      # Playwright E2E（要ローカル Supabase: supabase start → db reset）
 pnpm typecheck     # 型チェック（vue-tsc --noEmit）
 ```
 
@@ -52,7 +52,8 @@ Nuxt 4 アプリ（`app/` ディレクトリ構成）を **Cloudflare Pages** �
 | `shared/types/components.ts` | コンポーネントの defineExpose 型 |
 | `shared/utils/` | app・server 共通の純粋ロジック（直下は両側で auto-import、明示は `#shared/utils/*`）。例: `date.ts`（日付/週/曜日） |
 | `supabase/migrations/` | PostgreSQL マイグレーション SQL |
-| `supabase/seed.sql` | ローカル用シード（trainee/mentor/admin のテストユーザー＋担当割り当て。`supabase db reset` で適用） |
+| `supabase/seed.sql` | ローカル/E2E 用シード（trainee/mentor/admin のテストユーザー＋担当割り当て。`supabase db reset` で適用） |
+| `e2e/` | Playwright E2E（`fixtures.ts` ＋ ログイン認証・日報CRUD・週次コメント。ローカル Supabase に対して実行） |
 
 ## ユーザーロール
 
@@ -80,7 +81,7 @@ Vitest + `@nuxt/test-utils`（happy-dom 環境）。テストはソースファ�
 
 Server API ハンドラーは Supabase クライアントをモックしてテスト。Vue コンポーネントは `$fetch` をモックしてテスト。
 
-E2E は **Playwright** を採用予定で、`playwright.config.ts` と `pnpm test:e2e` は用意済みだが **spec は未整備**（`*.spec.ts` は `e2e/**` 配下に置き `vitest.config.ts` の exclude で Vitest から除外する想定）。CI は `.github/workflows/ci.yml` の **lint-and-typecheck / test / build / security（`pnpm audit`）** のみ（gitleaks・E2E ジョブは持たない）。
+E2E は **Playwright**（`e2e/`）。`@nuxtjs/supabase` 越しの実 RLS を検証するため、ローカル Supabase スタック（`supabase start` → `supabase db reset` で `supabase/seed.sql` 適用）に対して実行する。Playwright の `*.spec.ts` は `e2e/**` 配下に置き、`vitest.config.ts` の exclude で Vitest から除外している（衝突回避）。**E2E は CI では実行せず**（ローカル実行のみ）、CI は `.github/workflows/ci.yml` の lint-and-typecheck / test / build / security（`pnpm audit`）。
 
 ## 設計ドキュメント
 

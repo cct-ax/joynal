@@ -1,6 +1,14 @@
+---
+description: TypeScript / Vue / 命名 / データ取得 / エラー処理の実装規約（コード例付き）。
+---
+
 # コーディング規約
 
+このページで分かること: TypeScript・Vue・命名・データ取得・エラー処理など、実装時に守る規約をコード例つきで。
+
 > メンバー向けのガイドです。わからないことがあれば PL に聞いてください。
+
+> 関連: [アーキテクチャ](./architecture.md) ・ [API 設計](./api-design.md) ・ [用語集](./glossary.md)
 
 ---
 
@@ -123,6 +131,39 @@ export type CommentUpsertBody = {
   weekStart: string
   traineeId: string
   content: string
+}
+
+// GET /api/reports/mood-trend（mood 推移グラフ用）
+export type MoodTrendQuery = {
+  from: string
+  to: string
+  userId?: string
+}
+export type MoodTrendPoint = {
+  date: string
+  mood: MoodValue // mood 未入力日はレスポンスに含めない
+}
+
+// POST /api/ai/coach（新人コーチング）
+export type AiCoachBody = {
+  content?: string // 入力中のドラフト本文（任意・空ならスターター質問）
+  mood?: MoodValue
+}
+export type AiCoachResponse = {
+  questions: string[] // 振り返りの深掘り質問（2〜3個）
+  feedback: string // 短い励まし（1〜2文・空文字可）
+}
+
+// GET/POST /api/ai/weekly-summary（週次サマリー）
+export type AiAudience = 'self' | 'mentor' // self=本人の振り返り / mentor=観察。サーバーが導出
+export type WeeklySummaryData = {
+  content: string
+  audience: AiAudience
+  sourceUpdatedAt: string // 生成時のその週の日報 max(updated_at)
+}
+export type WeeklySummaryGetResponse = {
+  summary: WeeklySummaryData | null
+  latestReportUpdatedAt: string | null // 鮮度判定用
 }
 ```
 
@@ -355,6 +396,30 @@ const { data: reports } = await useFetch('/api/reports', {
 ```
 
 > `useFetch` は SSR・キャッシュ・ローディング状態を自動で管理してくれる。
+
+### ストリーミング（SSE）取得は `responseType: 'stream'` ＋ `readSseStream`
+
+AI 週次サマリー生成（`POST /api/ai/weekly-summary`）のように、生成トークンを逐次表示したいミューテーションは **SSE（`text/event-stream`）** で受ける。クライアントは `$fetch` の `responseType: 'stream'` でストリームを取得し、`app/utils/sse.ts` の `readSseStream` で `{ event, data }` フレームを逐次処理する（`useWeeklySummary.generate()` 参照）。
+
+```typescript
+// ✓ SSE を逐次読む（生成トークンを少しずつ表示）
+try {
+  const stream = await $fetch<ReadableStream<Uint8Array>>('/api/ai/weekly-summary', {
+    method: 'POST',
+    body: { userId, weekStart },
+    responseType: 'stream'
+  })
+  for await (const frame of readSseStream(stream)) {
+    if (frame.event === 'delta') streamingContent.value += parseDeltaText(frame.data)
+    else if (frame.event === 'done') { /* 完了メタを反映 */ }
+    else if (frame.event === 'error') { /* useApiError で通知 */ }
+  }
+} catch (error) {
+  apiError.notify(error, { fallback: 'サマリーの生成に失敗しました' })
+}
+```
+
+> **設計の要点**: 認証・バリデーション・日報なし(422)・レート上限(429) の**事前チェックはストリーム開始前**に通常の HTTP ステータスで返す（`useApiError` がそのまま機能）。HTTP 200（SSE 開始）後に起きうる AI 上流失敗のみ `error` イベントで通知する。サーバーは h3 `createEventStream` で `delta` / `done` / `error` を push し、各 `data` は 1 行 JSON 文字列。上流 AI への送信は SDK を使わず素の `$fetch`（`stream: true`）で行い、`server/utils/aiChat.ts` の `streamAiProvider` が provider 別 SSE をパースする（Cloudflare Workers 互換）。
 
 ---
 

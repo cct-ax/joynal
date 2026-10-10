@@ -15,9 +15,26 @@ const onwarn: RollupOnwarn = (warning, defaultHandler) => {
   defaultHandler(warning)
 }
 
+// docs サイト（@nuxt/content）は dev・nuxt prepare で有効、本番 build と test では無効。
+// 判定はコマンド(argv)で行う。理由: `nuxt prepare` も NODE_ENV=production で走るため
+// NODE_ENV で区別すると prepare 時に content が抜け、生成型から queryCollection/docs コレクションが
+// 消えてエディタ（VS Code Nuxt 拡張が prepare を再実行する）で型エラーが再発する。
+// dev / prepare では content をロードして型を保ち、実際の build と vitest のみ除外する。
+const isProdBuild = process.argv.includes('build') || process.argv.includes('generate')
+const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST)
+const docsDev = !isProdBuild && !isTest
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/ui', '@nuxt/fonts', '@nuxtjs/supabase', '@nuxt/eslint', '@vueuse/nuxt'],
+  modules: [
+    // @nuxt/content は @nuxt/ui より前（UI が content の prose を拡張するため）。dev のみ。
+    ...(docsDev ? ['@nuxt/content'] : []),
+    '@nuxt/ui',
+    '@nuxt/fonts',
+    '@nuxtjs/supabase',
+    '@nuxt/eslint',
+    '@vueuse/nuxt'
+  ],
 
   // ドメイン別サブフォルダ(report/admin/common)で整理しつつ、名前は据え置く
   // （pathPrefix:false ＝ <UserTable> 等のまま・使用箇所は無変更）。
@@ -35,6 +52,27 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  // AI 機能（コーチング・週次サマリー）のプロバイダ設定。
+  // 値は NUXT_* 環境変数で上書きする（runtimeConfig 直下＝サーバー専用でクライアントに露出しない）。
+  // 既定プロバイダは Anthropic（Claude Haiku 4.5）。OpenAI・Gemini も同一アダプタ（server/utils/aiChat）で利用可。
+  // Gemini は OpenAI 互換エンドポイント経由（provider='gemini'）。
+  runtimeConfig: {
+    anthropicApiKey: '', // NUXT_ANTHROPIC_API_KEY
+    openaiApiKey: '', // NUXT_OPENAI_API_KEY
+    geminiApiKey: '', // NUXT_GEMINI_API_KEY
+    aiProvider: 'anthropic', // NUXT_AI_PROVIDER（'anthropic' | 'openai' | 'gemini'）
+    anthropicModel: 'claude-haiku-4-5-20251001', // NUXT_ANTHROPIC_MODEL
+    openaiModel: 'gpt-4o-mini', // NUXT_OPENAI_MODEL
+    geminiModel: 'gemini-2.5-flash', // NUXT_GEMINI_MODEL
+    aiMaxTokens: 1024, // NUXT_AI_MAX_TOKENS
+    aiDailyLimit: 50 // NUXT_AI_DAILY_LIMIT（1ユーザー1日あたりの AI 呼び出し上限）
+  },
+
+  // 本番ビルドでは docs サイト関連（content 依存）を完全に除外する。
+  // queryCollection / ContentRenderer を参照する全ファイルを対象にし、本番の未定義 auto-import 混入を防ぐ。
+  // ignore は rootDir 相対のため app/ を前置する。dev / nuxt prepare では含める。
+  ignore: docsDev ? [] : ['app/pages/docs/**', 'app/layouts/docs.vue', 'app/components/content/**'],
+
   routeRules: {
     '/login': { ssr: false },
     '/reset-password': { ssr: false },
@@ -44,7 +82,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
   nitro: {
-    preset: 'cloudflare-pages',
+    // 本番は cloudflare-pages。dev は docs サイト（@nuxt/content）が node ネイティブの
+    // better-sqlite3 を使うため CF エミュレーションを外して node ランタイムにする
+    // （native module は worker sandbox で動かず content が D1 にフォールバックして 500 になる）。
+    // 本番デプロイ・worker は無変更。
+    ...(docsDev ? {} : { preset: 'cloudflare-pages' }),
     cloudflare: {
       nodeCompat: true
     },
@@ -108,7 +150,8 @@ export default defineNuxtConfig({
       callback: '/confirm',
       // /reset-password は OTP 方式の申請〜コード入力〜新パスワード設定を 1 画面で行う未認証ページ。
       // 除外しないと未ログイン状態で /login へ弾かれてしまう。
-      exclude: ['/login', '/reset-password']
+      // /docs は dev 限定の設計ドキュメントサイト（未ログインでも閲覧可。本番はルート自体が無く no-op）。
+      exclude: ['/login', '/reset-password', '/docs', '/docs/**']
     },
     types: '#shared/types/database.types.ts'
   }

@@ -1,141 +1,135 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
+/**
+ * 全ページ共通のヘッダー。
+ *
+ * - 左: 「Joynal」ロゴ（/report リンク。UHeader の title/to に委譲）
+ * - 右: nav slot（MS4 で admin タブ等を追加予定）+ ユーザードロップダウン（パスワード変更 / ログアウト）
+ * - sticky・border・高さ（--ui-header-height）・コンテナは UHeader 既定に委譲する。
+ *
+ * design プロト L357-410（Header）を Vue 化したもの。
+ * スマホ時はユーザー名を隠してアイコンのみ表示する（Tailwind の `sm:` で切替）。
+ */
+import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 
 const user = useSupabaseUser()
-const apiError = useApiError()
-const passwordModalOpen = ref(false)
-const passwordModalMounted = ref(false)
+const { profile, pending, isAdmin } = useCurrentUser()
+const route = useRoute()
 
-const { profile, isAdmin } = useCurrentUser()
+// 設計ドキュメントサイト（@nuxt/content）は dev 限定。dev のときだけヘッダに導線を出す。
+const isDev = import.meta.dev
 
-const displayName = computed(() => profile.value?.name ?? 'ユーザー')
+// admin 専用ナビ。/report と /admin の 2 項目、現在のルートを active にする。
+const adminNavItems = computed<NavigationMenuItem[]>(() => [
+  { label: '日報', to: '/report', active: route.path === '/report' },
+  { label: '管理', to: '/admin', active: route.path.startsWith('/admin') }
+])
 
-const openPasswordModal = (): void => {
-  passwordModalMounted.value = true
-  passwordModalOpen.value = true
-}
+const pwModalOpen = ref(false)
+// 初回オープン時にチャンクを取得し、以後はマウントを維持して開閉トランジションを保つ。
+const pwModalMounted = useLazyOpen(pwModalOpen)
 
 const signOut = async (): Promise<void> => {
   try {
-    // サーバー側でセッション Cookie を破棄する（フロントから Supabase を直接呼ばない）。
     await $fetch('/api/auth/logout', { method: 'POST' })
-  } catch (error: unknown) {
-    apiError.notify(error, { fallback: 'ログアウトに失敗しました' })
-    return
+  } finally {
+    // サーバーが cookie を破棄するため、フルリロード（external）でクライアント側の
+    // セッションも確実にクリアしてから /login へ遷移する。
+    await navigateTo('/login', { external: true })
   }
-  // フルリロード（external）でクライアントの認証状態も確実にクリアしてから /login へ。
-  await navigateTo('/login', { external: true })
 }
 
-const userMenuItems = computed<DropdownMenuItem[]>(() => {
-  const items: DropdownMenuItem[] = []
-
-  if (isAdmin.value) {
-    items.push(
-      {
-        label: '管理',
-        icon: 'i-lucide-settings',
-        to: '/admin',
-        class: 'sm:hidden'
-      },
-      {
-        type: 'separator',
-        class: 'sm:hidden'
-      }
-    )
-  }
-
-  items.push(
+// UDropdownMenu の items は2次元配列。各内側配列が区切り線で分離される
+const userMenuItems = computed<DropdownMenuItem[][]>(() => [
+  [
     {
       label: 'パスワード変更',
-      icon: 'i-lucide-lock',
-      onSelect: openPasswordModal
-    },
-    {
-      type: 'separator'
-    },
+      icon: 'i-lucide-key',
+      onSelect: () => {
+        pwModalOpen.value = true
+      }
+    }
+  ],
+  [
     {
       label: 'ログアウト',
       icon: 'i-lucide-log-out',
-      color: 'error',
-      onSelect: () => {
-        void signOut()
-      }
+      onSelect: signOut
     }
-  )
-
-  return items
-})
+  ]
+])
 </script>
 
 <template>
-  <header
-    class="sticky top-0 z-50 flex h-[52px] items-center justify-between gap-4 border-b border-default bg-default px-4 sm:px-5"
+  <UHeader
+    :toggle="false"
+    :ui="{ container: 'max-w-5xl' }"
   >
-    <div class="flex min-w-0 items-center gap-5">
-      <NuxtLink
-        to="/report"
-        class="shrink-0 cursor-pointer select-none text-[18px] font-bold leading-none tracking-normal text-highlighted"
-      >
-        Joynal
-      </NuxtLink>
-
-      <nav
-        v-if="user && isAdmin"
-        class="hidden items-center gap-1 sm:flex"
-        aria-label="メインナビゲーション"
-      >
+    <!-- 左: ロゴ＋（admin のみ）日報 / 管理ナビをロゴの右隣に並べる -->
+    <template #left>
+      <div class="flex items-center gap-2 sm:gap-4">
         <NuxtLink
-          to="/admin"
-          class="rounded-md px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-elevated hover:text-highlighted"
-          active-class="bg-primary/10 text-primary"
+          to="/report"
+          class="text-lg font-bold tracking-tight select-none"
         >
-          管理
+          Joynal
         </NuxtLink>
-      </nav>
-    </div>
-
-    <div
-      v-if="user"
-      class="shrink-0"
-    >
-      <div class="flex items-center gap-2">
-        <span class="max-w-44 truncate text-sm text-muted">
-          {{ displayName }}
-        </span>
-        <UColorModeButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          square
-          class="cursor-pointer"
+        <!-- admin のみ: 日報 / 管理の水平ナビ。highlight で active を primary 下線表示 -->
+        <UNavigationMenu
+          v-if="user && isAdmin"
+          :items="adminNavItems"
+          variant="link"
+          highlight
+          aria-label="管理者ナビゲーション"
         />
+        <!-- dev 限定: 設計ドキュメントサイトへの導線 -->
+        <NuxtLink
+          v-if="isDev"
+          to="/docs"
+          class="text-sm font-medium text-muted hover:text-default transition-colors"
+          :class="{ 'text-primary': route.path.startsWith('/docs') }"
+        >
+          Docs
+        </NuxtLink>
+      </div>
+    </template>
+
+    <template #right>
+      <div
+        v-if="user"
+        class="flex items-center gap-1"
+      >
+        <slot name="nav" />
+        <!-- /api/users/me 取得中は名前が確定しないため、フォールバック文言を出さず Skeleton を表示する。
+             スマホでは氏名を隠してアイコンのみにする（左ナビのスペース確保）。 -->
+        <USkeleton
+          v-if="pending"
+          class="h-7 w-28 rounded-full max-sm:hidden"
+        />
+        <!-- 氏名のみ（アバターなし） -->
+        <UUser
+          v-else
+          :name="profile?.name ?? 'ユーザー'"
+          :ui="{ name: 'text-sm font-medium' }"
+          class="max-sm:hidden"
+        />
+        <UColorModeButton />
         <UDropdownMenu
           :items="userMenuItems"
-          :content="{ align: 'end', sideOffset: 4 }"
-          :ui="{
-            content: 'w-[168px]',
-            item: 'cursor-pointer'
-          }"
+          :ui="{ content: 'min-w-44' }"
         >
           <UButton
-            type="button"
             icon="i-lucide-ellipsis"
+            variant="ghost"
             color="neutral"
-            variant="outline"
-            size="sm"
-            square
-            class="h-8 w-9 cursor-pointer justify-center"
-            aria-label="メニューを開く"
-            aria-haspopup="menu"
+            :aria-label="`${profile?.name ?? 'ユーザー'} メニュー`"
           />
         </UDropdownMenu>
       </div>
-    </div>
-  </header>
+    </template>
+  </UHeader>
 
   <LazyPasswordChangeModal
-    v-if="passwordModalMounted"
-    v-model:open="passwordModalOpen"
+    v-if="pwModalMounted"
+    v-model:open="pwModalOpen"
   />
 </template>
