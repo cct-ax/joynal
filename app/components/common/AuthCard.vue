@@ -1,8 +1,9 @@
 <script setup lang="ts">
-// TODO(2-1a-a / AuthCard: 認証ページ共通カード(login・reset-password で共用))
+// TODO(R-7 #82): 認証ページ共通カード(login・reset-password で共用)。
+// 現状は各ページに <UCard> でインライン実装済み。ここへ抽出する。
 </script>
 
 <template>
-  <!-- TODO: 実装 -->
+  <!-- TODO(R-7 #82): login.vue / reset-password.vue のインライン UCard をここへ集約 -->
   <div />
 </template>

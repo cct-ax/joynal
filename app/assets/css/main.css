@@ -31,3 +31,12 @@
     animation: none;
   }
 }
+
+/* ライト/ダークでの primary トーン調整。 */
+:root {
+  --ui-primary: var(--ui-color-primary-600);
+}
+
+.dark {
+  --ui-primary: var(--ui-color-primary-400);
+}

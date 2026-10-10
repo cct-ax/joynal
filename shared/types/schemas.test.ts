@@ -4,7 +4,9 @@ import {
   commentSchema,
   loginSchema,
   passwordChangeSchema,
+  reportCreateBodySchema,
   resetWithOtpSchema,
+  reportUpdateBodySchema,
   reportSchema,
   resetPasswordSchema,
   userCreateSchema
@@ -38,6 +40,30 @@ describe('reportSchema', () => {
       content: '今日やったこと'
     })
     expect(result.success).toBe(true)
+  })
+
+  it('15分単位の時刻を受け入れる', () => {
+    const result = reportSchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:15',
+      check_out: '18:45',
+      content: '内容'
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('15分単位でない時刻はエラー', () => {
+    const result = reportSchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:10',
+      check_out: '18:00',
+      content: '内容'
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const checkInError = result.error.issues.find(i => i.path[0] === 'check_in')
+      expect(checkInError?.message).toBe('15分単位で入力してください')
+    }
   })
 
   it('必須項目が空の場合はエラー', () => {
@@ -104,6 +130,33 @@ describe('reportSchema', () => {
       check_out: '09:00',
       content: '内容'
     })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('report API schemas', () => {
+  it('作成ボディは15分単位の時刻を受け入れる', () => {
+    const result = reportCreateBodySchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:15',
+      check_out: '18:45',
+      content: '内容'
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('作成ボディは15分単位でない時刻を拒否する', () => {
+    const result = reportCreateBodySchema.safeParse({
+      date: '2026-05-19',
+      check_in: '09:10',
+      check_out: '18:00',
+      content: '内容'
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('更新ボディは15分単位でない時刻を拒否する', () => {
+    const result = reportUpdateBodySchema.safeParse({ check_out: '18:10' })
     expect(result.success).toBe(false)
   })
 })
