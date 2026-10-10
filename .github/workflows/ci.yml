@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  # Lint と型チェック。pnpm のバージョンは固定せず packageManager(pnpm@11.5.0) に従わせる。
+  # Lint と型チェック。pnpm のバージョンは固定せず packageManager(pnpm@11.28.2) に従わせる。
   lint-and-typecheck:
     runs-on: ubuntu-latest
     steps:

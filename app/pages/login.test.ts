@@ -17,9 +17,11 @@ mockNuxtImport('useRoute', () => () => ({ query: routeQuery }))
 const navigateToMock = vi.fn()
 mockNuxtImport('navigateTo', () => (...args: unknown[]) => navigateToMock(...args))
 
+const fetchMock = vi.fn()
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 describe('login ページ', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     toastAddMock.mockReset()
@@ -27,13 +29,11 @@ describe('login ページ', () => {
     navigateToMock.mockReset()
     fetchMock.mockReset()
     routeQuery = {}
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('?reset=success で完了 toast を出し query を除去する', async () => {

@@ -11,25 +11,25 @@ const navigateToMock = vi.fn()
 // factory は hoist されるため、navigateToMock は呼び出し時に遅延参照する（直接返すと初期化前アクセスになる）
 mockNuxtImport('navigateTo', () => (...args: unknown[]) => navigateToMock(...args))
 
+const fetchMock = vi.fn()
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 /** wrapper.vm から defineExpose の API を取り出す helper */
 const exposedOf = (w: VueWrapper): ResetPasswordPageExposed =>
   w.vm as unknown as ResetPasswordPageExposed
 
 describe('reset-password ページ', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     fetchMock.mockReset()
     notifyMock.mockReset()
     navigateToMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('初期表示で全フィールドと送信・更新ボタンが同時に出る', async () => {

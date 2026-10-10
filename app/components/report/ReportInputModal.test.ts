@@ -11,6 +11,9 @@ mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 const notifyMock = vi.fn()
 mockNuxtImport('useApiError', () => () => ({ notify: notifyMock }))
 
+const fetchMock = vi.fn()
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 const exposedOf = (wrapper: VueWrapper): ReportInputModalExposed =>
   wrapper.vm as unknown as ReportInputModalExposed
 
@@ -43,19 +46,16 @@ const existingReport: DailyReport = {
 
 describe('ReportInputModal', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
     notifyMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('新規入力では「保存」、編集では「更新」を主ボタンに表示する', async () => {
