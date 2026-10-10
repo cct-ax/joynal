@@ -15,21 +15,23 @@ mockNuxtImport('navigateTo', () => (...args: unknown[]) => navigateToMock(...arg
 const exposedOf = (w: VueWrapper): ResetPasswordPageExposed =>
   w.vm as unknown as ResetPasswordPageExposed
 
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 describe('reset-password ページ', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     fetchMock.mockReset()
     notifyMock.mockReset()
     navigateToMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('初期表示で全フィールドと送信・更新ボタンが同時に出る', async () => {

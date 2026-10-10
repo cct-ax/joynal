@@ -53,9 +53,13 @@ const traineeProfile: CurrentUserProfile = {
   updated_at: '2026-01-01T00:00:00Z'
 }
 
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 describe('AppHeader', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     supabaseUser.value = { sub: 'u1' }
@@ -65,14 +69,12 @@ describe('AppHeader', () => {
     routePath.value = '/report'
     navigateToMock.mockReset()
     fetchMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     // teleport 先（document.body）の DOM をテスト間で隔離する
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('ロゴ「Joynal」を表示し /report にリンクする', async () => {

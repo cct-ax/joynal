@@ -36,3 +36,19 @@ export const fromTimeValue = (t: Time | null): string => {
  */
 export const toHm = (s: string | null | undefined): string =>
   fromTimeValue(toTimeValue(s))
+
+/**
+ * 時刻候補ピッカー用に "HH:MM" を interval 分刻みで 1 日分（00:00〜）生成する。
+ * 日報の出退勤は 15 分単位（HH:00/15/30/45）が仕様のため、既定は 15。
+ * interval は 1〜1440 の整数のみ受け付け、それ以外は空配列を返す。
+ */
+export const buildTimeOptions = (intervalMinutes = 15): string[] => {
+  if (!Number.isInteger(intervalMinutes) || intervalMinutes < 1 || intervalMinutes > 24 * 60) {
+    return []
+  }
+  const count = Math.floor((24 * 60) / intervalMinutes)
+  return Array.from({ length: count }, (_, i) => {
+    const total = i * intervalMinutes
+    return fromTimeValue(new Time(Math.floor(total / 60), total % 60))
+  })
+}

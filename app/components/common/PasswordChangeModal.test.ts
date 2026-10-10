@@ -12,21 +12,23 @@ mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 const exposedOf = (w: VueWrapper): PasswordChangeModalExposed =>
   w.vm as unknown as PasswordChangeModalExposed
 
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 describe('PasswordChangeModal', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     // teleport 先（document.body）の DOM をテスト間で隔離する
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('open=true で 3 フィールドのフォームが表示される', async () => {

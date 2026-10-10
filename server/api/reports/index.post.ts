@@ -17,8 +17,8 @@ defineRouteMeta({
             required: ['date', 'check_in', 'check_out', 'content'],
             properties: {
               date: { type: 'string', format: 'date', description: 'YYYY-MM-DD' },
-              check_in: { type: 'string', description: '出勤時刻 HH:MM' },
-              check_out: { type: 'string', description: '退勤時刻 HH:MM（check_in より後）' },
+              check_in: { type: 'string', description: '出勤時刻 HH:MM（15分単位）' },
+              check_out: { type: 'string', description: '退勤時刻 HH:MM（15分単位、check_in より後）' },
               content: { type: 'string', description: 'やったこと' },
               mood: { type: 'integer', enum: [1, 2, 3, 4, 5], description: '気分（任意・1〜5）' }
             }

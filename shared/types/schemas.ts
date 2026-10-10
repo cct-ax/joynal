@@ -19,16 +19,27 @@ const moodUnion = z.union([
 
 const moodSchema = moodUnion.optional() satisfies z.ZodType<MoodValue | undefined>
 
+const timeRegex = /^\d{2}:(00|15|30|45)$/
+const timeIntervalMessage = '15分単位で入力してください'
+
+const reportTimeField = (requiredMessage: string) =>
+  z.string()
+    .min(1, requiredMessage)
+    .refine(value => !value || timeRegex.test(value), {
+      message: timeIntervalMessage
+    })
+
 /**
  * 日報フォーム用スキーマ。
  * - check_out > check_in を refine で検証する。
+ * - check_in/check_out は 15 分単位の HH:MM を検証する。
  * - mood は任意項目（1〜5）。
  */
 export const reportSchema = z
   .object({
     date: z.string().min(1, '日付は必須です'),
-    check_in: z.string().min(1, '出勤時間は必須です'),
-    check_out: z.string().min(1, '退勤時間は必須です'),
+    check_in: reportTimeField('出勤時間は必須です'),
+    check_out: reportTimeField('退勤時間は必須です'),
     content: z.string().min(1, 'やったことは必須です'),
     mood: moodSchema
   })
@@ -122,7 +133,6 @@ export const assignmentSchema = z.object({
 export const uuidSchema = z.guid('有効な ID を指定してください')
 
 const ymdRegex = /^\d{4}-\d{2}-\d{2}$/
-const timeRegex = /^\d{2}:\d{2}$/
 
 /** GET /api/reports クエリ */
 export const reportsQuerySchema = z.object({
@@ -136,8 +146,8 @@ export const reportsQuerySchema = z.object({
 export const reportCreateBodySchema = z
   .object({
     date: z.string().regex(ymdRegex, 'date は YYYY-MM-DD 形式で指定してください'),
-    check_in: z.string().regex(timeRegex, 'check_in は HH:MM 形式で指定してください'),
-    check_out: z.string().regex(timeRegex, 'check_out は HH:MM 形式で指定してください'),
+    check_in: z.string().regex(timeRegex, 'check_in は HH:MM（15分単位）形式で指定してください'),
+    check_out: z.string().regex(timeRegex, 'check_out は HH:MM（15分単位）形式で指定してください'),
     content: z.string().min(1, 'content は必須です'),
     mood: moodSchema
   })
@@ -149,8 +159,8 @@ export const reportCreateBodySchema = z
 /** PUT /api/reports/[id] ボディ。すべて optional、両方存在時のみ refine */
 export const reportUpdateBodySchema = z
   .object({
-    check_in: z.string().regex(timeRegex).optional(),
-    check_out: z.string().regex(timeRegex).optional(),
+    check_in: z.string().regex(timeRegex, 'check_in は HH:MM（15分単位）形式で指定してください').optional(),
+    check_out: z.string().regex(timeRegex, 'check_out は HH:MM（15分単位）形式で指定してください').optional(),
     content: z.string().min(1).optional(),
     mood: moodUnion.nullable().optional()
   })

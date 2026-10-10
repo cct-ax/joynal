@@ -1,3 +1,4 @@
+import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import '../test/serverGlobals'
 import {
@@ -11,6 +12,9 @@ import {
 } from './aiChat'
 
 const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
 /** フレーム文字列の配列を SSE バイトストリームに変換する。 */
 const sseStream = (frames: string[]): ReadableStream<Uint8Array> =>
@@ -77,7 +81,6 @@ describe('extractOpenAiText', () => {
 describe('callAiProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   it('anthropic: Messages API を正しい URL/ヘッダ/ボディで叩き本文を返す', async () => {
@@ -183,7 +186,6 @@ describe('extractOpenAiDelta', () => {
 describe('streamAiProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   it('anthropic: text_delta を順次 yield し stream:true で叩く', async () => {

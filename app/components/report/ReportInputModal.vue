@@ -15,6 +15,8 @@ import type { DailyReport } from '#shared/types/models'
 import { isMoodValue, type MoodValue, type ReportCreateBody, type ReportUpdateBody } from '#shared/types/api'
 import { reportSchema, type ReportSchema } from '#shared/types/schemas'
 
+const TIME_OPTION_INTERVAL_MINUTES = 15
+
 const props = defineProps<{
   /** 開閉状態（v-model:open） */
   open: boolean
@@ -118,6 +120,21 @@ const checkOutTime = computed<Time | null>({
   }
 })
 
+// 出退勤は 15 分単位（HH:00/15/30/45）が仕様。UInputTime の直接入力に加えて、
+// 時計ボタンから Popover の候補一覧（15 分刻み・96 件）を選べるようにする。
+const TIME_OPTIONS = buildTimeOptions(TIME_OPTION_INTERVAL_MINUTES)
+const checkInPickerOpen = ref(false)
+const checkOutPickerOpen = ref(false)
+
+const selectCheckInTime = (time: string): void => {
+  state.check_in = time
+  checkInPickerOpen.value = false
+}
+const selectCheckOutTime = (time: string): void => {
+  state.check_out = time
+  checkOutPickerOpen.value = false
+}
+
 const dateLabel = computed(() => {
   if (!state.date) return ''
   const d = parseYmd(state.date)
@@ -149,9 +166,14 @@ const onMoodUpdate = (v: ReportSchema['mood'] | null): void => {
   state.mood = v ?? undefined
 }
 
-// モーダルを開くたびに前回のコーチングヒントをクリアする。
+// モーダルを開くたびに前回のコーチングヒントをクリアし、閉じたら時刻候補の Popover も畳む。
 watch(() => props.open, (open) => {
-  if (open) resetCoachHints()
+  if (open) {
+    resetCoachHints()
+  } else {
+    checkInPickerOpen.value = false
+    checkOutPickerOpen.value = false
+  }
 })
 
 // 入力中のドラフトと気分を渡してコーチングヒントを取得する。
@@ -187,22 +209,98 @@ defineExpose({ submit, onDelete })
             label="出勤時間"
             required
           >
-            <UInputTime
-              v-model="checkInTime"
-              :hour-cycle="24"
-              class="w-full justify-center"
-            />
+            <UPopover
+              v-model:open="checkInPickerOpen"
+              :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
+              :ui="{ content: 'w-(--reka-popover-trigger-width)' }"
+            >
+              <template #anchor>
+                <div class="flex w-full">
+                  <UInputTime
+                    v-model="checkInTime"
+                    :hour-cycle="24"
+                    class="min-w-0 flex-1 justify-center"
+                    :ui="{ base: 'w-full rounded-e-none' }"
+                  />
+                  <UButton
+                    type="button"
+                    icon="i-lucide-clock"
+                    color="neutral"
+                    variant="outline"
+                    class="-ms-px shrink-0 rounded-s-none"
+                    aria-label="出勤時間を選択"
+                    aria-haspopup="dialog"
+                    :aria-expanded="checkInPickerOpen"
+                    @click="checkInPickerOpen = !checkInPickerOpen"
+                  />
+                </div>
+              </template>
+              <template #content>
+                <div class="max-h-64 overflow-y-auto p-1">
+                  <UButton
+                    v-for="time in TIME_OPTIONS"
+                    :key="`check-in-${time}`"
+                    type="button"
+                    color="neutral"
+                    :variant="state.check_in === time ? 'soft' : 'ghost'"
+                    block
+                    class="justify-center"
+                    @click="selectCheckInTime(time)"
+                  >
+                    {{ time }}
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
           </UFormField>
           <UFormField
             name="check_out"
             label="退勤時間"
             required
           >
-            <UInputTime
-              v-model="checkOutTime"
-              :hour-cycle="24"
-              class="w-full justify-center"
-            />
+            <UPopover
+              v-model:open="checkOutPickerOpen"
+              :content="{ align: 'end', side: 'bottom', sideOffset: 6, collisionPadding: 12 }"
+              :ui="{ content: 'w-(--reka-popover-trigger-width)' }"
+            >
+              <template #anchor>
+                <div class="flex w-full">
+                  <UInputTime
+                    v-model="checkOutTime"
+                    :hour-cycle="24"
+                    class="min-w-0 flex-1 justify-center"
+                    :ui="{ base: 'w-full rounded-e-none' }"
+                  />
+                  <UButton
+                    type="button"
+                    icon="i-lucide-clock"
+                    color="neutral"
+                    variant="outline"
+                    class="-ms-px shrink-0 rounded-s-none"
+                    aria-label="退勤時間を選択"
+                    aria-haspopup="dialog"
+                    :aria-expanded="checkOutPickerOpen"
+                    @click="checkOutPickerOpen = !checkOutPickerOpen"
+                  />
+                </div>
+              </template>
+              <template #content>
+                <div class="max-h-64 overflow-y-auto p-1">
+                  <UButton
+                    v-for="time in TIME_OPTIONS"
+                    :key="`check-out-${time}`"
+                    type="button"
+                    color="neutral"
+                    :variant="state.check_out === time ? 'soft' : 'ghost'"
+                    block
+                    class="justify-center"
+                    @click="selectCheckOutTime(time)"
+                  >
+                    {{ time }}
+                  </UButton>
+                </div>
+              </template>
+            </UPopover>
           </UFormField>
         </div>
 

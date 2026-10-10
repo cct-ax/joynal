@@ -26,21 +26,23 @@ const sampleUser: Profile = {
   updated_at: '2026-01-01T00:00:00Z'
 }
 
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 describe('UserFormModal', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
     notifyMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   // ----------------------------------------------------------------

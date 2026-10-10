@@ -11,6 +11,9 @@ mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 
 let wrapper: VueWrapper | null = null
 const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
 /** フレーム文字列の配列を SSE バイトストリームに変換する（generate の responseType:'stream' 用）。 */
 const sseStream = (frames: string[]): ReadableStream<Uint8Array> =>
@@ -44,14 +47,12 @@ describe('useWeeklySummary', () => {
     requestFetchMock.mockReset()
     fetchMock.mockReset()
     toastAddMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
     clearNuxtData('weekly-summary')
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
     clearNuxtData('weekly-summary')
   })
 

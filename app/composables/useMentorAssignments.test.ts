@@ -19,8 +19,10 @@ mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 const apiErrorNotifyMock = vi.fn()
 mockNuxtImport('useApiError', () => () => ({ notify: apiErrorNotifyMock }))
 
-// $fetch はグローバルに spy 化する（vi.stubGlobal 経由）
 const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
 // ----------------------------------------------------------------
 // テストデータ
@@ -131,7 +133,6 @@ describe('useMentorAssignments', () => {
     toastAddMock.mockReset()
     apiErrorNotifyMock.mockReset()
     fetchMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
 
     clearNuxtData('admin-users')
     clearNuxtData('admin-assignments')

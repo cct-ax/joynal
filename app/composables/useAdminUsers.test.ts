@@ -52,21 +52,22 @@ const mountAdminUsers = async () => {
   return exposed as ReturnType<typeof useAdminUsers>
 }
 
-describe('useAdminUsers', () => {
-  const fetchMock = vi.fn()
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
+describe('useAdminUsers', () => {
   beforeEach(() => {
     requestFetchMock.mockReset()
     notifyMock.mockReset()
     fetchMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
     clearNuxtData('admin-users')
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
     clearNuxtData('admin-users')
   })
 

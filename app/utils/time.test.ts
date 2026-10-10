@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Time } from '@internationalized/date'
-import { fromTimeValue, toHm, toTimeValue } from './time'
+import { buildTimeOptions, fromTimeValue, toHm, toTimeValue } from './time'
 
 describe('time', () => {
   it('toTimeValue は "HH:MM" を Time に変換する', () => {
@@ -56,5 +56,18 @@ describe('time', () => {
     expect(toHm(null)).toBe('')
     expect(toHm(undefined)).toBe('')
     expect(toHm('bad')).toBe('')
+  })
+
+  it('buildTimeOptions は 15 分刻みで 96 件の "HH:MM" を返す', () => {
+    const options = buildTimeOptions()
+    expect(options).toHaveLength(96)
+    expect(options.slice(0, 4)).toEqual(['00:00', '00:15', '00:30', '00:45'])
+    expect(options.at(-1)).toBe('23:45')
+  })
+
+  it('buildTimeOptions は不正な間隔で空配列を返す', () => {
+    expect(buildTimeOptions(0)).toEqual([])
+    expect(buildTimeOptions(7.5)).toEqual([])
+    expect(buildTimeOptions(1441)).toEqual([])
   })
 })

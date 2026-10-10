@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 開発ガイド（CONTRIBUTING）
+    url: https://github.com/cct-ax/joynal/blob/main/CONTRIBUTING.md
+    about: セットアップ・作業フロー・コーディングルールはこちら。
+  - name: 設計ドキュメント
+    url: https://github.com/cct-ax/joynal/tree/main/docs
+    about: アーキテクチャ・API・DB 設計などのドキュメント。

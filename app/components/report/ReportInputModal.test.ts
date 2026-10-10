@@ -30,20 +30,22 @@ const sampleReport: DailyReport = {
 const exposedOf = (w: VueWrapper): ReportInputModalExposed =>
   w.vm as unknown as ReportInputModalExposed
 
+const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
+
 describe('ReportInputModal', () => {
   let wrapper: VueWrapper | null = null
-  const fetchMock = vi.fn()
 
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('open=true・新規モードで「日報を入力」と日付ラベルが表示される', async () => {
@@ -180,6 +182,32 @@ describe('ReportInputModal', () => {
       })
     )
     expect(wrapper.emitted('saved')).toBeUndefined()
+  })
+
+  it('時刻候補ピッカーで選んだ 15 分単位の時刻が出勤時間に反映される', async () => {
+    wrapper = await mountSuspended(ReportInputModal, {
+      props: { open: true, date: '2026-05-25', report: null }
+    })
+    const pickerBtn = document.body.querySelector<HTMLButtonElement>('button[aria-label="出勤時間を選択"]')
+    expect(pickerBtn).not.toBeNull()
+
+    pickerBtn?.click()
+    await flushPromises()
+
+    const option = Array.from(document.body.querySelectorAll('button')).find(
+      b => b.textContent?.trim() === '09:15'
+    )
+    expect(option).toBeDefined()
+
+    option?.click()
+    await flushPromises()
+
+    // UInputTime の hour / minute セグメント（role=spinbutton）に選択値が入る
+    const segments = Array.from(document.body.querySelectorAll('[role="spinbutton"]'))
+    expect(segments[0]?.getAttribute('aria-valuenow')).toBe('9')
+    expect(segments[1]?.getAttribute('aria-valuenow')).toBe('15')
+    // 選択後は Popover が閉じる
+    expect(pickerBtn?.getAttribute('aria-expanded')).toBe('false')
   })
 
   it('「ヒントを見る」ボタンのクリックで POST /api/ai/coach を呼ぶ', async () => {

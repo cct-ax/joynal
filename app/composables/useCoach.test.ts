@@ -9,6 +9,9 @@ mockNuxtImport('useToast', () => () => ({ add: toastAddMock }))
 
 let wrapper: VueWrapper | null = null
 const fetchMock = vi.fn()
+// Nuxt 4.6 で $fetch は auto-import（#build/fetch）になり vi.stubGlobal が効かないため mockNuxtImport で差し替える。
+// factory は hoist されるので、呼び出し時に遅延参照するラッパーを返す。
+mockNuxtImport('$fetch', () => (...args: unknown[]) => fetchMock(...args))
 
 const mountCoach = async () => {
   let exposed: ReturnType<typeof useCoach> | null = null
@@ -28,13 +31,11 @@ describe('useCoach', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     toastAddMock.mockReset()
-    vi.stubGlobal('$fetch', fetchMock)
   })
 
   afterEach(() => {
     wrapper?.unmount()
     wrapper = null
-    vi.unstubAllGlobals()
   })
 
   it('fetchHints: content/mood を body にして POST し hints をセット', async () => {
