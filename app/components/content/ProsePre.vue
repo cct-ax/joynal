@@ -7,7 +7,7 @@
  * ```mermaid を**無改変**のまま GitHub ではネイティブ描画・サイトでは図描画にできる。
  * 本ファイルは nuxt.config の ignore で本番ビルドから除外する。
  */
-import { computed } from 'vue'
+import { computed, type StyleValue } from 'vue'
 
 const props = defineProps<{
   code?: string
@@ -16,8 +16,9 @@ const props = defineProps<{
   highlights?: number[]
   meta?: string | null
   class?: string | null
-  // MDC は style を文字列でもオブジェクトでも渡すため両方受ける。
-  style?: string | Record<string, unknown> | null
+  // MDC は style を文字列でもオブジェクトでも渡すため、<pre :style> がそのまま受けられる
+  // Vue の StyleValue（string | CSSProperties | 配列 | null 等）で受ける。
+  style?: StyleValue
 }>()
 
 const isMermaid = computed(() => props.language === 'mermaid')
