@@ -5,6 +5,19 @@ allowBuilds:
   unrs-resolver: true
   vue-demi: true
   workerd: true
+# 修正版が無い／上げると壊れる dev・build 専用経路のアドバイザリを pnpm audit から除外する。
+# いずれも Cloudflare の本番成果物には含まれない。解消条件を満たしたら該当行を削除すること。
+auditConfig:
+  ignoreGhsas:
+    # simple-git（@nuxt/devtools 経由・dev のみ）。修正は simple-git 4 だが default export 廃止で
+    # devtools 3.x が読み込み失敗する。devtools 4 安定版（simple-git 依存なし）へ上げたら削除。
+    - GHSA-x6jw-m9v5-85vh # critical: trailer 設定経由のコマンド実行
+    - GHSA-v5rq-49vh-5v5c # critical: @simple-git/argv-parser の VISUAL 検出漏れ
+    - GHSA-g4wm-2vf7-vfgr # high: Git config include 経由のコマンド実行
+    - GHSA-858h-whjf-mvg5 # high: long-option 省略形による unsafe-operations バイパス
+    # 修正版が未公開（first_patched_version なし）。nitropack 経由の dev/build 時専用。修正版公開で削除。
+    - GHSA-86w9-cpqp-85rv # high: node-forge RSA 署名検証（listhen の dev 証明書生成）
+    - GHSA-vfj7-8cjw-p6xm # high: braces のスタック枯渇 DoS（globby によるビルド時 glob）
 overrides:
   cac: "^6.7.14"
   commander: "^13.1.0"
@@ -17,8 +30,9 @@ overrides:
   esbuild: "^0.28.1"
   # ws <8.21.0 は GHSA-96hv-2xvq-fx4p（high）。Supabase realtime が推移的に引く。
   ws: "^8.21.0"
-  # vite <=7.3.4 は GHSA-fx2h-pf6j-xcff（high）。Nuxt UI/dev tooling が推移的に引く。
-  vite: "^7.3.5"
+  # vite <=7.3.4 / 8.0.0〜8.0.15 は GHSA-fx2h-pf6j-xcff（high）。Nuxt UI/dev tooling が推移的に引く。
+  # nuxt 4.6 の @nuxt/vite-builder は vite ^8.3.2 必須（7 系だと transformWithOxc が無くビルド不能）。
+  vite: "^8.3.2"
   # undici <7.28.0 は GHSA-vmh5-mc38-953g / GHSA-vxpw-j846-p89q / GHSA-hm92-r4w5-c3mj（high）。Wrangler/miniflare が推移的に引く。
   undici: "^7.28.0"
   # tar <=7.5.15 は PAX size override による parser interpretation differential（medium）、

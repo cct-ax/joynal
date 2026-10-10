@@ -2,7 +2,7 @@
   "name": "joynal",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1",
+  "packageManager": "pnpm@11.28.2+sha512.755ce2fe3c05bfd7bb412b42aff3c5c55cd38c529c6eca810475497ae36746c571e4b6e1814e6e7e4b97d7ee864b8a0e44673c3b297a50e0ac28771c5ce15d27",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -19,18 +19,18 @@
   },
   "dependencies": {
     "@internationalized/date": "3.12.1",
-    "@nuxt/ui": "^4.8.0",
+    "@nuxt/ui": "^4.11.3",
     "@nuxtjs/supabase": "^2.0.5",
     "@vueuse/core": "^14.2.1",
     "@vueuse/nuxt": "^14.2.1",
-    "nuxt": "4.4.7",
+    "nuxt": "4.6.0",
     "tailwindcss": "^4.3.0",
-    "vue": "^3.5.32",
-    "vue-router": "^5.0.4",
+    "vue": "^3.5.43",
+    "vue-router": "^5.0.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^1.4.1",
+    "@nuxt/eslint": "^1.15.2",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/test-utils": "^4.0.2",
     "@playwright/test": "^1.60.0",
@@ -40,7 +40,7 @@
     "eslint": "^10.2.1",
     "happy-dom": "^20.9.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.2.7",
     "wrangler": "^4.95.0"
   },
